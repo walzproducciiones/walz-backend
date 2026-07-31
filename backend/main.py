@@ -29,7 +29,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración de la base de datos
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+# --- NUEVA CONFIGURACIÓN DE BASE DE DATOS ---
+# Intenta obtener la URL de la variable de entorno (para Render)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Si no hay variable de entorno (estás en tu PC local), usa una base de datos SQLite de prueba
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./test.db"
+
+# --- TU CÓDIGO ORIGINAL (AHORA CON LA VARIABLE CORRECTA) ---
 Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
