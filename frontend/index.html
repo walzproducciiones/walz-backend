@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WalZ - Sistema de Ventas Inteligente</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app">
+        <!-- Pantalla de Login -->
+        <div id="loginScreen" class="screen">
+            <div class="container">
+                <h1>🔐 WalZ</h1>
+                <h2>Iniciar Sesión</h2>
+                <input type="email" id="loginEmail" placeholder="Email" value="miemail@test.com">
+                <input type="password" id="loginPassword" placeholder="Contraseña" value="mipassword123">
+                <button onclick="login()">Entrar</button>
+                <p>¿No tienes cuenta? <a href="#" onclick="showRegister()">Regístrate</a></p>
+                <div id="loginMessage" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Registro -->
+        <div id="registerScreen" class="screen" style="display:none;">
+            <div class="container">
+                <h1>🔐 WalZ</h1>
+                <h2>Registrar Comercio</h2>
+                <input type="email" id="registerEmail" placeholder="Email" value="nuevo@test.com">
+                <input type="text" id="registerBusiness" placeholder="Nombre del Comercio" value="Mi Nueva Tienda">
+                <input type="password" id="registerPassword" placeholder="Contraseña" value="123456">
+                <button onclick="register()">Registrarse</button>
+                <p>¿Ya tienes cuenta? <a href="#" onclick="showLogin()">Inicia Sesión</a></p>
+                <div id="registerMessage" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Panel de Productos (Dashboard) -->
+        <div id="dashboardScreen" class="screen" style="display:none;">
+            <div class="container">
+                <div class="header">
+                    <h1>📦 WalZ</h1>
+                    <span id="userName" class="user-badge">Mi Tienda</span>
+                    <button onclick="logout()" class="logout-btn">Cerrar Sesión</button>
+                </div>
+                
+                <h2>Mis Productos</h2>
+                
+                <!-- Formulario para crear producto -->
+                <div class="card">
+                    <h3>➕ Nuevo Producto</h3>
+                    <input type="text" id="productName" placeholder="Nombre del producto" value="Producto Nuevo">
+                    <input type="number" id="productPrice" placeholder="Precio" value="99.99">
+                    <input type="text" id="productDescription" placeholder="Descripción" value="Descripción del producto">
+                    <input type="number" id="productStock" placeholder="Stock" value="10">
+                    <button onclick="createProduct()">Crear Producto</button>
+                    <div id="productMessage" class="message"></div>
+                </div>
+
+                <!-- Lista de productos -->
+                <div id="productList" class="product-grid">
+                    <p>Cargando productos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
