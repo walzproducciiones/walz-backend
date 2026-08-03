@@ -1,198 +1,286 @@
-// ==========================================
-// CONFIGURACIÓN
-// ==========================================
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://127.0.0.1:8000';
 let token = null;
-let user = null;
+let cart = [];
 
-// ==========================================
-// UTILIDADES
-// ==========================================
-function showMessage(elementId, text, type = 'success') {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    el.textContent = text;
-    el.className = 'message ' + type;
-    el.style.display = 'block';
-}
+// --- FUNCIONES DE AUTENTICACIÓN ---
 
-function clearMessages() {
-    document.querySelectorAll('.message').forEach(el => {
-        el.textContent = '';
-        el.className = 'message';
-        el.style.display = 'none';
-    });
-}
+async function handleRegister() {
+    const first_name = document.getElementById('reg-firstname').value;
+    const last_name = document.getElementById('reg-lastname').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
 
-function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(screenId).style.display = 'block';
-    clearMessages();
-}
-
-// ==========================================
-// AUTENTICACIÓN
-// ==========================================
-function showRegister() {
-    showScreen('registerScreen');
-}
-
-function showLogin() {
-    showScreen('loginScreen');
-}
-
-async function register() {
-    clearMessages();
-    const email = document.getElementById('registerEmail').value.trim();
-    const business = document.getElementById('registerBusiness').value.trim();
-    const password = document.getElementById('registerPassword').value.trim();
-
-    if (!email || !business || !password) {
-        showMessage('registerMessage', '❌ Todos los campos son obligatorios', 'error');
+    if(!email || !password || !first_name || !last_name) {
+        showMessage('Por favor completa todos los campos.', 'error');
         return;
     }
 
     try {
-        const response = await fetch(`${API_URL}/api/register`, {
+        const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, business_name: business })
+            body: JSON.stringify({ email, first_name, last_name, password, role: 'COMPRADOR', phone: '' })
         });
-
-        const data = await response.json();
-        if (response.ok) {
-            showMessage('registerMessage', '✅ ¡Usuario creado! Ahora inicia sesión.', 'success');
-            setTimeout(() => showLogin(), 1500);
+        const data = await res.json();
+        if(res.ok) {
+            showMessage('¡Cuenta creada con éxito! Ahora inicia sesión.', 'success');
+            showLogin();
         } else {
-            showMessage('registerMessage', '❌ ' + (data.detail || 'Error al registrar'), 'error');
+            showMessage(data.detail || 'Error al registrarse.', 'error');
         }
-    } catch (error) {
-        showMessage('registerMessage', '❌ Error de conexión: ' + error.message, 'error');
+    } catch(e) {
+        showMessage('Error de conexión con el servidor.', 'error');
     }
 }
 
-async function login() {
-    clearMessages();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
+async function handleLogin() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
 
-    if (!email || !password) {
-        showMessage('loginMessage', '❌ Email y contraseña son obligatorios', 'error');
+    if(!email || !password) {
+        showMessage('Por favor ingresa tu correo y contraseña.', 'error');
         return;
     }
 
     try {
-        const formData = new URLSearchParams();
-        formData.append('username', email);
-        formData.append('password', password);
-
-        const response = await fetch(`${API_URL}/api/token`, {
+        const res = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
-
-        const data = await response.json();
-        if (response.ok) {
+        const data = await res.json();
+        if(res.ok) {
             token = data.access_token;
-            user = { id: data.user_id, email: email };
-            document.getElementById('userName').textContent = email;
-            showScreen('dashboardScreen');
+            localStorage.setItem('walz_token', token);
+            showMessage('¡Bienvenido a WalZ!', 'success');
+            showMarketplace();
             loadProducts();
         } else {
-            showMessage('loginMessage', '❌ Credenciales incorrectas', 'error');
+            showMessage(data.detail || 'Credenciales incorrectas.', 'error');
         }
-    } catch (error) {
-        showMessage('loginMessage', '❌ Error de conexión: ' + error.message, 'error');
+    } catch(e) {
+        showMessage('Error de conexión con el servidor.', 'error');
     }
 }
 
-function logout() {
+function handleLogout() {
     token = null;
-    user = null;
-    showScreen('loginScreen');
+    localStorage.removeItem('walz_token');
+    cart = [];
+    showAuth();
+    showMessage('Sesión cerrada.', 'success');
 }
 
-// ==========================================
-// PRODUCTOS
-// ==========================================
-async function loadProducts() {
-    const list = document.getElementById('productList');
-    list.innerHTML = '<p>Cargando productos...</p>';
+// --- FUNCIONES DEL MARKETPLACE ---
+
+async function handleCreateProduct() {
+    token = localStorage.getItem('walz_token');
+    const name = document.getElementById('prod-name').value;
+    const price = parseFloat(document.getElementById('prod-price').value);
+    const stock = parseInt(document.getElementById('prod-stock').value);
+
+    if(!name || isNaN(price) || isNaN(stock)) {
+        showMessage('Completa los datos del producto.', 'error');
+        return;
+    }
 
     try {
-        const response = await fetch(`${API_URL}/api/products`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`${API_URL}/products/`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name, price, stock, category: '' })
         });
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                list.innerHTML = '<p style="color:red;">⚠️ Sesión expirada. Inicia sesión nuevamente.</p>';
-                setTimeout(() => logout(), 2000);
-                return;
-            }
-            throw new Error('Error al cargar productos');
+        if(res.ok) {
+            showMessage('¡Producto publicado con éxito!', 'success');
+            document.getElementById('prod-name').value = '';
+            document.getElementById('prod-price').value = '';
+            document.getElementById('prod-stock').value = '';
+            loadProducts();
+        } else {
+            const data = await res.json();
+            showMessage(data.detail || 'Error al publicar el producto.', 'error');
         }
+    } catch(e) {
+        showMessage('Error de conexión.', 'error');
+    }
+}
 
-        const products = await response.json();
-        if (products.length === 0) {
-            list.innerHTML = '<p>📭 No tienes productos aún. ¡Crea el primero!</p>';
+async function loadProducts() {
+    try {
+        const res = await fetch(`${API_URL}/products/`);
+        const products = await res.json();
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        
+        if(products.length === 0) {
+            list.innerHTML = '<p style="color: #888;">Aún no hay productos publicados.</p>';
             return;
         }
 
-        list.innerHTML = products.map(p => `
-            <div class="product-card">
-                <h4>${p.name}</h4>
-                <div class="price">$ ${p.price}</div>
-                <div class="stock">📦 Stock: ${p.stock}</div>
-                <div style="font-size:0.8rem;color:#888;margin-top:4px;">${p.description || ''}</div>
-            </div>
-        `).join('');
-    } catch (error) {
-        list.innerHTML = '<p style="color:red;">❌ Error al cargar productos: ' + error.message + '</p>';
+        products.forEach(p => {
+            list.innerHTML += `
+                <div class="product-item">
+                    <div class="product-info">
+                        <h4>${p.name}</h4>
+                        <p>💰 $${p.price} | 📦 Stock: ${p.stock}</p>
+                    </div>
+                    <div class="product-actions">
+                        <input type="number" id="qty-${p.id}" value="1" min="1" max="${p.stock}" style="width: 50px; padding: 5px; margin-right: 5px;">
+                        <button onclick="addToCart('${p.id}', '${p.name}', ${p.price})" class="buy-btn">🛒 Agregar</button>
+                    </div>
+                </div>
+            `;
+        });
+    } catch(e) {
+        console.error('Error cargando productos:', e);
     }
 }
 
-async function createProduct() {
-    clearMessages();
-    const name = document.getElementById('productName').value.trim();
-    const price = parseFloat(document.getElementById('productPrice').value);
-    const description = document.getElementById('productDescription').value.trim();
-    const stock = parseInt(document.getElementById('productStock').value) || 0;
+// --- CARRITO DE COMPRAS ---
 
-    if (!name || isNaN(price) || price <= 0) {
-        showMessage('productMessage', '❌ Nombre y precio válido son obligatorios', 'error');
+function addToCart(productId, productName, price) {
+    console.log("🛒 CLICK DETECTADO para:", productName);
+    const qtyInput = document.getElementById(`qty-${productId}`);
+    const quantity = parseInt(qtyInput.value);
+
+    if(!quantity || quantity < 1) {
+        showMessage('Selecciona una cantidad válida.', 'error');
         return;
     }
 
+    const existingItem = cart.find(item => item.productId === productId);
+    if(existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        cart.push({ productId, productName, price, quantity });
+    }
+
+    showMessage(`✅ ${productName} (x${quantity}) agregado al carrito`, 'success');
+    updateCartUI();
+}
+
+function updateCartUI() {
+    const cartCount = document.getElementById('cart-count');
+    if(cartCount) {
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        cartCount.textContent = totalItems;
+    }
+}
+
+function toggleCart() {
+    const cartSection = document.getElementById('cart-section');
+    if(cartSection.style.display === 'none') {
+        cartSection.style.display = 'block';
+        renderCartItems();
+    } else {
+        cartSection.style.display = 'none';
+    }
+}
+
+function renderCartItems() {
+    const container = document.getElementById('cart-items');
+    container.innerHTML = '';
+    let total = 0;
+
+    if(cart.length === 0) {
+        container.innerHTML = '<p style="color: #888;">El carrito está vacío.</p>';
+        document.getElementById('cart-total').textContent = '';
+        return;
+    }
+
+    cart.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        container.innerHTML += `
+            <div class="product-item" style="display: flex; justify-content: space-between;">
+                <div>
+                    <strong>${item.productName}</strong> (x${item.quantity})
+                </div>
+                <div>
+                    $${itemTotal}
+                    <button onclick="removeFromCart(${index})" style="width: auto; padding: 2px 8px; background: #aa0000;">X</button>
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById('cart-total').textContent = `Total: $${total}`;
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    renderCartItems();
+    updateCartUI();
+}
+
+async function checkout() {
+    if(cart.length === 0) {
+        showMessage('El carrito está vacío.', 'error');
+        return;
+    }
+
+    token = localStorage.getItem('walz_token');
+    const firstItem = cart[0];
+
     try {
-        const response = await fetch(`${API_URL}/api/products`, {
+        const res = await fetch(`${API_URL}/orders/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ name, price, description, stock })
+            body: JSON.stringify({
+                items: [{ product_id: firstItem.productId, quantity: firstItem.quantity }],
+                shipping_address: "Dirección de prueba"
+            })
         });
 
-        const data = await response.json();
-        if (response.ok) {
-            showMessage('productMessage', '✅ ¡Producto creado!', 'success');
-            // Limpiar campos
-            document.getElementById('productName').value = '';
-            document.getElementById('productPrice').value = '';
-            document.getElementById('productDescription').value = '';
-            document.getElementById('productStock').value = '';
-            loadProducts(); // Recargar lista
+        if(res.ok) {
+            showMessage(`✅ Compra de ${firstItem.productName} realizada con éxito!`, 'success');
+            cart = [];
+            renderCartItems();
+            updateCartUI();
+            loadProducts();
+            toggleCart();
         } else {
-            showMessage('productMessage', '❌ ' + (data.detail || 'Error al crear producto'), 'error');
+            const data = await res.json();
+            showMessage(data.detail || 'Error al procesar la compra.', 'error');
         }
-    } catch (error) {
-        showMessage('productMessage', '❌ Error de conexión: ' + error.message, 'error');
+    } catch(e) {
+        showMessage('Error de conexión al comprar.', 'error');
     }
 }
 
-// ==========================================
-// INICIO: Mostrar pantalla de login
-// ==========================================
-showScreen('loginScreen');
+// --- FUNCIONES DE UI ---
+
+function showMessage(text, type) {
+    const box = document.getElementById('message-box');
+    box.textContent = text;
+    box.className = `message-box ${type}`;
+    setTimeout(() => { box.className = 'message-box'; }, 5000);
+}
+
+function showRegister() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('message-box').className = 'message-box';
+}
+
+function showLogin() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('message-box').className = 'message-box';
+}
+
+function showAuth() {
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('marketplace-section').style.display = 'none';
+}
+
+function showMarketplace() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('marketplace-section').style.display = 'block';
+}
