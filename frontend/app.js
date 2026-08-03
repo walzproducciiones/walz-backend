@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'https://walz-backend.onrender.com';
 let token = null;
 let cart = [];
 
