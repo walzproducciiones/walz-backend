@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import auth, products, orders
 from backend.app.database.session import engine
 from backend.app.models import user
-from app.api import auth, products, orders
+from backend.app.api import auth, products, orders
 
 # Crear las tablas en la base de datos (si no existen)
 user.Base.metadata.create_all(bind=engine)
