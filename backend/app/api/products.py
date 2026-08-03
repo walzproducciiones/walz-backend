@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from backend.app.database.session import SessionLocal  # <--- CAMBIADO
-from backend.app.schemas.product import ProductCreate, ProductResponse  # <--- CAMBIADO
-from backend.app.services.product_service import create_product, get_products  # <--- CAMBIADO
-from backend.app.api.auth import get_current_user  # <--- CAMBIADO
-from backend.app.models.user import User  # <--- CAMBIADO
-from uuid import UUIDfrom fastapi import APIRouter, Depends, HTTPException, Query
+from backend.app.database.session import SessionLocal
+from backend.app.schemas.product import ProductCreate, ProductResponse
+from backend.app.services.product_service import create_product, get_products
+from backend.app.api.auth import get_current_user
+from backend.app.models.user import User
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal  # <--- CAMBIADO
 from backend.app.schemas.product import ProductCreate, ProductResponse  # <--- CAMBIADO
