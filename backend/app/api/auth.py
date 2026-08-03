@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.session import SessionLocal
 from app.schemas.user import UserCreate, UserResponse, UserLogin
-from app.services.auth_service import register_user
+from backend.app.services.auth_service import register_user
 from app.security.jwt import create_access_token, create_refresh_token, decode_token  # <-- Actualizado
 from app.security.password import verify_password
-from app.models.user import User
+from backend.app.models.user import User
 from datetime import timezone, datetime
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials  # <-- NUEVO
 from uuid import UUID

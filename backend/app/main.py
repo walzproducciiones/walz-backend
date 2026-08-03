@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth
+from backend.app.api import auth
 from app.database.session import engine
 from app.models import user
 from app.api import auth, products, orders
