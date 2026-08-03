@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
+# --- Productos ---
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
@@ -22,3 +23,10 @@ class ProductResponse(ProductBase):
 
     class Config:
         from_attributes = True
+
+# --- Filtros de búsqueda ---
+class ProductFilter(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
