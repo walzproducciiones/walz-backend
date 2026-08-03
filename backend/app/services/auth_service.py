@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from app.models.user import User
-from app.schemas.user import UserCreate
-from app.security.password import hash_password
-from app.services.email_service import send_verification_email  # <-- IMPORTADO
-from app.security.jwt import create_access_token
+from backend.app.models.user import User
+from backend.app.schemas.user import UserCreate
+from backend.app.security.password import hash_password
+from backend.app.services.email_service import send_verification_email
+from backend.app.security.jwt import create_access_token
 
 def register_user(db: Session, user_data: UserCreate):
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -23,8 +23,7 @@ def register_user(db: Session, user_data: UserCreate):
     db.commit()
     db.refresh(new_user)
 
-    # Generar token de verificación y enviar correo
     verification_token = create_access_token({"sub": str(new_user.id), "email": new_user.email})
-    send_verification_email(new_user.email, verification_token)  # <-- ENVIAR CORREO
+    send_verification_email(new_user.email, verification_token)
 
     return new_user, None

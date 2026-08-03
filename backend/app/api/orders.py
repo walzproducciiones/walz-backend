@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database.session import SessionLocal
-from app.schemas.order import OrderCreate, OrderResponse
-from app.services.order_service import create_order
-from app.api.auth import get_current_user
-from app.models.user import User
+from backend.app.database.session import SessionLocal
+from backend.app.schemas.order import OrderCreate, OrderResponse
+from backend.app.services.order_service import create_order
+from backend.app.api.auth import get_current_user
+from backend.app.models.user import User
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 

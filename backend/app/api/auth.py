@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database.session import SessionLocal
-from app.schemas.user import UserCreate, UserResponse, UserLogin
+from backend.app.database.session import SessionLocal
+from backend.app.schemas.user import UserCreate, UserResponse, UserLogin
 from backend.app.services.auth_service import register_user
-from app.security.jwt import create_access_token, create_refresh_token, decode_token  # <-- Actualizado
-from app.security.password import verify_password
+from backend.app.security.jwt import create_access_token, create_refresh_token, decode_token
+from backend.app.security.password import verify_password
 from backend.app.models.user import User
 from datetime import timezone, datetime
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials  # <-- NUEVO
-from uuid import UUID
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -46,9 +45,6 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
         "user": UserResponse.model_validate(user)
     }
 
-# ==========================================================
-# PROTECCIÓN DE RUTAS
-# ==========================================================
 security = HTTPBearer()
 
 def get_current_user(
@@ -60,7 +56,7 @@ def get_current_user(
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    user = db.query(User).filter(User.id == UUID(payload.get("sub"))).first()
+    user = db.query(User).filter(User.id == payload.get("sub")).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user

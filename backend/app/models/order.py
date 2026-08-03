@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Float, Integer, Boolean, ForeignKey, UUID, Enum, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database.session import Base
+from backend.app.database.session import Base
 import uuid
 import enum
 
@@ -23,7 +23,6 @@ class Order(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relaciones
     buyer = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
@@ -36,6 +35,5 @@ class OrderItem(Base):
     quantity = Column(Integer, nullable=False, default=1)
     price_at_purchase = Column(Float, nullable=False)
 
-    # Relaciones
     order = relationship("Order", back_populates="items")
     product = relationship("Product")

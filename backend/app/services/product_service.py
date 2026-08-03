@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
-from app.models.product import Product
-from app.schemas.product import ProductCreate
+from backend.app.models.product import Product
+from backend.app.schemas.product import ProductCreate
 from uuid import UUID
-
 
 def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
     new_product = Product(

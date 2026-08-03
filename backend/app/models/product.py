@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Float, Integer, Boolean, ForeignKey, UUID, Text, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.database.session import Base
+from backend.app.database.session import Base
 import uuid
 
 class Product(Base):
@@ -19,5 +19,4 @@ class Product(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relación con el usuario (vendedor)
     seller = relationship("User", back_populates="products")
