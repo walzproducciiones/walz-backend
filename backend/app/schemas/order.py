@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
-from app.schemas.product import ProductResponse
+from backend.app.schemas.product import ProductResponse
 
 class OrderItemBase(BaseModel):
     product_id: UUID
