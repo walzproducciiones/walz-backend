@@ -1,43 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from backend.app.database.session import SessionLocal
 from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter
-from backend.app.services.product_service import create_product, get_products
-from backend.app.api.auth import get_current_user
-from backend.app.models.user import User
-from uuid import UUID
-
-router = APIRouter(prefix="/products", tags=["Products"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@router.post("/", response_model=ProductResponse)
-def create_new_product(
-    product: ProductCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return create_product(db, current_user.id, product)
+import traceback
+from fastapi import HTTPException
 
 @router.get("/", response_model=list[ProductResponse])
 def list_products(
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=100),
-    name: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    min_price: float | None = Query(default=None, ge=0),
-    max_price: float | None = Query(default=None, ge=0),
-    db: Session = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    name: str | None = Query(None),
+    category: str | None = Query(None),
+    min_price: float | None = Query(None, ge=0),
+    max_price: float | None = Query(None, ge=0),
+    db: Session = Depends(get_db),
 ):
-    filters = ProductFilter(
-        name=name,
-        category=category,
-        min_price=min_price,
-        max_price=max_price
-    )
-    return get_products(db, skip, limit, filters)
+    try:
+        filters = ProductFilter(
+            name=name,
+            category=category,
+            min_price=min_price,
+            max_price=max_price,
+        )
+        return get_products(db, skip, limit, filters)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
