@@ -1,18 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
-from backend.app.schemas.product import ProductCreate, ProductResponse
+from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter
 from backend.app.services.product_service import create_product, get_products
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from backend.app.database.session import SessionLocal  # <--- CAMBIADO
-from backend.app.schemas.product import ProductCreate, ProductResponse  # <--- CAMBIADO
-from backend.app.services.product_service import create_product, get_products  # <--- CAMBIADO
-from backend.app.api.auth import get_current_user  # <--- CAMBIADO
-from backend.app.models.user import User  # <--- CAMBIADO
 from uuid import UUID
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -34,12 +26,12 @@ def create_new_product(
 
 @router.get("/", response_model=list[ProductResponse])
 def list_products(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    name: str | None = None,  # <--- CAMBIADO: sin Optional[str], usa str | None
-    category: str | None = None,  # <--- CAMBIADO
-    min_price: float | None = Query(None, ge=0),  # <--- CAMBIADO
-    max_price: float | None = Query(None, ge=0),  # <--- CAMBIADO
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
+    name: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    min_price: float | None = Query(default=None, ge=0),
+    max_price: float | None = Query(default=None, ge=0),
     db: Session = Depends(get_db)
 ):
     filters = ProductFilter(
