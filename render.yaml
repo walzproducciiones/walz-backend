@@ -2,7 +2,5 @@ services:
   - type: web
     name: walz-backend
     runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-      alembic upgrade head
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port 10000
