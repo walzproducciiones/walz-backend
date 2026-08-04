@@ -36,6 +36,16 @@ def create_new_product(
 def list_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    name: Optional[str] = None,
+    category: Optional[str] = None,
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
     db: Session = Depends(get_db)
 ):
-    return get_products(db, skip, limit)
+    filters = ProductFilter(
+        name=name,
+        category=category,
+        min_price=min_price,
+        max_price=max_price
+    )
+    return get_products(db, skip, limit, filters)  # <--- ¡AGREGAR filters AQUÍ!
