@@ -40,13 +40,13 @@ app.add_middleware(
 
 # --- Servir el frontend desde la raíz ---
 # FastAPI servirá index.html, app.js, style.css, order-success.html
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 # --- Incluir los routers ---
 app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(payments.router)
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 @app.get("/api/health")
 def health_check():
