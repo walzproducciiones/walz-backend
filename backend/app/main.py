@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import auth, products, orders
 from backend.app.database.session import engine
 from backend.app.models import user
-from backend.app.api import auth, products, orders
+from backend.app.api import auth, products, orders{}
+from fastapi.staticfiles import StaticFiles
 
 # Crear las tablas en la base de datos (si no existen)
 user.Base.metadata.create_all(bind=engine)
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(orders.router)
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 @app.get("/")
 def read_root():
