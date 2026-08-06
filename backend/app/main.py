@@ -1,9 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from backend.app.api import auth, products, orders, payments
-from backend.app.database.session import engine
 from backend.app.models import user, product, order
+
+# --- Configuración de la base de datos (SQLite) ---
+# Con SQLite no necesitas URL externa, Render no tiene conflictos de conexión.
+DATABASE_URL = "sqlite:///./walz_local.db"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 # Crear las tablas en la base de datos (si no existen)
 user.Base.metadata.create_all(bind=engine)
@@ -29,6 +39,7 @@ app.add_middleware(
 )
 
 # --- Servir el frontend desde la raíz ---
+# FastAPI servirá index.html, app.js, style.css, order-success.html
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 # --- Incluir los routers ---
