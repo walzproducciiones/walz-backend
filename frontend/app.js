@@ -2,7 +2,7 @@ const API_URL = 'https://walz-backend.onrender.com';
 let token = null;
 let cart = [];
 
-// --- FUNCIONES DE AUTENTICACIÓN ---
+// --- AUTENTICACIÓN ---
 
 async function handleRegister() {
     const first_name = document.getElementById('reg-firstname').value;
@@ -10,8 +10,8 @@ async function handleRegister() {
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
 
-    if(!email || !password || !first_name || !last_name) {
-        showMessage('Por favor completa todos los campos.', 'error');
+    if (!email || !password || !first_name || !last_name) {
+        showMessage('Completa todos los campos.', 'error');
         return;
     }
 
@@ -19,17 +19,17 @@ async function handleRegister() {
         const res = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, first_name, last_name, password, role: 'COMPRADOR', phone: '' })
+            body: JSON.stringify({ email, first_name, last_name, password, role: 'COMPRADOR' })
         });
         const data = await res.json();
-        if(res.ok) {
-            showMessage('¡Cuenta creada con éxito! Ahora inicia sesión.', 'success');
+        if (res.ok) {
+            showMessage('Cuenta creada. Inicia sesión.', 'success');
             showLogin();
         } else {
             showMessage(data.detail || 'Error al registrarse.', 'error');
         }
-    } catch(e) {
-        showMessage('Error de conexión con el servidor.', 'error');
+    } catch (e) {
+        showMessage('Error de conexión.', 'error');
     }
 }
 
@@ -37,8 +37,8 @@ async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    if(!email || !password) {
-        showMessage('Por favor ingresa tu correo y contraseña.', 'error');
+    if (!email || !password) {
+        showMessage('Ingresa correo y contraseña.', 'error');
         return;
     }
 
@@ -49,17 +49,17 @@ async function handleLogin() {
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-        if(res.ok) {
+        if (res.ok) {
             token = data.access_token;
             localStorage.setItem('walz_token', token);
-            showMessage('¡Bienvenido a WalZ!', 'success');
+            showMessage('Bienvenido a WalZ!', 'success');
             showMarketplace();
             loadProducts();
         } else {
             showMessage(data.detail || 'Credenciales incorrectas.', 'error');
         }
-    } catch(e) {
-        showMessage('Error de conexión con el servidor.', 'error');
+    } catch (e) {
+        showMessage('Error de conexión.', 'error');
     }
 }
 
@@ -71,7 +71,7 @@ function handleLogout() {
     showMessage('Sesión cerrada.', 'success');
 }
 
-// --- FUNCIONES DEL MARKETPLACE ---
+// --- MARKETPLACE ---
 
 async function handleCreateProduct() {
     token = localStorage.getItem('walz_token');
@@ -79,31 +79,31 @@ async function handleCreateProduct() {
     const price = parseFloat(document.getElementById('prod-price').value);
     const stock = parseInt(document.getElementById('prod-stock').value);
 
-    if(!name || isNaN(price) || isNaN(stock)) {
-        showMessage('Completa los datos del producto.', 'error');
+    if (!name || isNaN(price) || isNaN(stock)) {
+        showMessage('Completa los datos.', 'error');
         return;
     }
 
     try {
         const res = await fetch(`${API_URL}/products/`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ name, price, stock, category: '' })
         });
-        if(res.ok) {
-            showMessage('¡Producto publicado con éxito!', 'success');
+        if (res.ok) {
+            showMessage('Producto publicado!', 'success');
             document.getElementById('prod-name').value = '';
             document.getElementById('prod-price').value = '';
             document.getElementById('prod-stock').value = '';
             loadProducts();
         } else {
             const data = await res.json();
-            showMessage(data.detail || 'Error al publicar el producto.', 'error');
+            showMessage(data.detail || 'Error al publicar.', 'error');
         }
-    } catch(e) {
+    } catch (e) {
         showMessage('Error de conexión.', 'error');
     }
 }
@@ -114,173 +114,129 @@ async function loadProducts() {
         const products = await res.json();
         const list = document.getElementById('product-list');
         list.innerHTML = '';
-        
-        if(products.length === 0) {
-            list.innerHTML = '<p style="color: #888;">Aún no hay productos publicados.</p>';
+
+        if (products.length === 0) {
+            list.innerHTML = '<p style="color: #888;">No hay productos.</p>';
             return;
         }
 
         products.forEach(p => {
+            const stockValue = Number(p.stock);
+            const hasStock = stockValue > 0;
+
             list.innerHTML += `
                 <div class="product-item">
-                    <div class="product-info">
-                        <h4>${p.name}</h4>
-                        <p>💰 $${p.price} | 📦 Stock: ${p.stock}</p>
-                    </div>
+                    <h4>${p.name}</h4>
+                    <p>💰 $${p.price} | 📦 Stock: ${stockValue}</p>
                     <div class="product-actions">
-                        <input type="number" id="qty-${p.id}" value="1" min="1" max="${p.stock}" style="width: 50px; padding: 5px; margin-right: 5px;">
-                        <button onclick="addToCart('${p.id}', '${p.name}', ${p.price})" class="buy-btn">🛒 Agregar</button>
+                        ${hasStock ? `
+                            <input type="number" id="qty-${p.id}" value="1" min="1" max="${stockValue}" style="width: 50px;">
+                            <button onclick="addToCart('${p.id}', '${p.name}', ${p.price})">🛒 Agregar</button>
+                        ` : `
+                            <p style="color: #ff4444; font-weight: bold;">Sin stock</p>
+                        `}
                     </div>
                 </div>
             `;
         });
-    } catch(e) {
-        console.error('Error cargando productos:', e);
+    } catch (e) {
+        console.error(e);
     }
 }
 
-// --- CARRITO DE COMPRAS ---
+// --- CARRITO ---
 
-function addToCart(productId, productName, price) {
-    console.log("🛒 CLICK DETECTADO para:", productName);
-    const qtyInput = document.getElementById(`qty-${productId}`);
-    const quantity = parseInt(qtyInput.value);
-
-    if(!quantity || quantity < 1) {
-        showMessage('Selecciona una cantidad válida.', 'error');
-        return;
-    }
-
-    const existingItem = cart.find(item => item.productId === productId);
-    if(existingItem) {
-        existingItem.quantity += quantity;
+function addToCart(id, name, price) {
+    const qtyInput = document.getElementById(`qty-${id}`);
+    const qty = parseInt(qtyInput.value) || 1;
+    const existing = cart.find(item => item.id === id);
+    if (existing) {
+        existing.qty += qty;
     } else {
-        cart.push({ productId, productName, price, quantity });
+        cart.push({ id, name, price, qty });
     }
-
-    showMessage(`✅ ${productName} (x${quantity}) agregado al carrito`, 'success');
+    showMessage(`✅ ${name} (x${qty}) agregado`, 'success');
     updateCartUI();
 }
 
 function updateCartUI() {
-    const cartCount = document.getElementById('cart-count');
-    if(cartCount) {
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        cartCount.textContent = totalItems;
+    const count = document.getElementById('cart-count');
+    if (count) {
+        const total = cart.reduce((sum, item) => sum + item.qty, 0);
+        count.textContent = total;
     }
 }
 
 function toggleCart() {
-    const cartSection = document.getElementById('cart-section');
-    if(cartSection.style.display === 'none') {
-        cartSection.style.display = 'block';
-        renderCartItems();
+    const section = document.getElementById('cart-section');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        renderCart();
     } else {
-        cartSection.style.display = 'none';
+        section.style.display = 'none';
     }
 }
 
-function renderCartItems() {
+function renderCart() {
     const container = document.getElementById('cart-items');
     container.innerHTML = '';
     let total = 0;
-
-    if(cart.length === 0) {
-        container.innerHTML = '<p style="color: #888;">El carrito está vacío.</p>';
+    if (cart.length === 0) {
+        container.innerHTML = '<p style="color:#888;">Carrito vacío.</p>';
         document.getElementById('cart-total').textContent = '';
         return;
     }
-
-    cart.forEach((item, index) => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
+    cart.forEach((item, idx) => {
+        const subtotal = item.price * item.qty;
+        total += subtotal;
         container.innerHTML += `
-            <div class="product-item" style="display: flex; justify-content: space-between;">
-                <div>
-                    <strong>${item.productName}</strong> (x${item.quantity})
-                </div>
-                <div>
-                    $${itemTotal}
-                    <button onclick="removeFromCart(${index})" style="width: auto; padding: 2px 8px; background: #aa0000;">X</button>
-                </div>
+            <div style="display:flex;justify-content:space-between;background:#222;padding:10px;margin:5px 0;">
+                <span>${item.name} x${item.qty}</span>
+                <span>$${subtotal} <button onclick="removeFromCart(${idx})" style="background:#a00;">X</button></span>
             </div>
         `;
     });
-
     document.getElementById('cart-total').textContent = `Total: $${total}`;
 }
 
-function removeFromCart(index) {
-    cart.splice(index, 1);
-    renderCartItems();
+function removeFromCart(idx) {
+    cart.splice(idx, 1);
+    renderCart();
     updateCartUI();
 }
 
 async function checkout() {
-    if(cart.length === 0) {
-        showMessage('El carrito está vacío.', 'error');
-        return;
-    }
-
-    token = localStorage.getItem('walz_token');
-    const firstItem = cart[0];
-
+    // ... (código anterior de validación y token) ...
+    
     try {
-        const res = await fetch(`${API_URL}/orders/`, {
+        const res = await fetch('https://walz-backend.onrender.com/orders/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                items: [{ product_id: firstItem.productId, quantity: firstItem.quantity }],
+                items: cart.map(item => ({
+                    product_id: item.productId,
+                    quantity: item.quantity
+                })),
                 shipping_address: "Dirección de prueba"
             })
         });
 
-        if(res.ok) {
-            showMessage(`✅ Compra de ${firstItem.productName} realizada con éxito!`, 'success');
+        if (res.ok) {
+            // Vaciar el carrito y redirigir a la página de éxito
             cart = [];
             renderCartItems();
             updateCartUI();
             loadProducts();
             toggleCart();
+            window.location.href = 'https://walz-backend-1.onrender.com/order-success.html';
         } else {
             const data = await res.json();
             showMessage(data.detail || 'Error al procesar la compra.', 'error');
         }
-    } catch(e) {
+    } catch (e) {
         showMessage('Error de conexión al comprar.', 'error');
     }
-}
-
-// --- FUNCIONES DE UI ---
-
-function showMessage(text, type) {
-    const box = document.getElementById('message-box');
-    box.textContent = text;
-    box.className = `message-box ${type}`;
-    setTimeout(() => { box.className = 'message-box'; }, 5000);
-}
-
-function showRegister() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
-    document.getElementById('message-box').className = 'message-box';
-}
-
-function showLogin() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
-    document.getElementById('message-box').className = 'message-box';
-}
-
-function showAuth() {
-    document.getElementById('auth-section').style.display = 'block';
-    document.getElementById('marketplace-section').style.display = 'none';
-}
-
-function showMarketplace() {
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('marketplace-section').style.display = 'block';
 }

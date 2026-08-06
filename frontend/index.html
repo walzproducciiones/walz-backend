@@ -13,25 +13,24 @@
             <h1 class="logo">WALZ</h1>
             
             <!-- Formulario de Login -->
-            <<form id="login-form">
+            <div id="login-form">
                 <h3>Iniciar Sesión</h3>
                 <input type="email" id="login-email" placeholder="Correo electrónico">
                 <input type="password" id="login-password" placeholder="Contraseña">
-                <button type="button" onclick="handleLogin()">Ingresar</button>
-                <p class="switch-text">¿No tienes cuenta? <a href="#" onclick="showRegister()">Crear cuenta</a>
-            </p>
-            </form>
+                <button onclick="handleLogin()">Ingresar</button>
+                <p class="switch-text">¿No tienes cuenta? <a href="#" onclick="showRegister()">Crear cuenta</a></p>
+            </div>
 
             <!-- Formulario de Registro -->
-            <form id="register-form" style="display: none;">
+            <div id="register-form" style="display: none;">
                 <h3>Crear Cuenta</h3>
                 <input type="text" id="reg-firstname" placeholder="Nombre">
                 <input type="text" id="reg-lastname" placeholder="Apellido">
                 <input type="email" id="reg-email" placeholder="Correo electrónico">
                 <input type="password" id="reg-password" placeholder="Contraseña (mín. 8 caracteres)">
-                <button type="button" onclick="handleRegister()">Registrarse</button>
+                <button onclick="handleRegister()">Registrarse</button>
                 <p class="switch-text">¿Ya tienes cuenta? <a href="#" onclick="showLogin()">Iniciar sesión</a></p>
-            </form>
+            </div>
 
             <!-- Mensajes de feedback -->
             <div id="message-box" class="message-box"></div>
@@ -55,28 +54,6 @@
         </div>
     </div>
 
-    <!-- ======================================================== -->
-<!-- SECCIÓN DEL CARRITO DE COMPRAS (NUEVO)                   -->
-<!-- ======================================================== -->
-
-<!-- Sección del Carrito (oculta por defecto) -->
-<div id="cart-section" style="display: none; margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
-    <h3>🛒 Tu Carrito</h3>
-    <div id="cart-items"></div>
-    <div id="cart-total" style="margin-top: 10px; font-weight: bold;"></div>
-    <button onclick="checkout()" style="margin-top: 10px; background: #00aa88;">Finalizar Compra</button>
-    <button onclick="toggleCart()" style="margin-top: 5px; background: #333;">Cerrar Carrito</button>
-</div>
-
-<!-- Botón flotante para abrir el carrito -->
-<div style="position: fixed; bottom: 20px; right: 20px;">
-    <button onclick="toggleCart()" style="width: auto; padding: 10px 20px; border-radius: 50px; background: #ff00aa;">
-        🛒 <span id="cart-count">0</span>
-    </button>
-</div>
-
-<!-- ======================================================== -->
- 
     <script src="app.js"></script>
 </body>
 </html>
