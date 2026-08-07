@@ -75,6 +75,8 @@ function handleLogout() {
 
 async function handleCreateProduct() {
     token = localStorage.getItem('walz_token');
+    console.log("📤 Token enviado:", token);  // <--- ESTO TE MUESTRA EL TOKEN EN LA CONSOLA
+
     const name = document.getElementById('prod-name').value;
     const price = parseFloat(document.getElementById('prod-price').value);
     const stock = parseInt(document.getElementById('prod-stock').value);
@@ -101,10 +103,11 @@ async function handleCreateProduct() {
             loadProducts();
         } else {
             const data = await res.json();
-            console.log("❌ Error del backend:", data);  // <--- ESTA LÍNEA ES LA QUE AGREGASTE
+            console.log("❌ Error del backend:", data);  // <--- ESTO MUESTRA EL ERROR REAL
             showMessage(data.detail || 'Error al publicar.', 'error');
         }
     } catch (e) {
+        console.error("🚨 Error de red:", e);
         showMessage('Error de conexión.', 'error');
     }
 }
