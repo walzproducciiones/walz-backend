@@ -101,6 +101,7 @@ async function handleCreateProduct() {
             loadProducts();
         } else {
             const data = await res.json();
+            console.log("❌ Error del backend:", data);  // <--- ESTA LÍNEA ES LA QUE AGREGASTE
             showMessage(data.detail || 'Error al publicar.', 'error');
         }
     } catch (e) {
