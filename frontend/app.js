@@ -206,8 +206,17 @@ function removeFromCart(idx) {
 }
 
 async function checkout() {
-    // ... (código anterior de validación y token) ...
-    
+    if (cart.length === 0) {
+        showMessage('El carrito está vacío.', 'error');
+        return;
+    }
+
+    const token = localStorage.getItem('walz_token');
+    if (!token) {
+        showMessage('Debes iniciar sesión para comprar.', 'error');
+        return;
+    }
+
     try {
         const res = await fetch('https://walz-backend.onrender.com/orders/', {
             method: 'POST',
@@ -225,13 +234,12 @@ async function checkout() {
         });
 
         if (res.ok) {
-            // Vaciar el carrito y redirigir a la página de éxito
+            showMessage('✅ ¡Compra realizada con éxito!', 'success');
             cart = [];
             renderCartItems();
             updateCartUI();
             loadProducts();
             toggleCart();
-            window.location.href = 'https://walz-backend-1.onrender.com/order-success.html';
         } else {
             const data = await res.json();
             showMessage(data.detail || 'Error al procesar la compra.', 'error');
@@ -239,4 +247,35 @@ async function checkout() {
     } catch (e) {
         showMessage('Error de conexión al comprar.', 'error');
     }
+}
+
+// --- UI ---
+
+function showMessage(text, type) {
+    const box = document.getElementById('message-box');
+    box.textContent = text;
+    box.className = `message-box ${type}`;
+    setTimeout(() => { box.className = 'message-box'; }, 4000);
+}
+
+function showRegister() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('message-box').className = 'message-box';
+}
+
+function showLogin() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('message-box').className = 'message-box';
+}
+
+function showAuth() {
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('marketplace-section').style.display = 'none';
+}
+
+function showMarketplace() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('marketplace-section').style.display = 'block';
 }
