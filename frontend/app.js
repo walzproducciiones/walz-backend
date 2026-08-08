@@ -237,10 +237,10 @@ async function checkout() {
             })
         });
 
-                if (res.ok) {
+        if (res.ok) {
             showMessage('✅ ¡Compra realizada con éxito!', 'success');
             cart = [];
-            renderCart();      // <-- CAMBIADO: era renderCartItems()
+            renderCart();      // <--- CAMBIADO: era renderCartItems()
             updateCartUI();
             loadProducts();
             toggleCart();
@@ -248,6 +248,10 @@ async function checkout() {
             const data = await res.json();
             showMessage(data.detail || 'Error al procesar la compra.', 'error');
         }
+    } catch (e) {
+        showMessage('Error de conexión al comprar.', 'error');
+    }
+}
 
 // --- UI ---
 
