@@ -3,7 +3,8 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
-# Esquema base (Campos comunes)
+
+# Esquema base (campos comunes)
 class UserBase(BaseModel):
     email: EmailStr
     first_name: str = Field(..., min_length=1, max_length=80)
@@ -11,11 +12,14 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     role: str = "COMPRADOR"
 
-# Esquema para recibir datos al REGISTRARSE (incluye la contraseña)
+
+# Esquema para recibir datos al REGISTRARSE
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
-# Esquema para devolver datos al FRONTEND (NUNCA devolvemos la contraseña)
+
+# Esquema para devolver datos al FRONTEND
+# NUNCA devolvemos la contraseña
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
@@ -25,6 +29,7 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
 
 # Esquema para el LOGIN
 class UserLogin(BaseModel):
