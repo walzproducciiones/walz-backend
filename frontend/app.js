@@ -384,51 +384,36 @@ async function loadProducts() {
 // CARRITO
 // =====================================================
 
-function addToCart(
-    id,
-    name,
-    price,
-    stock
-) {
+function addToCart(id, name, price) {
+    console.log("🛒 AGREGAR PRESIONADO");
+    console.log("ID:", id);
+    console.log("Nombre:", name);
+    console.log("Precio:", price);
 
-    console.log(
-        '🛒 Agregando producto:',
-        {
-            id,
-            name,
-            price,
-            stock
-        }
-    );
+    const qtyInput = document.getElementById(`qty-${id}`);
+    const qty = parseInt(qtyInput?.value) || 1;
 
-    const qtyInput =
-        document.getElementById(
-            `qty-${id}`
-        );
+    console.log("Cantidad:", qty);
 
-    let qty = 1;
+    const existing = cart.find(item => item.id === id);
 
-    if (qtyInput) {
-
-        qty =
-            parseInt(
-                qtyInput.value
-            ) || 1;
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        cart.push({
+            id: id,
+            name: name,
+            price: Number(price),
+            qty: qty
+        });
     }
 
-    if (qty < 1) {
-        qty = 1;
-    }
+    console.log("🛒 CARRITO ACTUAL:", cart);
 
-    if (qty > stock) {
+    showMessage(`✅ ${name} (x${qty}) agregado`, 'success');
 
-        showMessage(
-            `Solo hay ${stock} unidades disponibles.`,
-            'error'
-        );
-
-        return;
-    }
+    updateCartUI();
+}
 
     const existing =
         cart.find(
