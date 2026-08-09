@@ -1,6 +1,6 @@
-const API_URL = 'https://walz-backend.onrender.com';
+const API_URL = "https://walz-backend.onrender.com";
 
-let token = localStorage.getItem('walz_token');
+let token = localStorage.getItem("walz_token");
 let cart = [];
 
 // =====================================================
@@ -8,64 +8,64 @@ let cart = [];
 // =====================================================
 
 async function handleRegister() {
-    const first_name = document.getElementById('reg-firstname').value.trim();
-    const last_name = document.getElementById('reg-lastname').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
+    const first_name = document.getElementById("reg-firstname").value.trim();
+    const last_name = document.getElementById("reg-lastname").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
 
     if (!email || !password || !first_name || !last_name) {
-        showMessage('Completa todos los campos.', 'error');
+        showMessage("Completa todos los campos.", "error");
         return;
     }
 
     try {
         const res = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 email,
                 first_name,
                 last_name,
                 password,
-                role: 'COMPRADOR'
+                role: "COMPRADOR"
             })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            showMessage('Cuenta creada. Inicia sesión.', 'success');
+            showMessage("Cuenta creada. Inicia sesión.", "success");
             showLogin();
         } else {
             showMessage(
-                data.detail || 'Error al registrarse.',
-                'error'
+                data.detail || "Error al registrarse.",
+                "error"
             );
         }
 
     } catch (e) {
-        console.error('Error registro:', e);
-        showMessage('Error de conexión.', 'error');
+        console.error("Error registro:", e);
+        showMessage("Error de conexión.", "error");
     }
 }
 
 
 async function handleLogin() {
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
 
     if (!email || !password) {
-        showMessage('Ingresa correo y contraseña.', 'error');
+        showMessage("Ingresa correo y contraseña.", "error");
         return;
     }
 
     try {
         const res = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 email,
@@ -75,18 +75,20 @@ async function handleLogin() {
 
         const data = await res.json();
 
+        console.log("Respuesta login:", data);
+
         if (res.ok) {
 
             token = data.access_token;
 
             localStorage.setItem(
-                'walz_token',
+                "walz_token",
                 token
             );
 
             showMessage(
-                'Bienvenido a WalZ!',
-                'success'
+                "Bienvenido a WalZ!",
+                "success"
             );
 
             showMarketplace();
@@ -98,18 +100,21 @@ async function handleLogin() {
         } else {
 
             showMessage(
-                data.detail || 'Credenciales incorrectas.',
-                'error'
+                data.detail || "Credenciales incorrectas.",
+                "error"
             );
         }
 
     } catch (e) {
 
-        console.error('Error login:', e);
+        console.error(
+            "Error al iniciar sesión:",
+            e
+        );
 
         showMessage(
-            'Error de conexión.',
-            'error'
+            "Error de conexión.",
+            "error"
         );
     }
 }
@@ -119,7 +124,7 @@ function handleLogout() {
 
     token = null;
 
-    localStorage.removeItem('walz_token');
+    localStorage.removeItem("walz_token");
 
     cart = [];
 
@@ -128,8 +133,8 @@ function handleLogout() {
     showAuth();
 
     showMessage(
-        'Sesión cerrada.',
-        'success'
+        "Sesión cerrada.",
+        "success"
     );
 }
 
@@ -140,39 +145,39 @@ function handleLogout() {
 
 async function handleCreateProduct() {
 
-    token = localStorage.getItem('walz_token');
+    token = localStorage.getItem("walz_token");
 
     console.log(
-        '📤 Token enviado:',
+        "Token enviado:",
         token
     );
 
     if (!token) {
         showMessage(
-            'Debes iniciar sesión.',
-            'error'
+            "Debes iniciar sesión.",
+            "error"
         );
         return;
     }
 
     const name =
-        document.getElementById('prod-name').value.trim();
+        document.getElementById("prod-name").value.trim();
 
     const price =
         parseFloat(
-            document.getElementById('prod-price').value
+            document.getElementById("prod-price").value
         );
 
     const stock =
         parseInt(
-            document.getElementById('prod-stock').value
+            document.getElementById("prod-stock").value
         );
 
     if (!name || isNaN(price) || isNaN(stock)) {
 
         showMessage(
-            'Completa los datos.',
-            'error'
+            "Completa los datos.",
+            "error"
         );
 
         return;
@@ -183,53 +188,53 @@ async function handleCreateProduct() {
         const res = await fetch(
             `${API_URL}/products/`,
             {
-                method: 'POST',
+                method: "POST",
 
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                 },
 
                 body: JSON.stringify({
                     name,
                     price,
                     stock,
-                    category: ''
+                    category: ""
                 })
             }
+        );
+
+        const text = await res.text();
+
+        console.log(
+            "Respuesta creación producto:",
+            text
         );
 
         if (res.ok) {
 
             showMessage(
-                'Producto publicado!',
-                'success'
+                "Producto publicado!",
+                "success"
             );
 
             document.getElementById(
-                'prod-name'
-            ).value = '';
+                "prod-name"
+            ).value = "";
 
             document.getElementById(
-                'prod-price'
-            ).value = '';
+                "prod-price"
+            ).value = "";
 
             document.getElementById(
-                'prod-stock'
-            ).value = '';
+                "prod-stock"
+            ).value = "";
 
             await loadProducts();
 
         } else {
 
-            const text = await res.text();
-
-            console.error(
-                '❌ Error backend:',
-                text
-            );
-
-            let message = 'Error al publicar.';
+            let message = "Error al publicar.";
 
             try {
                 const data = JSON.parse(text);
@@ -238,24 +243,28 @@ async function handleCreateProduct() {
 
             showMessage(
                 message,
-                'error'
+                "error"
             );
         }
 
     } catch (e) {
 
         console.error(
-            '🚨 Error de red:',
+            "Error de red:",
             e
         );
 
         showMessage(
-            'Error de conexión.',
-            'error'
+            "Error de conexión.",
+            "error"
         );
     }
 }
 
+
+// =====================================================
+// CARGAR PRODUCTOS
+// =====================================================
 
 async function loadProducts() {
 
@@ -266,26 +275,24 @@ async function loadProducts() {
         );
 
         if (!res.ok) {
-            throw new Error(
-                `HTTP ${res.status}`
-            );
+            throw new Error(`HTTP ${res.status}`);
         }
 
         const products = await res.json();
 
         const list =
             document.getElementById(
-                'product-list'
+                "product-list"
             );
 
         if (!list) {
             console.error(
-                'No existe #product-list'
+                "No existe #product-list"
             );
             return;
         }
 
-        list.innerHTML = '';
+        list.innerHTML = "";
 
         if (
             !products ||
@@ -315,7 +322,7 @@ async function loadProducts() {
                     </h4>
 
                     <p>
-                        💰 $${product.price}
+                        💰 $${Number(product.price).toFixed(2)}
                         |
                         📦 Stock: ${stockValue}
                     </p>
@@ -373,7 +380,7 @@ async function loadProducts() {
     } catch (e) {
 
         console.error(
-            'Error cargando productos:',
+            "Error cargando productos:",
             e
         );
     }
@@ -384,36 +391,54 @@ async function loadProducts() {
 // CARRITO
 // =====================================================
 
-function addToCart(id, name, price) {
-    console.log("🛒 AGREGAR PRESIONADO");
-    console.log("ID:", id);
-    console.log("Nombre:", name);
-    console.log("Precio:", price);
+function addToCart(
+    id,
+    name,
+    price,
+    stock
+) {
 
-    const qtyInput = document.getElementById(`qty-${id}`);
-    const qty = parseInt(qtyInput?.value) || 1;
+    console.log(
+        "🛒 AGREGAR PRESIONADO"
+    );
 
-    console.log("Cantidad:", qty);
+    console.log(
+        "ID:",
+        id
+    );
 
-    const existing = cart.find(item => item.id === id);
+    console.log(
+        "Nombre:",
+        name
+    );
 
-    if (existing) {
-        existing.qty += qty;
-    } else {
-        cart.push({
-            id: id,
-            name: name,
-            price: Number(price),
-            qty: qty
-        });
+    console.log(
+        "Precio:",
+        price
+    );
+
+    console.log(
+        "Stock:",
+        stock
+    );
+
+    const qtyInput =
+        document.getElementById(
+            `qty-${id}`
+        );
+
+    const qty =
+        parseInt(
+            qtyInput?.value
+        ) || 1;
+
+    if (qty < 1) {
+        showMessage(
+            "La cantidad debe ser mayor a 0.",
+            "error"
+        );
+        return;
     }
-
-    console.log("🛒 CARRITO ACTUAL:", cart);
-
-    showMessage(`✅ ${name} (x${qty}) agregado`, 'success');
-
-    updateCartUI();
-}
 
     const existing =
         cart.find(
@@ -428,7 +453,7 @@ function addToCart(id, name, price) {
 
             showMessage(
                 `No puedes agregar más de ${stock} unidades.`,
-                'error'
+                "error"
             );
 
             return;
@@ -448,24 +473,28 @@ function addToCart(id, name, price) {
     }
 
     console.log(
-        '🛒 Carrito:',
+        "🛒 CARRITO ACTUAL:",
         cart
     );
 
     showMessage(
         `✅ ${name} (x${qty}) agregado`,
-        'success'
+        "success"
     );
 
     updateCartUI();
 }
 
 
+// =====================================================
+// ACTUALIZAR CONTADOR
+// =====================================================
+
 function updateCartUI() {
 
     const count =
         document.getElementById(
-            'cart-count'
+            "cart-count"
         );
 
     if (!count) {
@@ -483,69 +512,79 @@ function updateCartUI() {
 }
 
 
+// =====================================================
+// ABRIR / CERRAR CARRITO
+// =====================================================
+
 function toggleCart() {
 
     const section =
         document.getElementById(
-            'cart-section'
+            "cart-section"
         );
 
     if (!section) {
+
         console.error(
-            'No existe #cart-section'
+            "No existe #cart-section"
         );
+
         return;
     }
 
     const isHidden =
-        section.style.display === 'none' ||
-        section.style.display === '';
+        section.style.display === "none" ||
+        section.style.display === "";
 
     if (isHidden) {
 
-        section.style.display =
-            'block';
+        section.style.display = "block";
 
         renderCart();
 
     } else {
 
-        section.style.display =
-            'none';
+        section.style.display = "none";
     }
 }
 
+
+// =====================================================
+// MOSTRAR CARRITO
+// =====================================================
 
 function renderCart() {
 
     const container =
         document.getElementById(
-            'cart-items'
+            "cart-items"
         );
 
     const totalElement =
         document.getElementById(
-            'cart-total'
+            "cart-total"
         );
 
     if (!container) {
+
         console.error(
-            'No existe #cart-items'
+            "No existe #cart-items"
         );
+
         return;
     }
 
-    container.innerHTML = '';
+    container.innerHTML = "";
 
     let total = 0;
 
     if (cart.length === 0) {
 
         container.innerHTML =
-            'Carrito vacío.';
+            "Carrito vacío.";
 
         if (totalElement) {
-            totalElement.textContent = '';
+            totalElement.textContent = "";
         }
 
         return;
@@ -555,8 +594,7 @@ function renderCart() {
         (item, index) => {
 
             const subtotal =
-                item.price *
-                item.qty;
+                item.price * item.qty;
 
             total += subtotal;
 
@@ -579,6 +617,7 @@ function renderCart() {
                     </span>
 
                     <span>
+
                         $${subtotal.toFixed(2)}
 
                         <button
@@ -588,6 +627,7 @@ function renderCart() {
                         >
                             X
                         </button>
+
                     </span>
 
                 </div>
@@ -602,6 +642,10 @@ function renderCart() {
     }
 }
 
+
+// =====================================================
+// ELIMINAR DEL CARRITO
+// =====================================================
 
 function removeFromCart(index) {
 
@@ -632,8 +676,8 @@ async function checkout() {
     if (cart.length === 0) {
 
         showMessage(
-            'El carrito está vacío.',
-            'error'
+            "El carrito está vacío.",
+            "error"
         );
 
         return;
@@ -641,33 +685,29 @@ async function checkout() {
 
     const token =
         localStorage.getItem(
-            'walz_token'
+            "walz_token"
         );
 
     if (!token) {
 
         showMessage(
-            'Debes iniciar sesión para comprar.',
-            'error'
+            "Debes iniciar sesión para comprar.",
+            "error"
         );
 
         return;
     }
 
     /*
-     * IMPORTANTE:
+     * El carrito utiliza:
      *
-     * addToCart() guarda:
+     * item.id
+     * item.qty
      *
-     * id
-     * name
-     * price
-     * qty
+     * El backend espera:
      *
-     * Por eso checkout debe enviar:
-     *
-     * product_id: item.id
-     * quantity: item.qty
+     * product_id
+     * quantity
      */
 
     const items =
@@ -677,7 +717,7 @@ async function checkout() {
         }));
 
     console.log(
-        '📦 Checkout:',
+        "📦 Enviando pedido:",
         items
     );
 
@@ -687,20 +727,17 @@ async function checkout() {
             await fetch(
                 `${API_URL}/orders/`,
                 {
-                    method: 'POST',
+                    method: "POST",
 
                     headers: {
-                        'Content-Type':
-                            'application/json',
-
-                        'Authorization':
-                            `Bearer ${token}`
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
                     },
 
                     body: JSON.stringify({
                         items: items,
                         shipping_address:
-                            'Dirección de prueba'
+                            "Dirección de prueba"
                     })
                 }
             );
@@ -709,15 +746,15 @@ async function checkout() {
             await res.text();
 
         console.log(
-            '📥 Respuesta checkout:',
+            "📥 Respuesta checkout:",
             text
         );
 
         if (res.ok) {
 
             showMessage(
-                '✅ ¡Compra realizada con éxito!',
-                'success'
+                "✅ ¡Compra realizada con éxito!",
+                "success"
             );
 
             cart = [];
@@ -731,7 +768,7 @@ async function checkout() {
         } else {
 
             let message =
-                'Error al procesar la compra.';
+                "Error al procesar la compra.";
 
             try {
 
@@ -739,32 +776,31 @@ async function checkout() {
                     JSON.parse(text);
 
                 message =
-                    data.detail ||
-                    message;
+                    data.detail || message;
 
             } catch (_) {}
 
             console.error(
-                '❌ Error checkout:',
+                "❌ Error checkout:",
                 text
             );
 
             showMessage(
                 message,
-                'error'
+                "error"
             );
         }
 
     } catch (e) {
 
         console.error(
-            '🚨 Error checkout:',
+            "🚨 Error checkout:",
             e
         );
 
         showMessage(
-            'Error de conexión al comprar.',
-            'error'
+            "Error de conexión al comprar.",
+            "error"
         );
     }
 }
@@ -777,22 +813,21 @@ async function checkout() {
 function escapeHtml(value) {
 
     return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
 
 function escapeJs(value) {
 
     return String(value)
-        .replaceAll('\\', '\\\\')
+        .replaceAll("\\", "\\\\")
         .replaceAll("'", "\\'")
-        .replaceAll('"', '\\"')
-        .replaceAll('\n', '\\n')
-        .replaceAll('\r', '\\r');
+        .replaceAll("\n", "\\n")
+        .replaceAll("\r", "\\r");
 }
 
 
@@ -807,11 +842,13 @@ function showMessage(
 
     const box =
         document.getElementById(
-            'message-box'
+            "message-box"
         );
 
     if (!box) {
+
         console.log(text);
+
         return;
     }
 
@@ -822,8 +859,10 @@ function showMessage(
 
     setTimeout(
         () => {
+
             box.className =
-                'message-box';
+                "message-box";
+
         },
         4000
     );
@@ -837,54 +876,114 @@ function showMessage(
 function showRegister() {
 
     document.getElementById(
-        'login-form'
-    ).style.display = 'none';
+        "login-form"
+    ).style.display = "none";
 
     document.getElementById(
-        'register-form'
-    ).style.display = 'block';
+        "register-form"
+    ).style.display = "block";
 
     document.getElementById(
-        'message-box'
-    ).className = 'message-box';
+        "message-box"
+    ).className = "message-box";
 }
 
 
 function showLogin() {
 
     document.getElementById(
-        'login-form'
-    ).style.display = 'block';
+        "login-form"
+    ).style.display = "block";
 
     document.getElementById(
-        'register-form'
-    ).style.display = 'none';
+        "register-form"
+    ).style.display = "none";
 
     document.getElementById(
-        'message-box'
-    ).className = 'message-box';
+        "message-box"
+    ).className = "message-box";
 }
 
 
 function showAuth() {
 
     document.getElementById(
-        'auth-section'
-    ).style.display = 'block';
+        "auth-section"
+    ).style.display = "block";
 
     document.getElementById(
-        'marketplace-section'
-    ).style.display = 'none';
+        "marketplace-section"
+    ).style.display = "none";
 }
 
 
 function showMarketplace() {
 
     document.getElementById(
-        'auth-section'
-    ).style.display = 'none';
+        "auth-section"
+    ).style.display = "none";
 
     document.getElementById(
-        'marketplace-section'
-    ).style.display = 'block';
+        "marketplace-section"
+    ).style.display = "block";
 }
+
+
+// =====================================================
+// HACER FUNCIONES GLOBALES
+// NECESARIO PARA onclick="..."
+// =====================================================
+
+window.handleRegister = handleRegister;
+window.handleLogin = handleLogin;
+window.handleLogout = handleLogout;
+window.handleCreateProduct = handleCreateProduct;
+
+window.loadProducts = loadProducts;
+
+window.addToCart = addToCart;
+window.updateCartUI = updateCartUI;
+window.toggleCart = toggleCart;
+window.renderCart = renderCart;
+window.removeFromCart = removeFromCart;
+window.checkout = checkout;
+
+window.showMessage = showMessage;
+
+window.showRegister = showRegister;
+window.showLogin = showLogin;
+window.showAuth = showAuth;
+window.showMarketplace = showMarketplace;
+
+
+// =====================================================
+// INICIO
+// =====================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        console.log(
+            "✅ WalZ app.js cargado correctamente"
+        );
+
+        console.log(
+            "Token:",
+            token ? "EXISTE" : "NO EXISTE"
+        );
+
+        updateCartUI();
+
+        if (token) {
+
+            showMarketplace();
+
+            loadProducts();
+
+        } else {
+
+            showAuth();
+        }
+    }
+);
