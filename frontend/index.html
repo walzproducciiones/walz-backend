@@ -1,59 +1,223 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WalZ One</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<div class="container">
 
-    <div class="container">
-        <div id="auth-section">
-            <h1 class="logo">WALZ</h1>
-            
-            <!-- Formulario de Login -->
-            <div id="login-form">
-                <h3>Iniciar Sesión</h3>
-                <input type="email" id="login-email" placeholder="Correo electrónico">
-                <input type="password" id="login-password" placeholder="Contraseña">
-                <button onclick="handleLogin()">Ingresar</button>
-                <p class="switch-text">¿No tienes cuenta? <a href="#" onclick="showRegister()">Crear cuenta</a></p>
-            </div>
+    <!-- ==============================
+         AUTENTICACIÓN
+    =============================== -->
 
-            <!-- Formulario de Registro -->
-            <div id="register-form" style="display: none;">
-                <h3>Crear Cuenta</h3>
-                <input type="text" id="reg-firstname" placeholder="Nombre">
-                <input type="text" id="reg-lastname" placeholder="Apellido">
-                <input type="email" id="reg-email" placeholder="Correo electrónico">
-                <input type="password" id="reg-password" placeholder="Contraseña (mín. 8 caracteres)">
-                <button onclick="handleRegister()">Registrarse</button>
-                <p class="switch-text">¿Ya tienes cuenta? <a href="#" onclick="showLogin()">Iniciar sesión</a></p>
-            </div>
+    <div id="auth-section">
 
-            <!-- Mensajes de feedback -->
-            <div id="message-box" class="message-box"></div>
+        <h1 class="logo">WALZ</h1>
+
+        <!-- Login -->
+
+        <div id="login-form">
+
+            <h3>Iniciar Sesión</h3>
+
+            <input
+                type="email"
+                id="login-email"
+                placeholder="Correo electrónico"
+            >
+
+            <input
+                type="password"
+                id="login-password"
+                placeholder="Contraseña"
+            >
+
+            <button
+                type="button"
+                onclick="handleLogin()"
+            >
+                Ingresar
+            </button>
+
+            <p class="switch-text">
+                ¿No tienes cuenta?
+                <a
+                    href="#"
+                    onclick="showRegister(); return false;"
+                >
+                    Crear cuenta
+                </a>
+            </p>
+
         </div>
 
-        <!-- Sección del Marketplace (visible solo cuando está logueado) -->
-        <div id="marketplace-section" style="display: none;">
-            <h2>Bienvenido a WalZ One</h2>
-            <button onclick="handleLogout()" class="logout-btn">Cerrar Sesión</button>
-            
-            <h3>Crear Producto</h3>
-            <div class="product-form">
-                <input type="text" id="prod-name" placeholder="Nombre del producto">
-                <input type="number" id="prod-price" placeholder="Precio">
-                <input type="number" id="prod-stock" placeholder="Stock">
-                <button onclick="handleCreateProduct()">Publicar Producto</button>
-            </div>
 
-            <h3>Lista de Productos</h3>
-            <div id="product-list"></div>
+        <!-- Registro -->
+
+        <div
+            id="register-form"
+            style="display:none;"
+        >
+
+            <h3>Crear Cuenta</h3>
+
+            <input
+                type="text"
+                id="reg-firstname"
+                placeholder="Nombre"
+            >
+
+            <input
+                type="text"
+                id="reg-lastname"
+                placeholder="Apellido"
+            >
+
+            <input
+                type="email"
+                id="reg-email"
+                placeholder="Correo electrónico"
+            >
+
+            <input
+                type="password"
+                id="reg-password"
+                placeholder="Contraseña (mín. 8 caracteres)"
+            >
+
+            <button
+                type="button"
+                onclick="handleRegister()"
+            >
+                Registrarse
+            </button>
+
+            <p class="switch-text">
+                ¿Ya tienes cuenta?
+                <a
+                    href="#"
+                    onclick="showLogin(); return false;"
+                >
+                    Iniciar sesión
+                </a>
+            </p>
+
         </div>
+
+
+        <!-- Mensajes -->
+
+        <div
+            id="message-box"
+            class="message-box"
+        ></div>
+
     </div>
 
-    <script src="app.js"></script>
-</body>
-</html>
+
+    <!-- ==============================
+         MARKETPLACE
+    =============================== -->
+
+    <div
+        id="marketplace-section"
+        style="display:none;"
+    >
+
+        <h2>Bienvenido a WalZ One</h2>
+
+        <button
+            type="button"
+            onclick="handleLogout()"
+            class="logout-btn"
+        >
+            Cerrar Sesión
+        </button>
+
+
+        <!-- CARRITO -->
+
+        <div style="margin:20px 0;">
+
+            <button
+                type="button"
+                onclick="toggleCart()"
+            >
+                🛒 Carrito
+                (<span id="cart-count">0</span>)
+            </button>
+
+        </div>
+
+
+        <!-- CREAR PRODUCTO -->
+
+        <h3>Crear Producto</h3>
+
+        <div class="product-form">
+
+            <input
+                type="text"
+                id="prod-name"
+                placeholder="Nombre del producto"
+            >
+
+            <input
+                type="number"
+                id="prod-price"
+                placeholder="Precio"
+            >
+
+            <input
+                type="number"
+                id="prod-stock"
+                placeholder="Stock"
+            >
+
+            <button
+                type="button"
+                onclick="handleCreateProduct()"
+            >
+                Publicar Producto
+            </button>
+
+        </div>
+
+
+        <!-- LISTA PRODUCTOS -->
+
+        <h3>Lista de Productos</h3>
+
+        <div id="product-list"></div>
+
+
+        <!-- CARRITO ABIERTO -->
+
+        <div
+            id="cart-section"
+            style="
+                display:none;
+                margin-top:30px;
+                padding:20px;
+                background:#1f1f1f;
+                border-radius:10px;
+            "
+        >
+
+            <h3>🛒 Carrito</h3>
+
+            <div id="cart-items">
+                Carrito vacío.
+            </div>
+
+            <h3 id="cart-total"></h3>
+
+            <button
+                type="button"
+                onclick="checkout()"
+            >
+                💳 Finalizar compra
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="app.js"></script>
