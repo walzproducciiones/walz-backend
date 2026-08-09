@@ -168,3 +168,16 @@ def get_current_user(
         )
 
     return user
+
+@router.get("/debug/user-exists")
+def debug_user_exists(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == email).first()
+
+    return {
+        "email": email,
+        "exists": user is not None,
+        "database": "configured"
+    }
