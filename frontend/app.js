@@ -752,20 +752,33 @@ async function checkout() {
 
         if (res.ok) {
 
-            showMessage(
-                "✅ ¡Compra realizada con éxito!",
-                "success"
-            );
+    showMessage(
+        '✅ ¡Compra realizada con éxito!',
+        'success'
+    );
 
-            cart = [];
+    // Vaciar carrito
+    cart = [];
 
-            renderCart();
+    // Actualizar contador
+    updateCartUI();
 
-            updateCartUI();
+    // Actualizar productos / stock
+    await loadProducts();
 
-            await loadProducts();
+    // Cerrar visualmente el carrito
+    const cartSection = document.getElementById('cart-section');
 
-        } else {
+    if (cartSection) {
+        cartSection.style.display = 'none';
+    }
+
+    // Volver arriba de la página
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+} else {
 
             let message =
                 "Error al procesar la compra.";
