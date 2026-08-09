@@ -2,32 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-
 from backend.app.api import auth, products, orders, payments
+from backend.app.database.session import engine
+
 from backend.app.models import user, product, order
-
-
-# ============================================================
-# BASE DE DATOS
-# ============================================================
-
-DATABASE_URL = "sqlite:///./walz_local.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-Base = declarative_base()
 
 
 # ============================================================
