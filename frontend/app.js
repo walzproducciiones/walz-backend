@@ -674,150 +674,95 @@ function removeFromCart(index) {
 async function checkout() {
 
     if (cart.length === 0) {
-
-        showMessage(
-            "El carrito está vacío.",
-            "error"
-        );
-
+        showMessage('El carrito está vacío.', 'error');
         return;
     }
 
-    const token =
-        localStorage.getItem(
-            "walz_token"
-        );
+    const token = localStorage.getItem('walz_token');
+
+    console.log("🛒 CHECKOUT");
+    console.log("Token existe:", !!token);
+    console.log("Token:", token);
 
     if (!token) {
-
-        showMessage(
-            "Debes iniciar sesión para comprar.",
-            "error"
-        );
-
+        showMessage('Debes iniciar sesión para comprar.', 'error');
         return;
     }
 
-    /*
-     * El carrito utiliza:
-     *
-     * item.id
-     * item.qty
-     *
-     * El backend espera:
-     *
-     * product_id
-     * quantity
-     */
+    const items = cart.map(item => ({
+        product_id: item.id,
+        quantity: item.qty
+    }));
 
-    const items =
-        cart.map(item => ({
-            product_id: item.id,
-            quantity: item.qty
-        }));
-
-    console.log(
-        "📦 Enviando pedido:",
-        items
-    );
+    console.log("📦 Items enviados:", items);
 
     try {
 
-        const res =
-            await fetch(
-                `${API_URL}/orders/`,
-                {
-                    method: "POST",
+        const res = await fetch(`${API_URL}/orders/`, {
+            method: 'POST',
 
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
 
-                    body: JSON.stringify({
-                        items: items,
-                        shipping_address:
-                            "Dirección de prueba"
-                    })
-                }
-            );
+            body: JSON.stringify({
+                items: items,
+                shipping_address: 'Dirección de prueba'
+            })
+        });
 
-        const text =
-            await res.text();
+        const text = await res.text();
 
-        console.log(
-            "📥 Respuesta checkout:",
-            text
-        );
+        console.log("📥 RESPUESTA CHECKOUT");
+        console.log("HTTP:", res.status);
+        console.log("Respuesta:", text);
 
         if (res.ok) {
 
-    showMessage(
-        '✅ ¡Compra realizada con éxito!',
-        'success'
-    );
+            showMessage(
+                '✅ ¡Compra realizada con éxito!',
+                'success'
+            );
 
-    // Vaciar carrito
-    cart = [];
+            cart = [];
 
-    // Actualizar contador
-    updateCartUI();
+            renderCart();
+            updateCartUI();
 
-    // Actualizar productos / stock
-    await loadProducts();
+            await loadProducts();
 
-    // Cerrar visualmente el carrito
-    const cartSection = document.getElementById('cart-section');
+        } else {
 
-    if (cartSection) {
-        cartSection.style.display = 'none';
-    }
-
-    // Volver arriba de la página
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
-} else {
-
-            let message =
-                "Error al procesar la compra.";
+            let message = 'Error al procesar la compra.';
 
             try {
-
-                const data =
-                    JSON.parse(text);
-
-                message =
-                    data.detail || message;
-
+                const data = JSON.parse(text);
+                message = data.detail || message;
             } catch (_) {}
 
             console.error(
-                "❌ Error checkout:",
+                '❌ Error checkout:',
+                res.status,
                 text
             );
 
-            showMessage(
-                message,
-                "error"
-            );
+            showMessage(message, 'error');
         }
 
     } catch (e) {
 
         console.error(
-            "🚨 Error checkout:",
+            '🚨 Error de conexión checkout:',
             e
         );
 
         showMessage(
-            "Error de conexión al comprar.",
-            "error"
+            'Error de conexión al comprar.',
+            'error'
         );
     }
 }
-
 
 // =====================================================
 // UTILIDADES
