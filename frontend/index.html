@@ -1,14 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>WalZ One</title>
+
+    <!-- CSS PRINCIPAL -->
+    <link rel="stylesheet" href="./style.css">
+
+</head>
+
+<body>
+
 <div class="container">
 
-    <!-- ==============================
+    <!-- =====================================================
          AUTENTICACIÓN
-    =============================== -->
+    ====================================================== -->
 
     <div id="auth-section">
 
         <h1 class="logo">WALZ</h1>
 
-        <!-- Login -->
+        <!-- LOGIN -->
 
         <div id="login-form">
 
@@ -34,19 +55,22 @@
             </button>
 
             <p class="switch-text">
+
                 ¿No tienes cuenta?
+
                 <a
                     href="#"
                     onclick="showRegister(); return false;"
                 >
                     Crear cuenta
                 </a>
+
             </p>
 
         </div>
 
 
-        <!-- Registro -->
+        <!-- REGISTRO -->
 
         <div
             id="register-form"
@@ -87,19 +111,22 @@
             </button>
 
             <p class="switch-text">
+
                 ¿Ya tienes cuenta?
+
                 <a
                     href="#"
                     onclick="showLogin(); return false;"
                 >
                     Iniciar sesión
                 </a>
+
             </p>
 
         </div>
 
 
-        <!-- Mensajes -->
+        <!-- MENSAJES -->
 
         <div
             id="message-box"
@@ -109,9 +136,9 @@
     </div>
 
 
-    <!-- ==============================
+    <!-- =====================================================
          MARKETPLACE
-    =============================== -->
+    ====================================================== -->
 
     <div
         id="marketplace-section"
@@ -129,7 +156,9 @@
         </button>
 
 
-        <!-- CARRITO -->
+        <!-- =================================================
+             CARRITO
+        ================================================== -->
 
         <div style="margin:20px 0;">
 
@@ -137,14 +166,21 @@
                 type="button"
                 onclick="toggleCart()"
             >
+
                 🛒 Carrito
-                (<span id="cart-count">0</span>)
+
+                (
+                <span id="cart-count">0</span>
+                )
+
             </button>
 
         </div>
 
 
-        <!-- CREAR PRODUCTO -->
+        <!-- =================================================
+             CREAR PRODUCTO
+        ================================================== -->
 
         <h3>Crear Producto</h3>
 
@@ -178,14 +214,18 @@
         </div>
 
 
-        <!-- LISTA PRODUCTOS -->
+        <!-- =================================================
+             PRODUCTOS
+        ================================================== -->
 
         <h3>Lista de Productos</h3>
 
         <div id="product-list"></div>
 
 
-        <!-- CARRITO ABIERTO -->
+        <!-- =================================================
+             CARRITO ABIERTO
+        ================================================== -->
 
         <div
             id="cart-section"
@@ -220,4 +260,12 @@
 </div>
 
 
-<script src="app.js"></script>
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
+
+<script src="./app.js"></script>
+
+</body>
+
+</html>
