@@ -225,64 +225,85 @@ button[onclick="toggleCart()"] {
     display: flex;
     flex-direction: column;
     background: #ffffff;
-    border: 1px solid #e8e8e8;
+    border: 1px solid #e7e7e7;
     border-radius: 18px;
     padding: 20px;
-    min-height: 230px;
-    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.06);
+    min-height: 255px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
     transition: transform .2s ease, box-shadow .2s ease;
+    overflow: hidden;
 }
 
 .product-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.11);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.11);
+}
+
+/* Etiqueta superior */
+
+.product-item::before {
+    content: "PRODUCTO";
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 5px 9px;
+    border-radius: 7px;
+    background: #f1f1f1;
+    color: #666;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
 }
 
 /* Nombre */
 
 .product-item h4 {
-    margin: 0 0 14px;
+    margin: 0;
+    padding-right: 75px;
     font-size: 20px;
-    line-height: 1.25;
+    line-height: 1.3;
     color: #111;
 }
 
 /* Información */
 
 .product-item p {
-    margin: 7px 0;
+    margin: 9px 0;
     color: #555;
     font-size: 14px;
 }
 
-/* Precio */
+/* Precio + stock */
 
 .product-item p:first-of-type {
+    margin-top: 18px;
     color: #111;
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.5;
 }
 
-/* Área de acciones */
+/* Acciones */
 
 .product-actions {
     display: flex;
     gap: 8px;
     align-items: center;
     margin-top: auto;
-    padding-top: 18px;
+    padding-top: 20px;
 }
 
-/* Cantidad */
+/* Selector cantidad */
 
 .product-actions input {
-    width: 65px;
+    width: 62px;
     height: 42px;
     margin: 0;
     padding: 8px;
     text-align: center;
-    border: 1px solid #d9dce1;
+    border: 1px solid #d5d8dc;
     border-radius: 9px;
+    font-size: 14px;
 }
 
 /* Botón agregar */
@@ -304,26 +325,10 @@ button[onclick="toggleCart()"] {
 
 .product-item p[style*="color"] {
     margin-top: auto;
-    padding-top: 18px;
+    padding: 12px 0 0;
+    color: #e53935 !important;
     font-weight: 700;
-}
-
-/* =========================
-   ETIQUETA STOCK
-========================= */
-
-.product-item::before {
-    content: "PRODUCTO";
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    padding: 5px 8px;
-    border-radius: 6px;
-    background: #f1f1f1;
-    color: #666;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .5px;
+    font-size: 14px;
 }
 
 /* =========================
