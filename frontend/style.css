@@ -324,3 +324,113 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+/* =========================================================
+   WALZ HEADER
+   ========================================================= */
+
+.walz-header {
+    width: 100%;
+    min-height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    margin-bottom: 25px;
+    background: #111;
+    color: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.walz-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.walz-logo {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: 5px;
+}
+
+.walz-subtitle {
+    font-size: 13px;
+    color: #aaa;
+}
+
+.walz-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cart-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    color: #111;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.cart-button:hover {
+    opacity: 0.9;
+}
+
+.cart-badge {
+    min-width: 23px;
+    height: 23px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border-radius: 50%;
+    background: #111;
+    color: #fff;
+    font-size: 12px;
+}
+
+.marketplace-title {
+    margin-bottom: 25px;
+}
+
+.marketplace-title h2 {
+    margin: 0 0 6px;
+    font-size: 30px;
+}
+
+.marketplace-title p {
+    margin: 0;
+    color: #777;
+    font-size: 15px;
+}
+
+/* =========================================================
+   HEADER RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .walz-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+    }
+
+    .walz-brand {
+        justify-content: center;
+    }
+
+    .walz-actions {
+        justify-content: center;
+    }
+
+    .marketplace-title h2 {
+        font-size: 25px;
+    }
+}

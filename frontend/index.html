@@ -145,7 +145,28 @@
         style="display:none;"
     >
 
-        <h2>Bienvenido a WalZ One</h2>
+        <!-- ==============================
+     CABECERA WALZ
+=============================== -->
+
+<header class="walz-header">
+
+    <div class="walz-brand">
+        <div class="walz-logo">WALZ</div>
+        <div class="walz-subtitle">One Marketplace</div>
+    </div>
+
+    <div class="walz-actions">
+
+        <button
+            type="button"
+            class="cart-button"
+            onclick="toggleCart()"
+        >
+            🛒
+            <span>Carrito</span>
+            <span id="cart-count" class="cart-badge">0</span>
+        </button>
 
         <button
             type="button"
@@ -155,27 +176,18 @@
             Cerrar Sesión
         </button>
 
+    </div>
 
-        <!-- =================================================
-             CARRITO
-        ================================================== -->
+</header>
 
-        <div style="margin:20px 0;">
+<div class="marketplace-title">
 
-            <button
-                type="button"
-                onclick="toggleCart()"
-            >
+    <div>
+        <h2>Bienvenido a WalZ One</h2>
+        <p>Descubrí productos y comprá de forma simple.</p>
+    </div>
 
-                🛒 Carrito
-
-                (
-                <span id="cart-count">0</span>
-                )
-
-            </button>
-
-        </div>
+</div>
 
 
         <!-- =================================================
