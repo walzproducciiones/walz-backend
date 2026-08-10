@@ -8,11 +8,14 @@ body {
 * {
     box-sizing: border-box;
 }
+html {
+    background: #f5f6f8;
+}
 
 body {
     margin: 0;
     font-family: Arial, Helvetica, sans-serif;
-    background: #f5f6f8;
+    background: #f5f6f8 !important;
     color: #222;
 }
 
