@@ -1,27 +1,13 @@
-body {
-    background: red !important;
-}
-/* =========================================================
-   WALZ ONE — INTERFAZ FASE 2
-   ========================================================= */
-
 * {
     box-sizing: border-box;
-}
-html {
-    background: #f5f6f8;
 }
 
 body {
     margin: 0;
     font-family: Arial, Helvetica, sans-serif;
-    background: #f5f6f8 !important;
+    background: #f5f6f8;
     color: #222;
 }
-
-/* =========================================================
-   CONTENEDOR
-   ========================================================= */
 
 .container {
     width: 100%;
@@ -30,26 +16,26 @@ body {
     padding: 30px 20px;
 }
 
-/* =========================================================
+/* =========================
    AUTENTICACIÓN
-   ========================================================= */
+========================= */
 
 #auth-section {
     width: 100%;
     max-width: 430px;
     margin: 60px auto;
     padding: 35px;
-    background: white;
+    background: #fff;
     border-radius: 18px;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 35px rgba(0,0,0,.08);
 }
 
 .logo {
+    margin: 0 0 30px;
+    text-align: center;
     font-size: 42px;
     font-weight: 900;
     letter-spacing: 5px;
-    margin: 0 0 30px;
-    text-align: center;
 }
 
 #login-form,
@@ -58,7 +44,8 @@ body {
     flex-direction: column;
 }
 
-#auth-section h3 {
+#login-form h3,
+#register-form h3 {
     text-align: center;
     margin-bottom: 25px;
 }
@@ -77,10 +64,6 @@ input:focus {
     border-color: #111;
 }
 
-/* =========================================================
-   BOTONES
-   ========================================================= */
-
 button {
     border: none;
     border-radius: 9px;
@@ -90,22 +73,13 @@ button {
     font-size: 14px;
     background: #111;
     color: white;
-    transition: 0.2s ease;
+    transition: .2s ease;
 }
 
 button:hover {
     transform: translateY(-1px);
-    opacity: 0.9;
+    opacity: .9;
 }
-
-.logout-btn {
-    float: right;
-    background: #444;
-}
-
-/* =========================================================
-   LINKS
-   ========================================================= */
 
 .switch-text {
     text-align: center;
@@ -119,9 +93,9 @@ button:hover {
     text-decoration: none;
 }
 
-/* =========================================================
+/* =========================
    MENSAJES
-   ========================================================= */
+========================= */
 
 .message-box {
     min-height: 25px;
@@ -142,27 +116,37 @@ button:hover {
     color: #b42318;
 }
 
-/* =========================================================
+/* =========================
    MARKETPLACE
-   ========================================================= */
+========================= */
 
 #marketplace-section {
     width: 100%;
 }
 
 #marketplace-section h2 {
+    margin: 0;
+    padding: 25px;
+    background: #111;
+    color: white;
+    border-radius: 16px;
     font-size: 30px;
-    margin-top: 10px;
-    margin-bottom: 25px;
 }
 
-#marketplace-section h3 {
-    margin-top: 30px;
+/* =========================
+   BOTÓN CERRAR SESIÓN
+========================= */
+
+.logout-btn {
+    float: right;
+    margin-top: -58px;
+    margin-right: 20px;
+    background: #444;
 }
 
-/* =========================================================
-   CARRITO SUPERIOR
-   ========================================================= */
+/* =========================
+   CARRITO
+========================= */
 
 #marketplace-section > div:first-of-type {
     margin: 20px 0 !important;
@@ -171,11 +155,41 @@ button:hover {
 button[onclick="toggleCart()"] {
     font-size: 16px;
     padding: 13px 20px;
+    background: #111;
 }
 
-/* =========================================================
+#cart-section {
+    margin-top: 25px !important;
+    padding: 25px !important;
+    background: #171717 !important;
+    color: white;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,.18);
+}
+
+#cart-section h3 {
+    margin-top: 0;
+}
+
+#cart-items {
+    margin: 15px 0;
+}
+
+#cart-items > div {
+    background: #252525 !important;
+    border-radius: 10px;
+    padding: 12px !important;
+    margin: 8px 0 !important;
+}
+
+#cart-total {
+    font-size: 21px;
+    margin: 20px 0;
+}
+
+/* =========================
    CREAR PRODUCTO
-   ========================================================= */
+========================= */
 
 .product-form {
     display: grid;
@@ -184,16 +198,16 @@ button[onclick="toggleCart()"] {
     padding: 20px;
     background: white;
     border-radius: 14px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 5px 20px rgba(0,0,0,.05);
 }
 
 .product-form input {
     margin-bottom: 0;
 }
 
-/* =========================================================
-   LISTA DE PRODUCTOS
-   ========================================================= */
+/* =========================
+   LISTA PRODUCTOS
+========================= */
 
 #product-list {
     display: grid;
@@ -202,22 +216,24 @@ button[onclick="toggleCart()"] {
     margin-top: 20px;
 }
 
+/* Tarjeta */
+
 .product-item {
     background: white;
     border-radius: 15px;
     padding: 18px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
-    transition: 0.2s ease;
+    box-shadow: 0 5px 20px rgba(0,0,0,.06);
+    transition: .2s ease;
 }
 
 .product-item:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,.10);
 }
 
 .product-item h4 {
-    font-size: 18px;
     margin: 0 0 12px;
+    font-size: 18px;
 }
 
 .product-item p {
@@ -232,7 +248,7 @@ button[onclick="toggleCart()"] {
 }
 
 .product-actions input {
-    width: 60px;
+    width: 65px;
     margin: 0;
     padding: 9px;
 }
@@ -241,49 +257,9 @@ button[onclick="toggleCart()"] {
     flex: 1;
 }
 
-/* =========================================================
-   CARRITO
-   ========================================================= */
-
-#cart-section {
-    margin-top: 30px;
-    padding: 25px !important;
-    background: #171717 !important;
-    color: white;
-    border-radius: 16px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-}
-
-#cart-section h3 {
-    margin-top: 0;
-}
-
-#cart-items {
-    margin: 15px 0;
-}
-
-#cart-items > div {
-    border-radius: 10px;
-    background: #252525 !important;
-}
-
-#cart-total {
-    font-size: 20px;
-    margin: 20px 0;
-}
-
-#cart-section button {
-    background: white;
-    color: #111;
-}
-
-#cart-section button:hover {
-    background: #eee;
-}
-
-/* =========================================================
+/* =========================
    RESPONSIVE
-   ========================================================= */
+========================= */
 
 @media (max-width: 800px) {
 
@@ -291,17 +267,13 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 
-    .product-form input {
-        margin-bottom: 0;
-    }
-
     .logout-btn {
         float: none;
-        margin-bottom: 20px;
+        margin: 15px 0;
     }
 
     #marketplace-section h2 {
-        clear: both;
+        font-size: 24px;
     }
 }
 
@@ -322,115 +294,5 @@ button[onclick="toggleCart()"] {
 
     #product-list {
         grid-template-columns: 1fr;
-    }
-}
-/* =========================================================
-   WALZ HEADER
-   ========================================================= */
-
-.walz-header {
-    width: 100%;
-    min-height: 78px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 24px;
-    margin-bottom: 25px;
-    background: #111;
-    color: #fff;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-}
-
-.walz-brand {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-}
-
-.walz-logo {
-    font-size: 30px;
-    font-weight: 900;
-    letter-spacing: 5px;
-}
-
-.walz-subtitle {
-    font-size: 13px;
-    color: #aaa;
-}
-
-.walz-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.cart-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #fff;
-    color: #111;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-.cart-button:hover {
-    opacity: 0.9;
-}
-
-.cart-badge {
-    min-width: 23px;
-    height: 23px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 6px;
-    border-radius: 50%;
-    background: #111;
-    color: #fff;
-    font-size: 12px;
-}
-
-.marketplace-title {
-    margin-bottom: 25px;
-}
-
-.marketplace-title h2 {
-    margin: 0 0 6px;
-    font-size: 30px;
-}
-
-.marketplace-title p {
-    margin: 0;
-    color: #777;
-    font-size: 15px;
-}
-
-/* =========================================================
-   HEADER RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 650px) {
-
-    .walz-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 18px;
-    }
-
-    .walz-brand {
-        justify-content: center;
-    }
-
-    .walz-actions {
-        justify-content: center;
-    }
-
-    .marketplace-title h2 {
-        font-size: 25px;
     }
 }
