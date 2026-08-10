@@ -1,19 +1,311 @@
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-body { background: #0f0f0f; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-.container { background: #1a1a1a; padding: 40px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-.logo { text-align: center; font-size: 2.5rem; font-weight: bold; color: #ff00aa; margin-bottom: 20px; letter-spacing: 2px; }
-input { width: 100%; padding: 12px; margin: 8px 0; background: #2a2a2a; border: 1px solid #333; color: #fff; border-radius: 6px; font-size: 1rem; }
-button { width: 100%; padding: 12px; background: #ff00aa; color: #fff; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-button:hover { background: #cc0088; }
-.switch-text { text-align: center; margin-top: 15px; font-size: 0.9rem; color: #aaa; }
-.switch-text a { color: #ff00aa; text-decoration: none; cursor: pointer; }
-.message-box { margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; display: none; }
-.message-box.success { background: #1e5631; color: #a3e4a3; display: block; }
-.message-box.error { background: #561e1e; color: #e4a3a3; display: block; }
-#marketplace-section { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
-.product-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-.product-form input { flex: 1; min-width: 100px; }
-.product-item { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #ff00aa; }
-.product-item h4 { margin-bottom: 5px; color: #ff00aa; }
-.logout-btn { background: #333; margin-top: 0; margin-bottom: 20px; }
-.logout-btn:hover { background: #555; }
+/* =========================================================
+   WALZ ONE — INTERFAZ
+   FASE 2
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f5f6f8;
+    color: #222;
+}
+
+/* =========================================================
+   CONTENEDOR
+   ========================================================= */
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.logo {
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    margin: 0 0 30px;
+    text-align: center;
+}
+
+/* =========================================================
+   AUTENTICACIÓN
+   ========================================================= */
+
+#auth-section {
+    max-width: 430px;
+    margin: 60px auto;
+    padding: 35px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+#auth-section h3 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+#login-form,
+#register-form {
+    display: flex;
+    flex-direction: column;
+}
+
+input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    border: 1px solid #d9dce1;
+    border-radius: 9px;
+    font-size: 15px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #111;
+}
+
+/* =========================================================
+   BOTONES
+   ========================================================= */
+
+button {
+    border: none;
+    border-radius: 9px;
+    padding: 11px 17px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    background: #111;
+    color: white;
+    transition: 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.logout-btn {
+    background: #444;
+    float: right;
+}
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+.switch-text {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 18px;
+}
+
+.switch-text a {
+    color: #111;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+/* =========================================================
+   MENSAJES
+   ========================================================= */
+
+.message-box {
+    min-height: 25px;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.message-box.success {
+    background: #e7f7ed;
+    color: #16733a;
+}
+
+.message-box.error {
+    background: #fdeaea;
+    color: #b42318;
+}
+
+/* =========================================================
+   MARKETPLACE
+   ========================================================= */
+
+#marketplace-section {
+    width: 100%;
+}
+
+#marketplace-section h2 {
+    font-size: 30px;
+    margin-top: 10px;
+    margin-bottom: 25px;
+}
+
+#marketplace-section h3 {
+    margin-top: 30px;
+}
+
+/* =========================================================
+   CREAR PRODUCTO
+   ========================================================= */
+
+.product-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    padding: 20px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+}
+
+.product-form input {
+    margin-bottom: 0;
+}
+
+/* =========================================================
+   LISTA DE PRODUCTOS
+   ========================================================= */
+
+#product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.product-item {
+    background: white;
+    border-radius: 15px;
+    padding: 18px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+    transition: 0.2s ease;
+}
+
+.product-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.product-item h4 {
+    font-size: 18px;
+    margin: 0 0 12px;
+}
+
+.product-item p {
+    margin: 8px 0;
+}
+
+.product-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.product-actions input {
+    width: 60px;
+    margin: 0;
+    padding: 9px;
+}
+
+.product-actions button {
+    flex: 1;
+}
+
+/* =========================================================
+   CARRITO
+   ========================================================= */
+
+#cart-section {
+    margin-top: 30px;
+    padding: 25px;
+    background: #171717 !important;
+    color: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+#cart-section h3 {
+    margin-top: 0;
+}
+
+#cart-items {
+    margin: 15px 0;
+}
+
+#cart-items > div {
+    border-radius: 10px;
+    background: #252525 !important;
+}
+
+#cart-total {
+    font-size: 20px;
+    margin: 20px 0;
+}
+
+/* =========================================================
+   BOTÓN CARRITO
+   ========================================================= */
+
+button[onclick="toggleCart()"] {
+    font-size: 16px;
+    padding: 13px 20px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+    .product-form {
+        grid-template-columns: 1fr;
+    }
+
+    .product-form input {
+        margin-bottom: 0;
+    }
+
+    .logout-btn {
+        float: none;
+        margin-bottom: 20px;
+    }
+
+    #marketplace-section h2 {
+        clear: both;
+    }
+}
+
+@media (max-width: 500px) {
+
+    .container {
+        padding: 15px;
+    }
+
+    #auth-section {
+        margin: 20px auto;
+        padding: 25px;
+    }
+
+    .logo {
+        font-size: 34px;
+    }
+
+    #product-list {
+        grid-template-columns: 1fr;
+    }
+}
