@@ -1,8 +1,6 @@
-```css
 /* =========================================================
-   WALZ ONE — INTERFAZ
-   FASE 2
-========================================================= */
+   WALZ ONE — INTERFAZ FASE 2
+   ========================================================= */
 
 * {
     box-sizing: border-box;
@@ -17,7 +15,7 @@ body {
 
 /* =========================================================
    CONTENEDOR
-========================================================= */
+   ========================================================= */
 
 .container {
     width: 100%;
@@ -27,8 +25,18 @@ body {
 }
 
 /* =========================================================
-   LOGO
-========================================================= */
+   AUTENTICACIÓN
+   ========================================================= */
+
+#auth-section {
+    width: 100%;
+    max-width: 430px;
+    margin: 60px auto;
+    padding: 35px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
 
 .logo {
     font-size: 42px;
@@ -38,34 +46,16 @@ body {
     text-align: center;
 }
 
-/* =========================================================
-   AUTENTICACIÓN
-========================================================= */
-
-#auth-section {
-    width: 100%;
-    max-width: 430px;
-    margin: 60px auto;
-    padding: 35px;
-    background: #fff;
-    border-radius: 18px;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
-}
-
-#auth-section h3 {
-    text-align: center;
-    margin-bottom: 25px;
-}
-
 #login-form,
 #register-form {
     display: flex;
     flex-direction: column;
 }
 
-/* =========================================================
-   INPUTS
-========================================================= */
+#auth-section h3 {
+    text-align: center;
+    margin-bottom: 25px;
+}
 
 input {
     width: 100%;
@@ -75,8 +65,6 @@ input {
     border-radius: 9px;
     font-size: 15px;
     outline: none;
-    background: #fff;
-    color: #222;
 }
 
 input:focus {
@@ -85,7 +73,7 @@ input:focus {
 
 /* =========================================================
    BOTONES
-========================================================= */
+   ========================================================= */
 
 button {
     border: none;
@@ -95,7 +83,7 @@ button {
     font-weight: 600;
     font-size: 14px;
     background: #111;
-    color: #fff;
+    color: white;
     transition: 0.2s ease;
 }
 
@@ -105,13 +93,13 @@ button:hover {
 }
 
 .logout-btn {
-    background: #444;
     float: right;
+    background: #444;
 }
 
 /* =========================================================
-   TEXTO CAMBIO LOGIN / REGISTRO
-========================================================= */
+   LINKS
+   ========================================================= */
 
 .switch-text {
     text-align: center;
@@ -127,7 +115,7 @@ button:hover {
 
 /* =========================================================
    MENSAJES
-========================================================= */
+   ========================================================= */
 
 .message-box {
     min-height: 25px;
@@ -150,7 +138,7 @@ button:hover {
 
 /* =========================================================
    MARKETPLACE
-========================================================= */
+   ========================================================= */
 
 #marketplace-section {
     width: 100%;
@@ -167,15 +155,28 @@ button:hover {
 }
 
 /* =========================================================
+   CARRITO SUPERIOR
+   ========================================================= */
+
+#marketplace-section > div:first-of-type {
+    margin: 20px 0 !important;
+}
+
+button[onclick="toggleCart()"] {
+    font-size: 16px;
+    padding: 13px 20px;
+}
+
+/* =========================================================
    CREAR PRODUCTO
-========================================================= */
+   ========================================================= */
 
 .product-form {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr auto;
     gap: 10px;
     padding: 20px;
-    background: #fff;
+    background: white;
     border-radius: 14px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
 }
@@ -186,7 +187,7 @@ button:hover {
 
 /* =========================================================
    LISTA DE PRODUCTOS
-========================================================= */
+   ========================================================= */
 
 #product-list {
     display: grid;
@@ -196,7 +197,7 @@ button:hover {
 }
 
 .product-item {
-    background: #fff;
+    background: white;
     border-radius: 15px;
     padding: 18px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
@@ -217,10 +218,6 @@ button:hover {
     margin: 8px 0;
 }
 
-/* =========================================================
-   ACCIONES DEL PRODUCTO
-========================================================= */
-
 .product-actions {
     display: flex;
     gap: 8px;
@@ -240,14 +237,14 @@ button:hover {
 
 /* =========================================================
    CARRITO
-========================================================= */
+   ========================================================= */
 
 #cart-section {
     margin-top: 30px;
-    padding: 25px;
+    padding: 25px !important;
     background: #171717 !important;
-    color: #fff;
-    border-radius: 16px;
+    color: white;
+    border-radius: 16px !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
 
@@ -269,26 +266,18 @@ button:hover {
     margin: 20px 0;
 }
 
-/* =========================================================
-   BOTÓN CARRITO
-========================================================= */
-
-button[onclick="toggleCart()"] {
-    font-size: 16px;
-    padding: 13px 20px;
+#cart-section button {
+    background: white;
+    color: #111;
 }
 
-/* =========================================================
-   BOTÓN CHECKOUT
-========================================================= */
-
-#cart-section button {
-    margin-top: 5px;
+#cart-section button:hover {
+    background: #eee;
 }
 
 /* =========================================================
    RESPONSIVE
-========================================================= */
+   ========================================================= */
 
 @media (max-width: 800px) {
 
