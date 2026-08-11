@@ -459,7 +459,7 @@ function clearProductFilters() {
 // =====================================================
 
 function openProductDetail(productId) {
-    
+
 console.log("🔎 FICHA PRODUCTO:", productId);
 
     const products =
@@ -527,11 +527,11 @@ console.log("🔎 FICHA PRODUCTO:", productId);
 
     if (stockElement) {
 
-        stockElement.textContent =
-            product.stock > 0
-                ? `📦 Stock disponible: ${product.stock}`
-                : "❌ Sin stock";
-    }
+    stockElement.textContent =
+        product.stock > 0
+            ? `📦 Stock disponible: ${product.stock}`
+            : "Sin stock";
+}
 
 
     modal.dataset.productId =
