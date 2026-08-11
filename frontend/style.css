@@ -437,3 +437,81 @@ button[onclick="toggleCart()"] {
     }
 
 }
+/* =========================================================
+   CARRITO — FASE 3.4
+   ========================================================= */
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    background: #252525;
+    padding: 14px;
+    margin: 8px 0;
+    border-radius: 10px;
+}
+
+.cart-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cart-item-info span {
+    color: #aaa;
+    font-size: 13px;
+}
+
+.cart-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cart-item-controls button {
+    padding: 6px 10px;
+    min-width: 32px;
+}
+
+.cart-qty {
+    min-width: 25px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.cart-subtotal {
+    min-width: 90px;
+    text-align: right;
+    font-weight: bold;
+}
+
+.cart-remove {
+    background: #a00000 !important;
+}
+
+.cart-empty {
+    text-align: center;
+    padding: 20px;
+    color: #aaa;
+}
+
+
+/* MÓVIL */
+
+@media (max-width: 600px) {
+
+    .cart-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cart-item-controls {
+        justify-content: space-between;
+    }
+
+    .cart-subtotal {
+        min-width: auto;
+    }
+
+}

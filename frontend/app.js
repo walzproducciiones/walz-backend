@@ -542,8 +542,9 @@ function clearProductFilters() {
 }
 
 
+
 // =====================================================
-// CARRITO
+// AGREGAR AL CARRITO
 // =====================================================
 
 function addToCart(
@@ -553,45 +554,25 @@ function addToCart(
     stock
 ) {
 
-    console.log(
-        "🛒 AGREGAR PRESIONADO"
-    );
-
-    console.log(
-        "ID:",
-        id
-    );
-
-    console.log(
-        "Nombre:",
-        name
-    );
-
-    console.log(
-        "Precio:",
-        price
-    );
-
-    console.log(
-        "Stock:",
-        stock
-    );
+    console.log("🛒 AGREGAR PRESIONADO");
+    console.log("ID:", id);
+    console.log("Nombre:", name);
+    console.log("Precio:", price);
+    console.log("Stock:", stock);
 
     const qtyInput =
-        document.getElementById(
-            `qty-${id}`
-        );
+        document.getElementById(`qty-${id}`);
 
     const qty =
-        parseInt(
-            qtyInput?.value
-        ) || 1;
+        parseInt(qtyInput?.value) || 1;
 
     if (qty < 1) {
+
         showMessage(
             "La cantidad debe ser mayor a 0.",
             "error"
         );
+
         return;
     }
 
@@ -603,11 +584,11 @@ function addToCart(
     if (existing) {
 
         if (
-            existing.qty + qty > stock
+            existing.qty + qty > existing.stock
         ) {
 
             showMessage(
-                `No puedes agregar más de ${stock} unidades.`,
+                `No puedes agregar más de ${existing.stock} unidades.`,
                 "error"
             );
 
@@ -623,7 +604,7 @@ function addToCart(
             name: name,
             price: Number(price),
             qty: qty,
-            stock: stock
+            stock: Number(stock)
         });
     }
 
@@ -638,6 +619,20 @@ function addToCart(
     );
 
     updateCartUI();
+
+    // Si el carrito está abierto,
+    // actualizarlo inmediatamente.
+    const cartSection =
+        document.getElementById(
+            "cart-section"
+        );
+
+    if (
+        cartSection &&
+        cartSection.style.display !== "none"
+    ) {
+        renderCart();
+    }
 }
 
 
@@ -733,17 +728,32 @@ function renderCart() {
 
     let total = 0;
 
+
+    // -------------------------------------------------
+    // CARRITO VACÍO
+    // -------------------------------------------------
+
     if (cart.length === 0) {
 
-        container.innerHTML =
-            "Carrito vacío.";
+        container.innerHTML = `
+            <div class="cart-empty">
+                🛒 Carrito vacío.
+            </div>
+        `;
 
         if (totalElement) {
-            totalElement.textContent = "";
+
+            totalElement.textContent =
+                "Total: $0.00";
         }
 
         return;
     }
+
+
+    // -------------------------------------------------
+    // PRODUCTOS
+    // -------------------------------------------------
 
     cart.forEach(
         (item, index) => {
@@ -753,48 +763,170 @@ function renderCart() {
 
             total += subtotal;
 
+
             container.innerHTML += `
 
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        background:#222;
-                        padding:10px;
-                        margin:5px 0;
-                    "
-                >
+                <div class="cart-item">
 
-                    <span>
-                        ${escapeHtml(item.name)}
-                        x${item.qty}
-                    </span>
+                    <div class="cart-item-info">
 
-                    <span>
+                        <strong>
+                            ${escapeHtml(item.name)}
+                        </strong>
 
-                        $${subtotal.toFixed(2)}
+                        <span>
+                            $${item.price.toFixed(2)}
+                            c/u
+                        </span>
+
+                    </div>
+
+
+                    <div class="cart-item-controls">
+
+                        <button
+                            type="button"
+                            onclick="decreaseCartItem(${index})"
+                        >
+                            −
+                        </button>
+
+
+                        <span class="cart-qty">
+                            ${item.qty}
+                        </span>
+
+
+                        <button
+                            type="button"
+                            onclick="increaseCartItem(${index})"
+                        >
+                            +
+                        </button>
+
+
+                        <span class="cart-subtotal">
+                            $${subtotal.toFixed(2)}
+                        </span>
+
 
                         <button
                             type="button"
                             onclick="removeFromCart(${index})"
-                            style="background:#a00;"
+                            class="cart-remove"
                         >
-                            X
+                            🗑️
                         </button>
 
-                    </span>
+                    </div>
 
                 </div>
             `;
         }
     );
 
+
+    // -------------------------------------------------
+    // TOTAL
+    // -------------------------------------------------
+
     if (totalElement) {
 
         totalElement.textContent =
             `Total: $${total.toFixed(2)}`;
     }
+}
+
+
+// =====================================================
+// AUMENTAR CANTIDAD
+// =====================================================
+
+function increaseCartItem(index) {
+
+    if (
+        index < 0 ||
+        index >= cart.length
+    ) {
+        return;
+    }
+
+    const item = cart[index];
+
+    if (item.qty >= item.stock) {
+
+        showMessage(
+            `No puedes agregar más de ${item.stock} unidades de ${item.name}.`,
+            "error"
+        );
+
+        return;
+    }
+
+    item.qty++;
+
+    updateCartUI();
+
+    renderCart();
+}
+
+
+// =====================================================
+// DISMINUIR CANTIDAD
+// =====================================================
+
+function decreaseCartItem(index) {
+
+    if (
+        index < 0 ||
+        index >= cart.length
+    ) {
+        return;
+    }
+
+    const item = cart[index];
+
+    if (item.qty > 1) {
+
+        item.qty--;
+
+    } else {
+
+        cart.splice(index, 1);
+    }
+
+    updateCartUI();
+
+    renderCart();
+}
+
+
+// =====================================================
+// ELIMINAR DEL CARRITO
+// =====================================================
+
+function removeFromCart(index) {
+
+    if (
+        index < 0 ||
+        index >= cart.length
+    ) {
+        return;
+    }
+
+    const item =
+        cart[index];
+
+    cart.splice(index, 1);
+
+    showMessage(
+        `🗑️ ${item.name} eliminado del carrito.`,
+        "success"
+    );
+
+    updateCartUI();
+
+    renderCart();
 }
 
 
