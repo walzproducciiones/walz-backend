@@ -230,9 +230,20 @@
              PRODUCTOS
         ================================================== -->
 
-        <h3>Lista de Productos</h3>
+       <h3>Lista de Productos</h3>
 
-        <div id="product-list"></div>
+<div class="product-search">
+
+    <input
+        type="text"
+        id="product-search"
+        placeholder="🔎 Buscar productos..."
+        oninput="filterProducts()"
+    >
+
+</div>
+
+<div id="product-list"></div>
 
 
         <!-- =================================================

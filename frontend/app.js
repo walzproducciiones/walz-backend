@@ -945,3 +945,46 @@ document.addEventListener(
         }
     }
 );
+// =====================================================
+// BUSCADOR DE PRODUCTOS
+// =====================================================
+
+function filterProducts() {
+
+    const input = document.getElementById('product-search');
+
+    if (!input) {
+        return;
+    }
+
+    const searchText = input.value
+        .trim()
+        .toLowerCase();
+
+    const products = document.querySelectorAll(
+        '#product-list .product-item'
+    );
+
+    products.forEach(product => {
+
+        const nameElement = product.querySelector('h4');
+
+        if (!nameElement) {
+            return;
+        }
+
+        const productName = nameElement.textContent
+            .trim()
+            .toLowerCase();
+
+        if (
+            searchText === '' ||
+            productName.includes(searchText)
+        ) {
+            product.style.display = '';
+        } else {
+            product.style.display = 'none';
+        }
+
+    });
+}
