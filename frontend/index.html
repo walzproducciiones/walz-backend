@@ -269,6 +269,75 @@
 </div>
 
 <div id="product-list"></div>
+<!-- =====================================================
+     FICHA DE PRODUCTO
+===================================================== -->
+
+<div
+    id="product-detail-modal"
+    class="product-detail-modal"
+    style="display:none;"
+>
+
+    <div
+        class="product-detail-card"
+        onclick="event.stopPropagation()"
+    >
+
+        <button
+            type="button"
+            class="product-detail-close"
+            onclick="closeProductDetail()"
+        >
+            ✕
+        </button>
+
+
+        <h2 id="detail-product-name">
+            Producto
+        </h2>
+
+
+        <div
+            id="detail-product-price"
+            class="detail-product-price"
+        >
+            $0.00
+        </div>
+
+
+        <div
+            id="detail-product-stock"
+            class="detail-product-stock"
+        >
+            Stock
+        </div>
+
+
+        <div class="detail-product-description">
+
+            <h3>
+                Información del producto
+            </h3>
+
+            <p>
+                Producto disponible en WalZ.
+            </p>
+
+        </div>
+
+
+        <button
+            type="button"
+            onclick="closeProductDetail()"
+            class="detail-close-button"
+        >
+            Cerrar
+        </button>
+
+    </div>
+
+</div>
 
 <div id="product-list"></div>
 
