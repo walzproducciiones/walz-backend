@@ -3,10 +3,12 @@ from datetime import datetime, timedelta, timezone
 import os
 
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "TU_CLAVE_SECRETA_SUPER_SEGURA_CAMBIALA_EN_RENDER"
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY no está configurada en las variables de entorno"
+    )
 
 ALGORITHM = "HS256"
 
