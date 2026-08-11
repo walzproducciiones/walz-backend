@@ -64,7 +64,17 @@ def decode_token(token: str):
             algorithms=[ALGORITHM]
         )
 
+        print("✅ JWT DECODE OK")
+        print("🔐 JWT payload:", payload)
+
         return payload
 
-    except JWTError:
+    except JWTError as e:
+        print("❌ JWT ERROR:", type(e).__name__)
+        print("❌ JWT DETAIL:", str(e))
+        return None
+
+    except Exception as e:
+        print("❌ JWT UNEXPECTED ERROR:", type(e).__name__)
+        print("❌ JWT DETAIL:", str(e))
         return None
