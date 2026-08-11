@@ -266,6 +266,10 @@ async function handleCreateProduct() {
 // CARGAR PRODUCTOS
 // =====================================================
 
+// =====================================================
+// CARGAR PRODUCTOS
+// =====================================================
+
 async function loadProducts() {
 
     try {
@@ -280,102 +284,11 @@ async function loadProducts() {
 
         const products = await res.json();
 
-        const list =
-            document.getElementById(
-                "product-list"
-            );
+        // Guardamos los productos originales
+        window.walzProducts = products;
 
-        if (!list) {
-            console.error(
-                "No existe #product-list"
-            );
-            return;
-        }
-
-        list.innerHTML = "";
-
-        if (
-            !products ||
-            products.length === 0
-        ) {
-
-            list.innerHTML =
-                '<p style="color:#888;">No hay productos.</p>';
-
-            return;
-        }
-
-        products.forEach(product => {
-
-            const stockValue =
-                Number(product.stock);
-
-            const hasStock =
-                stockValue > 0;
-
-            list.innerHTML += `
-
-                <div class="product-item">
-
-                    <h4>
-                        ${escapeHtml(product.name)}
-                    </h4>
-
-                    <p>
-                        💰 $${Number(product.price).toFixed(2)}
-                        |
-                        📦 Stock: ${stockValue}
-                    </p>
-
-                    <div class="product-actions">
-
-                        ${
-                            hasStock
-
-                            ?
-
-                            `
-                            <input
-                                type="number"
-                                id="qty-${product.id}"
-                                value="1"
-                                min="1"
-                                max="${stockValue}"
-                                style="width:50px;"
-                            >
-
-                            <button
-                                type="button"
-                                onclick="addToCart(
-                                    '${product.id}',
-                                    '${escapeJs(product.name)}',
-                                    ${Number(product.price)},
-                                    ${stockValue}
-                                )"
-                            >
-                                🛒 Agregar
-                            </button>
-                            `
-
-                            :
-
-                            `
-                            <p
-                                style="
-                                    color:#ff4444;
-                                    font-weight:bold;
-                                "
-                            >
-                                Sin stock
-                            </p>
-                            `
-                        }
-
-                    </div>
-
-                </div>
-            `;
-        });
+        // Mostramos todos los productos
+        renderProducts(products);
 
     } catch (e) {
 
@@ -384,6 +297,248 @@ async function loadProducts() {
             e
         );
     }
+}
+
+
+// =====================================================
+// MOSTRAR PRODUCTOS
+// =====================================================
+
+function renderProducts(products) {
+
+    const list =
+        document.getElementById(
+            "product-list"
+        );
+
+    if (!list) {
+
+        console.error(
+            "No existe #product-list"
+        );
+
+        return;
+    }
+
+    list.innerHTML = "";
+
+    if (
+        !products ||
+        products.length === 0
+    ) {
+
+        list.innerHTML =
+            '<p style="color:#888;">No se encontraron productos.</p>';
+
+        return;
+    }
+
+
+    products.forEach(product => {
+
+        const stockValue =
+            Number(product.stock);
+
+        const hasStock =
+            stockValue > 0;
+
+
+        list.innerHTML += `
+
+            <div class="product-item">
+
+                <h4>
+                    ${escapeHtml(product.name)}
+                </h4>
+
+                <p>
+                    💰 $${Number(product.price).toFixed(2)}
+                    |
+                    📦 Stock: ${stockValue}
+                </p>
+
+                <div class="product-actions">
+
+                    ${
+                        hasStock
+
+                        ?
+
+                        `
+                        <input
+                            type="number"
+                            id="qty-${product.id}"
+                            value="1"
+                            min="1"
+                            max="${stockValue}"
+                            style="width:50px;"
+                        >
+
+                        <button
+                            type="button"
+                            onclick="addToCart(
+                                '${product.id}',
+                                '${escapeJs(product.name)}',
+                                ${Number(product.price)},
+                                ${stockValue}
+                            )"
+                        >
+                            🛒 Agregar
+                        </button>
+                        `
+
+                        :
+
+                        `
+                        <p
+                            style="
+                                color:#ff4444;
+                                font-weight:bold;
+                            "
+                        >
+                            Sin stock
+                        </p>
+                        `
+                    }
+
+                </div>
+
+            </div>
+        `;
+    });
+}
+
+
+// =====================================================
+// FILTROS DE PRODUCTOS
+// =====================================================
+
+function filterProducts() {
+
+    const products =
+        window.walzProducts || [];
+
+
+    const searchInput =
+        document.getElementById(
+            "product-search"
+        );
+
+    const minPriceInput =
+        document.getElementById(
+            "price-min"
+        );
+
+    const maxPriceInput =
+        document.getElementById(
+            "price-max"
+        );
+
+
+    const search =
+        searchInput
+            ? searchInput.value
+                .trim()
+                .toLowerCase()
+            : "";
+
+
+    const minPrice =
+        minPriceInput
+            ? parseFloat(minPriceInput.value)
+            : NaN;
+
+
+    const maxPrice =
+        maxPriceInput
+            ? parseFloat(maxPriceInput.value)
+            : NaN;
+
+
+    const filtered =
+        products.filter(product => {
+
+            const name =
+                String(product.name || "")
+                    .toLowerCase();
+
+            const price =
+                Number(product.price || 0);
+
+
+            // Buscar por nombre
+            if (
+                search &&
+                !name.includes(search)
+            ) {
+                return false;
+            }
+
+
+            // Precio mínimo
+            if (
+                !isNaN(minPrice) &&
+                price < minPrice
+            ) {
+                return false;
+            }
+
+
+            // Precio máximo
+            if (
+                !isNaN(maxPrice) &&
+                price > maxPrice
+            ) {
+                return false;
+            }
+
+
+            return true;
+        });
+
+
+    renderProducts(filtered);
+}
+
+
+// =====================================================
+// LIMPIAR FILTROS
+// =====================================================
+
+function clearProductFilters() {
+
+    const search =
+        document.getElementById(
+            "product-search"
+        );
+
+    const minPrice =
+        document.getElementById(
+            "price-min"
+        );
+
+    const maxPrice =
+        document.getElementById(
+            "price-max"
+        );
+
+
+    if (search) {
+        search.value = "";
+    }
+
+    if (minPrice) {
+        minPrice.value = "";
+    }
+
+    if (maxPrice) {
+        maxPrice.value = "";
+    }
+
+
+    renderProducts(
+        window.walzProducts || []
+    );
 }
 
 
@@ -987,4 +1142,99 @@ function filterProducts() {
         }
 
     });
+}
+
+// =====================================================
+// FILTROS DE PRODUCTOS
+// =====================================================
+
+function filterProducts() {
+
+    const products = window.walzProducts || [];
+
+    const search =
+        document.getElementById('product-search')
+            ?.value
+            .trim()
+            .toLowerCase() || '';
+
+    const minPrice =
+        parseFloat(
+            document.getElementById('price-min')?.value
+        );
+
+    const maxPrice =
+        parseFloat(
+            document.getElementById('price-max')?.value
+        );
+
+    const filteredProducts = products.filter(product => {
+
+        const name =
+            String(product.name || '')
+                .toLowerCase();
+
+        const price =
+            Number(product.price || 0);
+
+        // Buscar por nombre
+        if (
+            search &&
+            !name.includes(search)
+        ) {
+            return false;
+        }
+
+        // Precio mínimo
+        if (
+            !isNaN(minPrice) &&
+            price < minPrice
+        ) {
+            return false;
+        }
+
+        // Precio máximo
+        if (
+            !isNaN(maxPrice) &&
+            price > maxPrice
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+
+    renderProducts(filteredProducts);
+}
+
+// =====================================================
+// LIMPIAR FILTROS
+// =====================================================
+
+function clearProductFilters() {
+
+    const search =
+        document.getElementById('product-search');
+
+    const minPrice =
+        document.getElementById('price-min');
+
+    const maxPrice =
+        document.getElementById('price-max');
+
+    if (search) {
+        search.value = '';
+    }
+
+    if (minPrice) {
+        minPrice.value = '';
+    }
+
+    if (maxPrice) {
+        maxPrice.value = '';
+    }
+
+    renderProducts(
+        window.walzProducts || []
+    );
 }

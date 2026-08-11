@@ -401,3 +401,39 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   BUSCADOR Y FILTROS
+   ========================================================= */
+
+.product-filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 18px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+}
+
+.product-filters input {
+    margin: 0;
+}
+
+.product-filters button {
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+    .product-filters {
+        grid-template-columns: 1fr;
+    }
+
+}

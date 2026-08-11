@@ -232,16 +232,43 @@
 
        <h3>Lista de Productos</h3>
 
-<div class="product-search">
+<!-- ==============================
+     BUSCADOR Y FILTROS
+=============================== -->
+
+<div class="product-filters">
 
     <input
         type="text"
         id="product-search"
-        placeholder="🔎 Buscar productos..."
+        placeholder="🔎 Buscar producto..."
         oninput="filterProducts()"
     >
 
+    <input
+        type="number"
+        id="price-min"
+        placeholder="Precio mínimo"
+        oninput="filterProducts()"
+    >
+
+    <input
+        type="number"
+        id="price-max"
+        placeholder="Precio máximo"
+        oninput="filterProducts()"
+    >
+
+    <button
+        type="button"
+        onclick="clearProductFilters()"
+    >
+        Limpiar filtros
+    </button>
+
 </div>
+
+<div id="product-list"></div>
 
 <div id="product-list"></div>
 
