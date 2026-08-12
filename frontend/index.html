@@ -158,23 +158,34 @@
 
     <div class="walz-actions">
 
-        <button
-            type="button"
-            class="cart-button"
-            onclick="toggleCart()"
-        >
-            🛒
-            <span>Carrito</span>
-            <span id="cart-count" class="cart-badge">0</span>
-        </button>
+    <button
+        type="button"
+        class="cart-button"
+        onclick="toggleCart()"
+    >
+        🛒
+        <span>Carrito</span>
+        <span id="cart-count" class="cart-badge">0</span>
+    </button>
 
-        <button
-            type="button"
-            onclick="handleLogout()"
-            class="logout-btn"
-        >
-            Cerrar Sesión
-        </button>
+    <button
+        type="button"
+        class="orders-button"
+        onclick="showMyOrders()"
+    >
+        📦
+        <span>Mis pedidos</span>
+    </button>
+
+    <button
+        type="button"
+        onclick="handleLogout()"
+        class="logout-btn"
+    >
+        Cerrar Sesión
+    </button>
+
+</div>
 
     </div>
 
@@ -189,6 +200,7 @@
 
 </div>
 
+        <div id="marketplace-content">
 
         <!-- =================================================
              CREAR PRODUCTO
@@ -373,6 +385,30 @@
             </button>
 
         </div>
+
+        </div>
+
+        <!-- =================================================
+             MIS PEDIDOS
+        ================================================== -->
+
+        <section
+            id="orders-section"
+            style="display:none; margin-top:30px;"
+        >
+            <button
+                type="button"
+                onclick="showMarketplaceContent()"
+            >
+                ← Volver al marketplace
+            </button>
+
+            <h2>📦 Mis pedidos</h2>
+
+            <div id="orders-content">
+                Cargando pedidos...
+            </div>
+        </section>
 
     </div>
 

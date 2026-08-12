@@ -789,6 +789,215 @@ function toggleCart() {
 
 
 // =====================================================
+// MIS PEDIDOS
+// =====================================================
+
+function showMyOrders() {
+
+    const marketplaceContent =
+        document.getElementById("marketplace-content");
+
+    const ordersSection =
+        document.getElementById("orders-section");
+
+    if (!marketplaceContent || !ordersSection) {
+        console.error("No existe la sección de pedidos.");
+        return;
+    }
+
+    marketplaceContent.style.display = "none";
+    ordersSection.style.display = "block";
+
+    loadMyOrders();
+}
+
+
+function showMarketplaceContent() {
+
+    const marketplaceContent =
+        document.getElementById("marketplace-content");
+
+    const ordersSection =
+        document.getElementById("orders-section");
+
+    if (marketplaceContent) {
+        marketplaceContent.style.display = "block";
+    }
+
+    if (ordersSection) {
+        ordersSection.style.display = "none";
+    }
+}
+
+
+async function loadMyOrders() {
+
+    const container =
+        document.getElementById("orders-content");
+
+    token = localStorage.getItem("walz_token");
+
+    if (!container) {
+        console.error("No existe #orders-content");
+        return;
+    }
+
+    if (!token) {
+        container.innerHTML =
+            '<p class="orders-error">Debes iniciar sesión para ver tus pedidos.</p>';
+        return;
+    }
+
+    container.innerHTML =
+        '<p class="orders-loading">Cargando pedidos...</p>';
+
+    try {
+
+        const res = await fetch(`${API_URL}/orders/`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const orders = await res.json();
+
+        renderMyOrders(orders);
+
+    } catch (e) {
+
+        console.error("Error cargando pedidos:", e);
+
+        container.innerHTML = `
+            <p class="orders-error">
+                No se pudieron cargar los pedidos. ${escapeHtml(e.message)}
+            </p>
+            <button type="button" onclick="loadMyOrders()">
+                Reintentar
+            </button>
+        `;
+    }
+}
+
+
+function renderMyOrders(orders) {
+
+    const container =
+        document.getElementById("orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    if (!Array.isArray(orders) || orders.length === 0) {
+        container.innerHTML = `
+            <p class="orders-empty">
+                Aún no realizaste pedidos.
+            </p>
+        `;
+        return;
+    }
+
+    container.innerHTML = orders.map(order => {
+
+        const createdAt = order.created_at
+            ? new Date(order.created_at).toLocaleString("es-AR")
+            : "Fecha no disponible";
+
+        const itemCount = Array.isArray(order.items)
+            ? order.items.reduce(
+                (total, item) => total + Number(item.quantity || 0),
+                0
+            )
+            : 0;
+
+        return `
+            <article class="order-item" style="margin:15px 0; padding:15px; background:#1f1f1f; border-radius:10px;">
+                <h3>Pedido #${escapeHtml(String(order.id))}</h3>
+                <p>Fecha: ${escapeHtml(createdAt)}</p>
+                <p>Estado: ${escapeHtml(order.status || "Sin estado")}</p>
+                <p>Artículos: ${itemCount}</p>
+                <p>Total: $${Number(order.total_amount || 0).toFixed(2)}</p>
+                <button type="button" onclick="openOrderDetail('${escapeJs(String(order.id))}')">
+                    Ver detalle
+                </button>
+            </article>
+        `;
+    }).join("");
+}
+
+
+async function openOrderDetail(orderId) {
+
+    const container =
+        document.getElementById("orders-content");
+
+    token = localStorage.getItem("walz_token");
+
+    if (!container || !token) {
+        showMessage("Debes iniciar sesión para ver el pedido.", "error");
+        return;
+    }
+
+    container.innerHTML =
+        '<p class="orders-loading">Cargando detalle del pedido...</p>';
+
+    try {
+
+        const res = await fetch(`${API_URL}/orders/${orderId}`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const order = await res.json();
+        const items = Array.isArray(order.items) ? order.items : [];
+
+        container.innerHTML = `
+            <button type="button" onclick="loadMyOrders()">
+                ← Volver a mis pedidos
+            </button>
+            <h3>Pedido #${escapeHtml(String(order.id))}</h3>
+            <p>Estado: ${escapeHtml(order.status || "Sin estado")}</p>
+            <p>Fecha: ${escapeHtml(order.created_at ? new Date(order.created_at).toLocaleString("es-AR") : "Fecha no disponible")}</p>
+            <div class="order-detail-items">
+                ${items.map(item => `
+                    <div style="margin:10px 0; padding:10px; background:#1f1f1f; border-radius:8px;">
+                        <strong>${escapeHtml(item.product?.name || "Producto")}</strong>
+                        <p>Cantidad: ${Number(item.quantity || 0)}</p>
+                        <p>Precio unitario: $${Number(item.price_at_purchase || 0).toFixed(2)}</p>
+                    </div>
+                `).join("") || "<p>Este pedido no tiene artículos.</p>"}
+            </div>
+            <h3>Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+        `;
+
+    } catch (e) {
+
+        console.error("Error cargando detalle del pedido:", e);
+
+        container.innerHTML = `
+            <p class="orders-error">
+                No se pudo cargar el detalle. ${escapeHtml(e.message)}
+            </p>
+            <button type="button" onclick="loadMyOrders()">
+                Volver a mis pedidos
+            </button>
+        `;
+    }
+}
+
+
+// =====================================================
 // MOSTRAR CARRITO
 // =====================================================
 
@@ -1257,6 +1466,10 @@ window.toggleCart = toggleCart;
 window.renderCart = renderCart;
 window.removeFromCart = removeFromCart;
 window.checkout = checkout;
+window.showMyOrders = showMyOrders;
+window.showMarketplaceContent = showMarketplaceContent;
+window.loadMyOrders = loadMyOrders;
+window.openOrderDetail = openOrderDetail;
 
 window.showMessage = showMessage;
 
