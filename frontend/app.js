@@ -419,6 +419,69 @@ function renderProducts(products) {
 }
 
 // =====================================================
+// FILTROS DE PRODUCTOS
+// =====================================================
+
+function filterProducts() {
+
+    const products =
+        window.walzProducts || [];
+
+    const search =
+        document.getElementById("product-search")
+            ?.value
+            .trim()
+            .toLowerCase() || "";
+
+    const minPrice =
+        parseFloat(
+            document.getElementById("price-min")?.value
+        );
+
+    const maxPrice =
+        parseFloat(
+            document.getElementById("price-max")?.value
+        );
+
+    const filteredProducts =
+        products.filter(product => {
+
+            const name =
+                String(product.name || "")
+                    .toLowerCase();
+
+            const price =
+                Number(product.price || 0);
+
+            if (
+                search &&
+                !name.includes(search)
+            ) {
+                return false;
+            }
+
+            if (
+                !isNaN(minPrice) &&
+                price < minPrice
+            ) {
+                return false;
+            }
+
+            if (
+                !isNaN(maxPrice) &&
+                price > maxPrice
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+    renderProducts(filteredProducts);
+}
+
+
+// =====================================================
 // LIMPIAR FILTROS
 // =====================================================
 
@@ -439,7 +502,6 @@ function clearProductFilters() {
             "price-max"
         );
 
-
     if (search) {
         search.value = "";
     }
@@ -452,15 +514,22 @@ function clearProductFilters() {
         maxPrice.value = "";
     }
 
-
     renderProducts(
-        // =====================================================
+        window.walzProducts || []
+    );
+}
+
+
+// =====================================================
 // ABRIR FICHA DEL PRODUCTO
 // =====================================================
 
 function openProductDetail(productId) {
 
-console.log("🔎 FICHA PRODUCTO:", productId);
+    console.log(
+        "🔎 FICHA PRODUCTO:",
+        productId
+    );
 
     const products =
         window.walzProducts || [];
@@ -494,7 +563,6 @@ console.log("🔎 FICHA PRODUCTO:", productId);
         return;
     }
 
-
     const nameElement =
         document.getElementById(
             "detail-product-name"
@@ -510,13 +578,11 @@ console.log("🔎 FICHA PRODUCTO:", productId);
             "detail-product-stock"
         );
 
-
     if (nameElement) {
 
         nameElement.textContent =
             product.name;
     }
-
 
     if (priceElement) {
 
@@ -524,19 +590,16 @@ console.log("🔎 FICHA PRODUCTO:", productId);
             `$${Number(product.price).toFixed(2)}`;
     }
 
-
     if (stockElement) {
 
-    stockElement.textContent =
-        product.stock > 0
-            ? `📦 Stock disponible: ${product.stock}`
-            : "Sin stock";
-}
-
+        stockElement.textContent =
+            product.stock > 0
+                ? `📦 Stock disponible: ${product.stock}`
+                : "Sin stock";
+    }
 
     modal.dataset.productId =
         product.id;
-
 
     modal.style.display =
         "flex";
@@ -561,9 +624,11 @@ function closeProductDetail() {
     modal.style.display =
         "none";
 }
-        window.walzProducts || []
-    );
-}
+
+
+// =====================================================
+// AGREGAR AL CARRITO
+// =====================================================
 
 
 
@@ -955,30 +1020,6 @@ function removeFromCart(index) {
 
 
 // =====================================================
-// ELIMINAR DEL CARRITO
-// =====================================================
-
-function removeFromCart(index) {
-
-    if (
-        index < 0 ||
-        index >= cart.length
-    ) {
-        return;
-    }
-
-    cart.splice(
-        index,
-        1
-    );
-
-    renderCart();
-
-    updateCartUI();
-}
-
-
-// =====================================================
 // CHECKOUT
 // =====================================================
 
@@ -1256,141 +1297,3 @@ document.addEventListener(
         }
     }
 );
-// =====================================================
-// BUSCADOR DE PRODUCTOS
-// =====================================================
-
-function filterProducts() {
-
-    const input = document.getElementById('product-search');
-
-    if (!input) {
-        return;
-    }
-
-    const searchText = input.value
-        .trim()
-        .toLowerCase();
-
-    const products = document.querySelectorAll(
-        '#product-list .product-item'
-    );
-
-    products.forEach(product => {
-
-        const nameElement = product.querySelector('h4');
-
-        if (!nameElement) {
-            return;
-        }
-
-        const productName = nameElement.textContent
-            .trim()
-            .toLowerCase();
-
-        if (
-            searchText === '' ||
-            productName.includes(searchText)
-        ) {
-            product.style.display = '';
-        } else {
-            product.style.display = 'none';
-        }
-
-    });
-}
-
-// =====================================================
-// FILTROS DE PRODUCTOS
-// =====================================================
-
-function filterProducts() {
-
-    const products = window.walzProducts || [];
-
-    const search =
-        document.getElementById('product-search')
-            ?.value
-            .trim()
-            .toLowerCase() || '';
-
-    const minPrice =
-        parseFloat(
-            document.getElementById('price-min')?.value
-        );
-
-    const maxPrice =
-        parseFloat(
-            document.getElementById('price-max')?.value
-        );
-
-    const filteredProducts = products.filter(product => {
-
-        const name =
-            String(product.name || '')
-                .toLowerCase();
-
-        const price =
-            Number(product.price || 0);
-
-        // Buscar por nombre
-        if (
-            search &&
-            !name.includes(search)
-        ) {
-            return false;
-        }
-
-        // Precio mínimo
-        if (
-            !isNaN(minPrice) &&
-            price < minPrice
-        ) {
-            return false;
-        }
-
-        // Precio máximo
-        if (
-            !isNaN(maxPrice) &&
-            price > maxPrice
-        ) {
-            return false;
-        }
-
-        return true;
-    });
-
-    renderProducts(filteredProducts);
-}
-
-// =====================================================
-// LIMPIAR FILTROS
-// =====================================================
-
-function clearProductFilters() {
-
-    const search =
-        document.getElementById('product-search');
-
-    const minPrice =
-        document.getElementById('price-min');
-
-    const maxPrice =
-        document.getElementById('price-max');
-
-    if (search) {
-        search.value = '';
-    }
-
-    if (minPrice) {
-        minPrice.value = '';
-    }
-
-    if (maxPrice) {
-        maxPrice.value = '';
-    }
-
-    renderProducts(
-        window.walzProducts || []
-    );
-}
