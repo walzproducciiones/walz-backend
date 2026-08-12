@@ -1,4 +1,4 @@
-const API_URL = "https://walz-backend.onrender.com";
+const API_URL = window.location.origin;
 
 let token = localStorage.getItem("walz_token");
 let cart = [];
@@ -916,7 +916,7 @@ function renderMyOrders(orders) {
             : 0;
 
         return `
-            <article class="order-item" style="margin:15px 0; padding:15px; background:#1f1f1f; border-radius:10px;">
+            <article class="order-item">
                 <h3>Pedido #${escapeHtml(String(order.id))}</h3>
                 <p>Fecha: ${escapeHtml(createdAt)}</p>
                 <p>Estado: ${escapeHtml(order.status || "Sin estado")}</p>
@@ -954,6 +954,11 @@ async function openOrderDetail(orderId) {
             }
         });
 
+        if (res.status === 404) {
+            renderOrderNotFound();
+            return;
+        }
+
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.detail || `HTTP ${res.status}`);
@@ -962,24 +967,7 @@ async function openOrderDetail(orderId) {
         const order = await res.json();
         const items = Array.isArray(order.items) ? order.items : [];
 
-        container.innerHTML = `
-            <button type="button" onclick="loadMyOrders()">
-                ← Volver a mis pedidos
-            </button>
-            <h3>Pedido #${escapeHtml(String(order.id))}</h3>
-            <p>Estado: ${escapeHtml(order.status || "Sin estado")}</p>
-            <p>Fecha: ${escapeHtml(order.created_at ? new Date(order.created_at).toLocaleString("es-AR") : "Fecha no disponible")}</p>
-            <div class="order-detail-items">
-                ${items.map(item => `
-                    <div style="margin:10px 0; padding:10px; background:#1f1f1f; border-radius:8px;">
-                        <strong>${escapeHtml(item.product?.name || "Producto")}</strong>
-                        <p>Cantidad: ${Number(item.quantity || 0)}</p>
-                        <p>Precio unitario: $${Number(item.price_at_purchase || 0).toFixed(2)}</p>
-                    </div>
-                `).join("") || "<p>Este pedido no tiene artículos.</p>"}
-            </div>
-            <h3>Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
-        `;
+        renderOrderDetail(order, items);
 
     } catch (e) {
 
@@ -987,13 +975,81 @@ async function openOrderDetail(orderId) {
 
         container.innerHTML = `
             <p class="orders-error">
-                No se pudo cargar el detalle. ${escapeHtml(e.message)}
+                No se pudo cargar el detalle. Verificá tu conexión e intentá nuevamente.
             </p>
+            <button type="button" onclick="openOrderDetail('${escapeJs(String(orderId))}')">
+                Reintentar
+            </button>
             <button type="button" onclick="loadMyOrders()">
                 Volver a mis pedidos
             </button>
         `;
     }
+}
+
+
+function renderOrderDetail(order, items) {
+
+    const container = document.getElementById("orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    const createdAt = order.created_at
+        ? new Date(order.created_at).toLocaleString("es-AR")
+        : "Fecha no disponible";
+
+    const address = order.shipping_address || "Dirección no disponible";
+
+    container.innerHTML = `
+        <button type="button" onclick="loadMyOrders()">
+            ← Volver a mis pedidos
+        </button>
+        <article class="order-detail-card">
+            <h3>Pedido #${escapeHtml(String(order.id))}</h3>
+            <dl class="order-summary">
+                <div><dt>Estado</dt><dd>${escapeHtml(order.status || "Sin estado")}</dd></div>
+                <div><dt>Fecha</dt><dd>${escapeHtml(createdAt)}</dd></div>
+                <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
+            </dl>
+            <h4>Productos</h4>
+            <div class="order-detail-items">
+                ${items.map(item => {
+                    const quantity = Number(item.quantity || 0);
+                    const price = Number(item.price_at_purchase || 0);
+                    const subtotal = quantity * price;
+
+                    return `
+                        <article class="order-detail-item">
+                            <strong>${escapeHtml(item.product?.name || "Producto")}</strong>
+                            <span>Cantidad: ${quantity}</span>
+                            <span>Precio unitario: $${price.toFixed(2)}</span>
+                            <strong>Subtotal: $${subtotal.toFixed(2)}</strong>
+                        </article>
+                    `;
+                }).join("") || "<p>Este pedido no tiene artículos.</p>"}
+            </div>
+            <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+        </article>
+    `;
+}
+
+
+function renderOrderNotFound() {
+
+    const container = document.getElementById("orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <p class="orders-empty">El pedido solicitado no existe o ya no está disponible.</p>
+        <button type="button" onclick="loadMyOrders()">
+            Volver a mis pedidos
+        </button>
+    `;
 }
 
 

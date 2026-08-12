@@ -63,3 +63,17 @@ def get_orders_by_buyer(db: Session, buyer_id: UUID):
         .order_by(Order.created_at.desc())
         .all()
     )
+
+
+def get_order_by_id(db: Session, order_id: UUID, buyer_id: UUID):
+    return (
+        db.query(Order)
+        .options(
+            selectinload(Order.items).selectinload(OrderItem.product)
+        )
+        .filter(
+            Order.id == order_id,
+            Order.buyer_id == buyer_id
+        )
+        .first()
+    )

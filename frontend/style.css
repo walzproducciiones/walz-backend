@@ -674,3 +674,46 @@ button[onclick="toggleCart()"] {
     }
 
 }
+.order-item,
+.order-detail-card {
+    margin: 15px 0;
+    padding: 15px;
+    background: #1f1f1f;
+    color: #f5f6f8;
+    border-radius: 10px;
+}
+
+.order-summary {
+    display: grid;
+    gap: 10px;
+}
+
+.order-summary div {
+    display: grid;
+    gap: 3px;
+}
+
+.order-summary dt {
+    font-weight: 700;
+}
+
+.order-summary dd {
+    margin: 0;
+}
+
+.order-detail-items {
+    display: grid;
+    gap: 10px;
+}
+
+.order-detail-item {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    background: #292929;
+    border-radius: 8px;
+}
+
+.order-total {
+    margin-bottom: 0;
+}

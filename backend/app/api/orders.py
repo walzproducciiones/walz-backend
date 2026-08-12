@@ -1,16 +1,18 @@
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
+from backend.app.models.user import User
 from backend.app.schemas.order import OrderCreate, OrderResponse
 from backend.app.services.order_service import (
     create_order,
+    get_order_by_id,
     get_orders_by_buyer,
 )
-from backend.app.api.auth import get_current_user
-from backend.app.models.user import User
 
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -44,3 +46,20 @@ def get_my_orders(
     current_user: User = Depends(get_current_user)
 ):
     return get_orders_by_buyer(db, current_user.id)
+
+
+@router.get("/{order_id}", response_model=OrderResponse)
+def get_my_order_detail(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    order = get_order_by_id(db, order_id, current_user.id)
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    return order
