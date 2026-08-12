@@ -1337,19 +1337,41 @@ async function checkout() {
 
         if (res.ok) {
 
-            showMessage(
-                '✅ ¡Compra realizada con éxito!',
-                'success'
-            );
+    const order = JSON.parse(text);
 
-            cart = [];
+    showMessage(
+        '✅ ¡Compra realizada con éxito!',
+        'success'
+    );
 
-            renderCart();
-            updateCartUI();
+    cart = [];
 
-            await loadProducts();
+    renderCart();
+    updateCartUI();
 
-        } else {
+    await loadProducts();
+
+    const cartSection = document.getElementById("cart-section");
+    const marketplaceContent =
+        document.getElementById("marketplace-content");
+    const ordersSection =
+        document.getElementById("orders-section");
+
+    if (cartSection) {
+        cartSection.style.display = "none";
+    }
+
+    if (marketplaceContent) {
+        marketplaceContent.style.display = "none";
+    }
+
+    if (ordersSection) {
+        ordersSection.style.display = "block";
+    }
+
+    await openOrderDetail(order.id);
+
+} else {
 
             let message = 'Error al procesar la compra.';
 
