@@ -1,7 +1,66 @@
 const API_URL = window.location.origin;
 
 let token = localStorage.getItem("walz_token");
-let cart = [];
+let currentUserId = localStorage.getItem("walz_user_id");
+
+let cart = loadCart();
+
+function getCartStorageKey() {
+    return currentUserId
+        ? `walz_cart_${currentUserId}`
+        : null;
+}
+
+function loadCart() {
+    try {
+        const cartStorageKey = getCartStorageKey();
+
+        if (!cartStorageKey) {
+            return [];
+        }
+
+        const savedCart = localStorage.getItem(cartStorageKey);
+
+        if (!savedCart) {
+            return [];
+        }
+
+        const parsedCart = JSON.parse(savedCart);
+
+        return Array.isArray(parsedCart)
+            ? parsedCart
+            : [];
+
+    } catch (error) {
+        console.error("Error recuperando carrito:", error);
+        return [];
+    }
+}
+
+function saveCart() {
+    try {
+        const cartStorageKey = getCartStorageKey();
+
+        if (!cartStorageKey) {
+            return;
+        }
+
+        localStorage.setItem(
+            cartStorageKey,
+            JSON.stringify(cart)
+        );
+    } catch (error) {
+        console.error("Error guardando carrito:", error);
+    }
+}
+
+function clearCartStorage() {
+    const cartStorageKey = getCartStorageKey();
+
+    if (cartStorageKey) {
+        localStorage.removeItem(cartStorageKey);
+    }
+}
 
 // =====================================================
 // AUTENTICACIÓN
@@ -86,6 +145,10 @@ async function handleLogin() {
                 token
             );
 
+            currentUserId = data.user.id;
+            localStorage.setItem("walz_user_id", currentUserId);
+            cart = loadCart();
+
             showMessage(
                 "Bienvenido a WalZ!",
                 "success"
@@ -125,6 +188,10 @@ function handleLogout() {
     token = null;
 
     localStorage.removeItem("walz_token");
+
+    currentUserId = null;
+
+    localStorage.removeItem("walz_user_id");
 
     cart = [];
 
@@ -706,6 +773,7 @@ function addToCart(
         `✅ ${name} (x${qty}) agregado`,
         "success"
     );
+    saveCart();
 
     updateCartUI();
 
@@ -1219,6 +1287,8 @@ function increaseCartItem(index) {
 
     item.qty++;
 
+    saveCart();
+
     updateCartUI();
 
     renderCart();
@@ -1249,6 +1319,8 @@ function decreaseCartItem(index) {
         cart.splice(index, 1);
     }
 
+    saveCart();
+
     updateCartUI();
 
     renderCart();
@@ -1272,6 +1344,8 @@ function removeFromCart(index) {
         cart[index];
 
     cart.splice(index, 1);
+
+    saveCart();
 
     showMessage(
         `🗑️ ${item.name} eliminado del carrito.`,
@@ -1345,6 +1419,8 @@ async function checkout() {
     );
 
     cart = [];
+
+    clearCartStorage();
 
     renderCart();
     updateCartUI();
