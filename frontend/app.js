@@ -348,10 +348,10 @@ async function loadProducts() {
 
         const products = await res.json();
 
-        // Guardamos los productos originales
         window.walzProducts = products;
 
-        // Mostramos todos los productos
+        syncCartWithProducts(products);
+
         renderProducts(products);
 
     } catch (e) {
@@ -363,6 +363,87 @@ async function loadProducts() {
     }
 }
 
+
+function syncCartWithProducts(products) {
+
+    if (!Array.isArray(products)) {
+        return;
+    }
+
+    const productsById = new Map(
+        products.map(product => [
+            String(product.id),
+            product
+        ])
+    );
+
+    let cartChanged = false;
+
+    const synchronizedCart = cart.reduce(
+        (result, item) => {
+
+            const product =
+                productsById.get(String(item.id));
+
+            if (!product) {
+                cartChanged = true;
+                return result;
+            }
+
+            const currentStock =
+                Number(product.stock || 0);
+
+            if (currentStock <= 0) {
+                cartChanged = true;
+                return result;
+            }
+
+            const synchronizedItem = {
+                ...item,
+                name: product.name,
+                price: Number(product.price),
+                stock: currentStock,
+                qty: Math.min(
+                    Number(item.qty || 1),
+                    currentStock
+                )
+            };
+
+            if (
+                synchronizedItem.name !== item.name ||
+                synchronizedItem.price !== Number(item.price) ||
+                synchronizedItem.stock !== Number(item.stock) ||
+                synchronizedItem.qty !== Number(item.qty)
+            ) {
+                cartChanged = true;
+            }
+
+            result.push(synchronizedItem);
+
+            return result;
+        },
+        []
+    );
+
+    if (!cartChanged) {
+        return;
+    }
+
+    cart = synchronizedCart;
+
+    saveCart();
+    updateCartUI();
+
+    const cartSection =
+        document.getElementById("cart-section");
+
+    if (
+        cartSection &&
+        cartSection.style.display !== "none"
+    ) {
+        renderCart();
+    }
+}
 
 // =====================================================
 // MOSTRAR PRODUCTOS
