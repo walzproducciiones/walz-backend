@@ -375,6 +375,60 @@
                 Carrito vacío.
             </div>
 
+            <div class="delivery-form">
+                <h3>Datos de entrega</h3>
+
+                <label for="delivery-name">Nombre del comprador</label>
+                <input
+                    type="text"
+                    id="delivery-name"
+                    maxlength="80"
+                    autocomplete="name"
+                    placeholder="Nombre y apellido"
+                >
+
+                <label for="delivery-address">Direccion</label>
+                <input
+                    type="text"
+                    id="delivery-address"
+                    maxlength="160"
+                    autocomplete="street-address"
+                    placeholder="Calle, numero, piso o departamento"
+                >
+
+                <label for="delivery-city">Ciudad</label>
+                <input
+                    type="text"
+                    id="delivery-city"
+                    maxlength="60"
+                    autocomplete="address-level2"
+                    placeholder="Ciudad"
+                >
+
+                <label for="delivery-phone">Telefono</label>
+                <input
+                    type="tel"
+                    id="delivery-phone"
+                    maxlength="30"
+                    autocomplete="tel"
+                    placeholder="Telefono de contacto"
+                >
+
+                <label for="delivery-notes">Observaciones (opcional)</label>
+                <textarea
+                    id="delivery-notes"
+                    maxlength="100"
+                    rows="3"
+                    placeholder="Indicaciones para la entrega"
+                ></textarea>
+
+                <p
+                    id="delivery-error"
+                    class="delivery-error"
+                    role="alert"
+                ></p>
+            </div>
+
             <h3 id="cart-total"></h3>
 
             <button

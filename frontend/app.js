@@ -1461,6 +1461,53 @@ async function checkout() {
         return;
     }
 
+    const deliveryName =
+        document.getElementById("delivery-name")?.value.trim() || "";
+
+    const deliveryAddress =
+        document.getElementById("delivery-address")?.value.trim() || "";
+
+    const deliveryCity =
+        document.getElementById("delivery-city")?.value.trim() || "";
+
+    const deliveryPhone =
+        document.getElementById("delivery-phone")?.value.trim() || "";
+
+    const deliveryNotes =
+        document.getElementById("delivery-notes")?.value.trim() || "";
+
+    const deliveryError =
+        document.getElementById("delivery-error");
+
+    if (
+        !deliveryName ||
+        !deliveryAddress ||
+        !deliveryCity ||
+        !deliveryPhone
+    ) {
+        if (deliveryError) {
+            deliveryError.textContent =
+                "Completa nombre, direccion, ciudad y telefono.";
+        }
+        return;
+    }
+
+    if (deliveryError) {
+        deliveryError.textContent = "";
+    }
+
+    const shippingAddress = [
+        `Destinatario: ${deliveryName}`,
+        `Direccion: ${deliveryAddress}`,
+        `Ciudad: ${deliveryCity}`,
+        `Telefono: ${deliveryPhone}`,
+        deliveryNotes
+            ? `Observaciones: ${deliveryNotes}`
+            : null
+    ]
+        .filter(Boolean)
+        .join(" | ");
+
     const items = cart.map(item => ({
         product_id: item.id,
         quantity: item.qty
@@ -1480,7 +1527,7 @@ async function checkout() {
 
             body: JSON.stringify({
                 items: items,
-                shipping_address: 'Dirección de prueba'
+                shipping_address: shippingAddress
             })
         });
 
