@@ -864,3 +864,78 @@ button[onclick="toggleCart()"] {
     background: #292929;
     color: #f2f2f2;
 }
+
+/* FASE 5F - RESULTADO DE LA COMPRA */
+.order-success-card {
+    max-width: 720px;
+    margin: 20px auto;
+    padding: 28px;
+    border-radius: 16px;
+    background: #1f1f1f;
+    color: #f5f6f8;
+    text-align: center;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.28);
+}
+
+.order-success-icon {
+    display: grid;
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 16px;
+    place-items: center;
+    border-radius: 50%;
+    background: #1f9d61;
+    color: white;
+    font-size: 34px;
+    font-weight: 800;
+}
+
+.order-success-card h2 {
+    margin: 0 0 10px;
+}
+
+.order-success-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+    text-align: left;
+}
+
+.order-success-summary div {
+    padding: 14px;
+    border-radius: 9px;
+    background: #292929;
+}
+
+.order-success-summary dt {
+    margin-bottom: 5px;
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.order-success-summary dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+}
+
+.order-success-note {
+    padding: 13px;
+    border-radius: 9px;
+    background: #292929;
+}
+
+.order-success-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+@media (max-width: 600px) {
+    .order-success-summary {
+        grid-template-columns: 1fr;
+    }
+}

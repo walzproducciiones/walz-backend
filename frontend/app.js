@@ -1766,7 +1766,7 @@ async function confirmCheckout() {
             ordersSection.style.display = "block";
         }
 
-        await openOrderDetail(order.id);
+        renderOrderSuccess(order, orderData.delivery);
 
     } catch (checkoutError) {
         console.error("Error de conexion checkout:", checkoutError);
@@ -1782,6 +1782,80 @@ async function confirmCheckout() {
             button.textContent = "Confirmar compra";
         }
     }
+}
+
+function renderOrderSuccess(order, delivery) {
+
+    const container =
+        document.getElementById("orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    const orderId = String(order.id || "");
+    const status = order.status || "pending";
+    const method = delivery?.method === "pickup"
+        ? "Retiro en el local"
+        : "Envio a domicilio";
+
+    container.innerHTML = `
+        <article class="order-success-card">
+            <div class="order-success-icon" aria-hidden="true">âœ“</div>
+
+            <h2>Compra realizada correctamente</h2>
+            <p>Tu pedido fue creado y ya esta registrado en WalZ.</p>
+
+            <dl class="order-success-summary">
+                <div>
+                    <dt>Numero de pedido</dt>
+                    <dd>${escapeHtml(orderId)}</dd>
+                </div>
+                <div>
+                    <dt>Estado inicial</dt>
+                    <dd>${escapeHtml(status)}</dd>
+                </div>
+                <div>
+                    <dt>Metodo de entrega</dt>
+                    <dd>${escapeHtml(method)}</dd>
+                </div>
+                <div>
+                    <dt>Total</dt>
+                    <dd>$${Number(order.total_amount || 0).toFixed(2)}</dd>
+                </div>
+            </dl>
+
+            ${delivery?.method === "pickup"
+                ? `<p class="order-success-note">
+                       La direccion y el horario del local se confirmaran cuando el pedido este listo.
+                   </p>`
+                : ""
+            }
+
+            <div class="order-success-actions">
+                <button
+                    type="button"
+                    onclick="openOrderDetail('${escapeJs(orderId)}')"
+                >
+                    Ver pedido
+                </button>
+
+                <button
+                    type="button"
+                    onclick="loadMyOrders()"
+                >
+                    Mis pedidos
+                </button>
+
+                <button
+                    type="button"
+                    onclick="showMarketplaceContent()"
+                >
+                    Volver al marketplace
+                </button>
+            </div>
+        </article>
+    `;
 }
 
 // =====================================================
