@@ -14,7 +14,11 @@ class UserBase(BaseModel):
 
 
 # Esquema para recibir datos al REGISTRARSE
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    email: EmailStr
+    first_name: str = Field(..., min_length=1, max_length=80)
+    last_name: str = Field(..., min_length=1, max_length=80)
+    phone: Optional[str] = None
     password: str = Field(..., min_length=8)
 
 

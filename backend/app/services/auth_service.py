@@ -28,7 +28,7 @@ def register_user(
         last_name=user_data.last_name,
         phone=user_data.phone,
         password_hash=hashed_pw,
-        role=user_data.role
+        role="COMPRADOR"
     )
 
     db.add(new_user)

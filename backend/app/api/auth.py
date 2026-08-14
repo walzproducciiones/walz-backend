@@ -167,7 +167,32 @@ def get_current_user(
             detail="User not found",
         )
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Usuario desactivado.",
+        )
+
     return user
+
+
+def require_admin_user(
+    current_user: User = Depends(get_current_user),
+):
+    if str(current_user.role or "").upper() != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Se requiere una cuenta administradora.",
+        )
+
+    return current_user
+
+
+@router.get("/me", response_model=UserResponse)
+def get_my_profile(
+    current_user: User = Depends(get_current_user),
+):
+    return current_user
 
 @router.get("/debug/user-exists")
 def debug_user_exists(
