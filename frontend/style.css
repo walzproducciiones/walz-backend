@@ -1355,3 +1355,48 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* FASE 5K PASO 2 - EDITAR PRODUCTOS */
+.my-product-actions,
+.my-product-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.my-product-editor {
+    display: grid;
+    grid-template-columns: minmax(200px, 2fr) minmax(130px, 1fr) minmax(120px, 1fr);
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #3b3b3b;
+}
+
+.my-product-editor label {
+    display: grid;
+    gap: 6px;
+}
+
+.my-product-editor label span {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.my-product-editor input {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #111;
+    color: #f5f5f5;
+}
+
+.my-product-editor-actions {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+    .my-product-editor {
+        grid-template-columns: 1fr;
+    }
+}

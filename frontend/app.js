@@ -2748,10 +2748,150 @@ function renderMyProducts(products) {
                         <div><span>Categoria</span><strong>${escapeHtml(product.category || "Sin categoria")}</strong></div>
                     </div>
                     <p class="my-product-code">Codigo: #${escapeHtml(String(product.id || ""))}</p>
+                    ${String(window.walzEditingProductId || "") === String(product.id)
+                        ? renderMyProductEditor(product)
+                        : `<div class="my-product-actions">
+                               <button
+                                   type="button"
+                                   onclick="startEditingMyProduct('${escapeJs(String(product.id))}')"
+                               >
+                                   Editar producto
+                               </button>
+                           </div>`
+                    }
                 </article>
             `).join("")}
         </div>
     `;
+}
+
+
+
+function startEditingMyProduct(productId) {
+    window.walzEditingProductId = String(productId);
+    applyMyProductsFilters();
+}
+
+
+function cancelEditingMyProduct() {
+    window.walzEditingProductId = null;
+    applyMyProductsFilters();
+}
+
+
+function renderMyProductEditor(product) {
+    return `
+        <div class="my-product-editor">
+            <label>
+                <span>Nombre</span>
+                <input
+                    id="edit-product-name-${escapeHtml(String(product.id))}"
+                    type="text"
+                    maxlength="200"
+                    value="${escapeHtml(product.name || "")}"
+                >
+            </label>
+            <label>
+                <span>Precio</span>
+                <input
+                    id="edit-product-price-${escapeHtml(String(product.id))}"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value="${Number(product.price || 0)}"
+                >
+            </label>
+            <label>
+                <span>Stock</span>
+                <input
+                    id="edit-product-stock-${escapeHtml(String(product.id))}"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value="${Number(product.stock || 0)}"
+                >
+            </label>
+            <div class="my-product-editor-actions">
+                <button
+                    type="button"
+                    onclick="saveMyProductChanges('${escapeJs(String(product.id))}')"
+                >
+                    Guardar cambios
+                </button>
+                <button type="button" onclick="cancelEditingMyProduct()">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+
+async function saveMyProductChanges(productId) {
+    const currentToken = localStorage.getItem("walz_token");
+    const name = document.getElementById(`edit-product-name-${productId}`)?.value.trim() || "";
+    const price = Number(document.getElementById(`edit-product-price-${productId}`)?.value);
+    const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
+
+    if (!name) {
+        showMessage("El nombre del producto es obligatorio.", "error");
+        return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+        showMessage("El precio debe ser mayor que cero.", "error");
+        return;
+    }
+
+    if (!Number.isInteger(stock) || stock < 0) {
+        showMessage("El stock debe ser un numero entero igual o mayor que cero.", "error");
+        return;
+    }
+
+    if (!currentToken) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        handleLogout();
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/products/${productId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify({ name, price, stock })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const index = (window.walzMyProducts || []).findIndex(
+            product => String(product.id) === String(data.id)
+        );
+
+        if (index >= 0) {
+            window.walzMyProducts[index] = data;
+        }
+
+        window.walzEditingProductId = null;
+        showMessage("Producto actualizado correctamente.", "success");
+        applyMyProductsFilters();
+        await loadProducts();
+
+    } catch (error) {
+        console.error("Error actualizando producto:", error);
+        showMessage(error.message || "No se pudo actualizar el producto.", "error");
+    }
 }
 
 // =====================================================
@@ -2788,6 +2928,9 @@ window.showMyProducts = showMyProducts;
 window.loadMyProducts = loadMyProducts;
 window.applyMyProductsFilters = applyMyProductsFilters;
 window.clearMyProductsFilters = clearMyProductsFilters;
+window.startEditingMyProduct = startEditingMyProduct;
+window.cancelEditingMyProduct = cancelEditingMyProduct;
+window.saveMyProductChanges = saveMyProductChanges;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

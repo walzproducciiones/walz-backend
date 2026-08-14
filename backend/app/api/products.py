@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
-from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter
-from backend.app.services.product_service import create_product, get_products, get_products_by_seller
+from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter, ProductUpdate
+from backend.app.services.product_service import create_product, get_products, get_products_by_seller, update_product_by_seller
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
 from uuid import UUID
@@ -53,3 +53,25 @@ def list_my_products(
     current_user: User = Depends(get_current_user),
 ):
     return get_products_by_seller(db, current_user.id)
+
+@router.patch("/{product_id}", response_model=ProductResponse)
+def update_my_product(
+    product_id: UUID,
+    product: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updated_product = update_product_by_seller(
+        db,
+        product_id,
+        current_user.id,
+        product,
+    )
+
+    if not updated_product:
+        raise HTTPException(
+            status_code=404,
+            detail="Producto no encontrado.",
+        )
+
+    return updated_product

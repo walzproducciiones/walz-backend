@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from backend.app.models.product import Product
-from backend.app.schemas.product import ProductCreate, ProductFilter
+from backend.app.schemas.product import ProductCreate, ProductFilter, ProductUpdate
 from uuid import UUID
 
 def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
@@ -39,3 +39,31 @@ def get_product(db: Session, product_id: UUID):
 
 def get_products_by_seller(db: Session, seller_id: UUID):
     return db.query(Product).filter(Product.seller_id == seller_id).all()
+
+def update_product_by_seller(
+    db: Session,
+    product_id: UUID,
+    seller_id: UUID,
+    product_data: ProductUpdate,
+):
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.seller_id == seller_id,
+        )
+        .first()
+    )
+
+    if not product:
+        return None
+
+    updates = product_data.model_dump(exclude_unset=True)
+
+    for field, value in updates.items():
+        if value is not None:
+            setattr(product, field, value)
+
+    db.commit()
+    db.refresh(product)
+    return product
