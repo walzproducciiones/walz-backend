@@ -4,6 +4,7 @@ let token = localStorage.getItem("walz_token");
 let currentUserId = localStorage.getItem("walz_user_id");
 
 let cart = loadCart();
+let pendingCheckout = null;
 
 function getCartStorageKey() {
     return currentUserId
@@ -1443,26 +1444,27 @@ function removeFromCart(index) {
 // CHECKOUT
 // =====================================================
 
-async function checkout() {
+function checkout() {
 
     if (cart.length === 0) {
-        showMessage('El carrito está vacío.', 'error');
+        showMessage("El carrito esta vacio.", "error");
         return;
     }
 
-    const token = localStorage.getItem('walz_token');
-
-    console.log("🛒 CHECKOUT");
-    console.log("Token existe:", !!token);
-    console.log("Token:", token);
+    const token = localStorage.getItem("walz_token");
 
     if (!token) {
-        showMessage('Debes iniciar sesión para comprar.', 'error');
+        showMessage("Debes iniciar sesion para comprar.", "error");
         return;
     }
 
     const deliveryName =
         document.getElementById("delivery-name")?.value.trim() || "";
+
+    const deliveryMethod =
+        document.querySelector(
+            'input[name="delivery-method"]:checked'
+        )?.value || "delivery";
 
     const deliveryAddress =
         document.getElementById("delivery-address")?.value.trim() || "";
@@ -1481,13 +1483,17 @@ async function checkout() {
 
     if (
         !deliveryName ||
-        !deliveryAddress ||
-        !deliveryCity ||
-        !deliveryPhone
+        !deliveryPhone ||
+        (
+            deliveryMethod === "delivery" &&
+            (!deliveryAddress || !deliveryCity)
+        )
     ) {
         if (deliveryError) {
             deliveryError.textContent =
-                "Completa nombre, direccion, ciudad y telefono.";
+                deliveryMethod === "pickup"
+                    ? "Completa nombre y telefono."
+                    : "Completa nombre, direccion, ciudad y telefono.";
         }
         return;
     }
@@ -1497,9 +1503,16 @@ async function checkout() {
     }
 
     const shippingAddress = [
+        deliveryMethod === "pickup"
+            ? "Metodo: Retiro en el local"
+            : "Metodo: Envio a domicilio",
         `Destinatario: ${deliveryName}`,
-        `Direccion: ${deliveryAddress}`,
-        `Ciudad: ${deliveryCity}`,
+        deliveryMethod === "delivery"
+            ? `Direccion: ${deliveryAddress}`
+            : "Direccion del local: A confirmar",
+        deliveryMethod === "delivery"
+            ? `Ciudad: ${deliveryCity}`
+            : null,
         `Telefono: ${deliveryPhone}`,
         deliveryNotes
             ? `Observaciones: ${deliveryNotes}`
@@ -1508,102 +1521,266 @@ async function checkout() {
         .filter(Boolean)
         .join(" | ");
 
-    const items = cart.map(item => ({
-        product_id: item.id,
-        quantity: item.qty
-    }));
+    pendingCheckout = {
+        items: cart.map(item => ({
+            product_id: item.id,
+            quantity: item.qty
+        })),
+        shipping_address: shippingAddress,
+        delivery: {
+            method: deliveryMethod,
+            name: deliveryName,
+            address: deliveryAddress,
+            city: deliveryCity,
+            phone: deliveryPhone,
+            notes: deliveryNotes
+        },
+        cart: cart.map(item => ({ ...item }))
+    };
 
-    console.log("📦 Items enviados:", items);
+    renderCheckoutConfirmation();
+}
+
+
+function updateDeliveryMethod() {
+
+    const method =
+        document.querySelector(
+            'input[name="delivery-method"]:checked'
+        )?.value || "delivery";
+
+    const addressFields =
+        document.getElementById("delivery-address-fields");
+
+    const pickupInformation =
+        document.getElementById("pickup-information");
+
+    const deliveryHeading =
+        document.querySelector(".delivery-form > h3:nth-of-type(2)");
+
+    if (addressFields) {
+        addressFields.style.display =
+            method === "pickup" ? "none" : "grid";
+    }
+
+    if (pickupInformation) {
+        pickupInformation.style.display =
+            method === "pickup" ? "block" : "none";
+    }
+
+    if (deliveryHeading) {
+        deliveryHeading.textContent =
+            method === "pickup"
+                ? "Datos para el retiro"
+                : "Datos de entrega";
+    }
+
+    const deliveryError =
+        document.getElementById("delivery-error");
+
+    if (deliveryError) {
+        deliveryError.textContent = "";
+    }
+}
+
+
+function renderCheckoutConfirmation() {
+
+    if (!pendingCheckout) {
+        return;
+    }
+
+    const modal =
+        document.getElementById("checkout-confirmation-modal");
+
+    const content =
+        document.getElementById("checkout-confirmation-content");
+
+    const error =
+        document.getElementById("checkout-confirmation-error");
+
+    if (!modal || !content) {
+        return;
+    }
+
+    const total = pendingCheckout.cart.reduce(
+        (sum, item) =>
+            sum + Number(item.price) * Number(item.qty),
+        0
+    );
+
+    content.innerHTML = `
+        <div class="checkout-confirmation-items">
+            ${pendingCheckout.cart.map(item => {
+                const subtotal =
+                    Number(item.price) * Number(item.qty);
+
+                return `
+                    <div class="checkout-confirmation-item">
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <span>Cantidad: ${Number(item.qty)}</span>
+                        <span>Precio unitario: $${Number(item.price).toFixed(2)}</span>
+                        <strong>Subtotal: $${subtotal.toFixed(2)}</strong>
+                    </div>
+                `;
+            }).join("")}
+        </div>
+
+        <h3>Total: $${total.toFixed(2)}</h3>
+
+        <div class="checkout-confirmation-delivery">
+            <h3>Datos de entrega</h3>
+            <p><strong>Metodo:</strong> ${pendingCheckout.delivery.method === "pickup"
+                ? "Retiro en el local"
+                : "Envio a domicilio"
+            }</p>
+            <p><strong>Nombre:</strong> ${escapeHtml(pendingCheckout.delivery.name)}</p>
+            ${pendingCheckout.delivery.method === "delivery"
+                ? `<p><strong>Direccion:</strong> ${escapeHtml(pendingCheckout.delivery.address)}</p>
+                   <p><strong>Ciudad:</strong> ${escapeHtml(pendingCheckout.delivery.city)}</p>`
+                : `<p><strong>Direccion y horario del local:</strong> A confirmar</p>`
+            }
+            <p><strong>Telefono:</strong> ${escapeHtml(pendingCheckout.delivery.phone)}</p>
+            ${pendingCheckout.delivery.notes
+                ? `<p><strong>Observaciones:</strong> ${escapeHtml(pendingCheckout.delivery.notes)}</p>`
+                : ""
+            }
+        </div>
+    `;
+
+    if (error) {
+        error.textContent = "";
+    }
+
+    modal.style.display = "flex";
+}
+
+
+function closeCheckoutConfirmation() {
+
+    const modal =
+        document.getElementById("checkout-confirmation-modal");
+
+    if (modal) {
+        modal.style.display = "none";
+    }
+
+    pendingCheckout = null;
+}
+
+
+async function confirmCheckout() {
+
+    if (!pendingCheckout) {
+        return;
+    }
+
+    const token = localStorage.getItem("walz_token");
+    const button =
+        document.getElementById("confirm-checkout-button");
+    const error =
+        document.getElementById("checkout-confirmation-error");
+
+    if (!token) {
+        if (error) {
+            error.textContent = "La sesion vencio. Inicia sesion nuevamente.";
+        }
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Procesando...";
+    }
+
+    const orderData = pendingCheckout;
 
     try {
-
         const res = await fetch(`${API_URL}/orders/`, {
-            method: 'POST',
-
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
             },
-
             body: JSON.stringify({
-                items: items,
-                shipping_address: shippingAddress
+                items: orderData.items,
+                shipping_address: orderData.shipping_address
             })
         });
 
-        const text = await res.text();
+        const responseText = await res.text();
 
-        console.log("📥 RESPUESTA CHECKOUT");
-        console.log("HTTP:", res.status);
-        console.log("Respuesta:", text);
+        if (!res.ok) {
+            let message = "Error al procesar la compra.";
 
-        if (res.ok) {
+            if (res.status === 401) {
+                message =
+                    "Tu sesion vencio. Inicia sesion nuevamente. El carrito permanece guardado.";
+            } else {
+                try {
+                    const data = JSON.parse(responseText);
+                    message = data.detail || message;
+                } catch (_) {}
+            }
 
-    const order = JSON.parse(text);
-
-    showMessage(
-        '✅ ¡Compra realizada con éxito!',
-        'success'
-    );
-
-    cart = [];
-
-    clearCartStorage();
-
-    renderCart();
-    updateCartUI();
-
-    await loadProducts();
-
-    const cartSection = document.getElementById("cart-section");
-    const marketplaceContent =
-        document.getElementById("marketplace-content");
-    const ordersSection =
-        document.getElementById("orders-section");
-
-    if (cartSection) {
-        cartSection.style.display = "none";
-    }
-
-    if (marketplaceContent) {
-        marketplaceContent.style.display = "none";
-    }
-
-    if (ordersSection) {
-        ordersSection.style.display = "block";
-    }
-
-    await openOrderDetail(order.id);
-
-} else {
-
-            let message = 'Error al procesar la compra.';
-
-            try {
-                const data = JSON.parse(text);
-                message = data.detail || message;
-            } catch (_) {}
-
-            console.error(
-                '❌ Error checkout:',
-                res.status,
-                text
-            );
-
-            showMessage(message, 'error');
+            if (error) {
+                error.textContent = message;
+            }
+            return;
         }
 
-    } catch (e) {
+        const order = JSON.parse(responseText);
 
-        console.error(
-            '🚨 Error de conexión checkout:',
-            e
-        );
+        pendingCheckout = null;
 
-        showMessage(
-            'Error de conexión al comprar.',
-            'error'
-        );
+        const modal =
+            document.getElementById("checkout-confirmation-modal");
+
+        if (modal) {
+            modal.style.display = "none";
+        }
+
+        cart = [];
+        clearCartStorage();
+        renderCart();
+        updateCartUI();
+
+        await loadProducts();
+
+        const cartSection =
+            document.getElementById("cart-section");
+        const marketplaceContent =
+            document.getElementById("marketplace-content");
+        const ordersSection =
+            document.getElementById("orders-section");
+
+        if (cartSection) {
+            cartSection.style.display = "none";
+        }
+
+        if (marketplaceContent) {
+            marketplaceContent.style.display = "none";
+        }
+
+        if (ordersSection) {
+            ordersSection.style.display = "block";
+        }
+
+        await openOrderDetail(order.id);
+
+    } catch (checkoutError) {
+        console.error("Error de conexion checkout:", checkoutError);
+
+        if (error) {
+            error.textContent =
+                "Error de conexion. El carrito permanece intacto.";
+        }
+
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Confirmar compra";
+        }
     }
 }
 
@@ -1748,6 +1925,9 @@ window.toggleCart = toggleCart;
 window.renderCart = renderCart;
 window.removeFromCart = removeFromCart;
 window.checkout = checkout;
+window.updateDeliveryMethod = updateDeliveryMethod;
+window.confirmCheckout = confirmCheckout;
+window.closeCheckoutConfirmation = closeCheckoutConfirmation;
 window.showMyOrders = showMyOrders;
 window.showMarketplaceContent = showMarketplaceContent;
 window.loadMyOrders = loadMyOrders;

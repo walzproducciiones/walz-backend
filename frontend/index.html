@@ -376,6 +376,39 @@
             </div>
 
             <div class="delivery-form">
+                <h3>Metodo de entrega</h3>
+
+                <div class="delivery-method-options">
+                    <label>
+                        <input
+                            type="radio"
+                            name="delivery-method"
+                            value="delivery"
+                            checked
+                            onchange="updateDeliveryMethod()"
+                        >
+                        Envio a domicilio
+                    </label>
+
+                    <label>
+                        <input
+                            type="radio"
+                            name="delivery-method"
+                            value="pickup"
+                            onchange="updateDeliveryMethod()"
+                        >
+                        Retiro en el local
+                    </label>
+                </div>
+
+                <p
+                    id="pickup-information"
+                    class="pickup-information"
+                    style="display:none;"
+                >
+                    La direccion y el horario del local se confirmaran cuando el pedido este listo.
+                </p>
+
                 <h3>Datos de entrega</h3>
 
                 <label for="delivery-name">Nombre del comprador</label>
@@ -387,6 +420,7 @@
                     placeholder="Nombre y apellido"
                 >
 
+                <div id="delivery-address-fields" class="delivery-address-fields">
                 <label for="delivery-address">Direccion</label>
                 <input
                     type="text"
@@ -404,6 +438,8 @@
                     autocomplete="address-level2"
                     placeholder="Ciudad"
                 >
+
+                </div>
 
                 <label for="delivery-phone">Telefono</label>
                 <input
@@ -468,6 +504,45 @@
 
 </div>
 
+
+<!-- =====================================================
+     CONFIRMACION DE COMPRA
+====================================================== -->
+
+<div
+    id="checkout-confirmation-modal"
+    class="checkout-confirmation-modal"
+    style="display:none;"
+>
+    <div class="checkout-confirmation-card">
+        <h2>Confirmar compra</h2>
+
+        <div id="checkout-confirmation-content"></div>
+
+        <p
+            id="checkout-confirmation-error"
+            class="checkout-confirmation-error"
+            role="alert"
+        ></p>
+
+        <div class="checkout-confirmation-actions">
+            <button
+                type="button"
+                onclick="closeCheckoutConfirmation()"
+            >
+                Volver
+            </button>
+
+            <button
+                type="button"
+                id="confirm-checkout-button"
+                onclick="confirmCheckout()"
+            >
+                Confirmar compra
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- =====================================================
      JAVASCRIPT
