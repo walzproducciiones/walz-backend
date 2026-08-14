@@ -1076,3 +1076,62 @@ button[onclick="toggleCart()"] {
 .order-cancel-button:hover {
     background: #733030;
 }
+
+/* FASE 5J - PEDIDOS RECIBIDOS */
+.sales-orders-intro {
+    color: #bdbdbd;
+}
+
+.sales-orders-list,
+.sales-order-items {
+    display: grid;
+    gap: 14px;
+}
+
+.sales-order-card {
+    margin-top: 18px;
+}
+
+.sales-buyer-data {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.sales-buyer-data div,
+.sales-order-item,
+.sales-delivery-data {
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #292929;
+}
+
+.sales-buyer-data span,
+.sales-delivery-data span,
+.sales-order-item span {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.sales-buyer-data strong,
+.sales-delivery-data p {
+    overflow-wrap: anywhere;
+}
+
+.sales-delivery-data p {
+    margin: 0;
+}
+
+@media (max-width: 800px) {
+    .sales-buyer-data {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .sales-buyer-data {
+        grid-template-columns: 1fr;
+    }
+}

@@ -179,6 +179,15 @@
 
     <button
         type="button"
+        class="orders-button sales-orders-button"
+        onclick="showReceivedOrders()"
+    >
+        <span aria-hidden="true">&#128230;</span>
+        <span>Pedidos recibidos</span>
+    </button>
+
+    <button
+        type="button"
         onclick="handleLogout()"
         class="logout-btn"
     >
@@ -499,11 +508,34 @@
                 Cargando pedidos...
             </div>
         </section>
+        <!-- =================================================
+             PEDIDOS RECIBIDOS
+        ================================================== -->
+
+        <section
+            id="sales-orders-section"
+            style="display:none; margin-top:30px;"
+        >
+            <button
+                type="button"
+                onclick="showMarketplaceContent()"
+            >
+                &larr; Volver al marketplace
+            </button>
+
+            <h2>&#128230; Pedidos recibidos</h2>
+            <p class="sales-orders-intro">
+                Aqui aparecen solamente los productos vendidos por esta cuenta.
+            </p>
+
+            <div id="sales-orders-content">
+                Cargando pedidos recibidos...
+            </div>
+        </section>
 
     </div>
 
 </div>
-
 
 <!-- =====================================================
      CONFIRMACION DE COMPRA

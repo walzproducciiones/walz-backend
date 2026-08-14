@@ -13,6 +13,7 @@ from backend.app.services.order_service import (
     create_order,
     get_order_by_id,
     get_orders_by_buyer,
+    get_orders_received_by_seller,
 )
 
 
@@ -90,3 +91,10 @@ def cancel_my_order(
         )
 
     return order
+
+@router.get("/seller/received")
+def get_received_orders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_orders_received_by_seller(db, current_user.id)

@@ -958,6 +958,13 @@ function showMyOrders() {
     marketplaceContent.style.display = "none";
     ordersSection.style.display = "block";
 
+    const salesOrdersSection =
+        document.getElementById("sales-orders-section");
+
+    if (salesOrdersSection) {
+        salesOrdersSection.style.display = "none";
+    }
+
     loadMyOrders();
 }
 
@@ -978,6 +985,12 @@ function showMarketplaceContent() {
         ordersSection.style.display = "none";
     }
 
+    const salesOrdersSection =
+        document.getElementById("sales-orders-section");
+
+    if (salesOrdersSection) {
+        salesOrdersSection.style.display = "none";
+    }
     loadProducts();
 }
 
@@ -1956,6 +1969,13 @@ async function confirmCheckout() {
 
         if (ordersSection) {
             ordersSection.style.display = "block";
+
+    const salesOrdersSection =
+        document.getElementById("sales-orders-section");
+
+    if (salesOrdersSection) {
+        salesOrdersSection.style.display = "none";
+    }
         }
 
         renderOrderSuccess(order, orderData.delivery);
@@ -2173,6 +2193,167 @@ function showMarketplace() {
 }
 
 
+
+
+// =====================================================
+// FASE 5J - PEDIDOS RECIBIDOS
+// =====================================================
+
+function showReceivedOrders() {
+    const marketplaceContent =
+        document.getElementById("marketplace-content");
+    const ordersSection =
+        document.getElementById("orders-section");
+    const salesOrdersSection =
+        document.getElementById("sales-orders-section");
+
+    if (!salesOrdersSection) {
+        console.error("No existe la seccion de pedidos recibidos.");
+        return;
+    }
+
+    if (marketplaceContent) {
+        marketplaceContent.style.display = "none";
+    }
+
+    if (ordersSection) {
+        ordersSection.style.display = "none";
+    }
+
+    salesOrdersSection.style.display = "block";
+    loadReceivedOrders();
+}
+
+
+async function loadReceivedOrders() {
+    const container =
+        document.getElementById("sales-orders-content");
+    const currentToken =
+        localStorage.getItem("walz_token");
+
+    if (!container) {
+        return;
+    }
+
+    if (!currentToken) {
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                Tu sesion vencio. Inicia sesion nuevamente.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="orders-state-card orders-loading">
+            Cargando pedidos recibidos...
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`${API_URL}/orders/seller/received`, {
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+        const data = await res.json().catch(() => ([]));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        renderReceivedOrders(data);
+
+    } catch (error) {
+        console.error("Error cargando pedidos recibidos:", error);
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                <h3>No pudimos cargar los pedidos recibidos</h3>
+                <p>${escapeHtml(error.message || "Error desconocido")}</p>
+            </div>
+        `;
+    }
+}
+
+
+function renderReceivedOrders(orders) {
+    const container =
+        document.getElementById("sales-orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    if (!Array.isArray(orders) || orders.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card orders-empty">
+                <h3>Todavia no recibiste pedidos</h3>
+                <p>Cuando alguien compre uno de tus productos aparecera aqui.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="sales-orders-list">
+            ${orders.map(order => {
+                const statusInfo = getOrderStatusInfo(order.status);
+                const createdAt = order.created_at
+                    ? new Date(order.created_at).toLocaleString("es-AR")
+                    : "Fecha no disponible";
+                const items = Array.isArray(order.items) ? order.items : [];
+
+                return `
+                    <article class="order-card sales-order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <span class="order-card-label">Venta</span>
+                                <h3>#${escapeHtml(String(order.id))}</h3>
+                            </div>
+                            <span class="order-status ${statusInfo.className}">
+                                ${escapeHtml(statusInfo.label)}
+                            </span>
+                        </div>
+
+                        <div class="sales-buyer-data">
+                            <div><span>Comprador</span><strong>${escapeHtml(order.buyer?.name || "Sin nombre")}</strong></div>
+                            <div><span>Email</span><strong>${escapeHtml(order.buyer?.email || "No disponible")}</strong></div>
+                            <div><span>Telefono</span><strong>${escapeHtml(order.buyer?.phone || "Ver datos de entrega")}</strong></div>
+                            <div><span>Fecha</span><strong>${escapeHtml(createdAt)}</strong></div>
+                        </div>
+
+                        <div class="sales-order-items">
+                            ${items.map(item => `
+                                <div class="sales-order-item">
+                                    <strong>${escapeHtml(item.product_name || "Producto")}</strong>
+                                    <span>Cantidad: ${Number(item.quantity || 0)}</span>
+                                    <span>Precio: $${Number(item.price_at_purchase || 0).toFixed(2)}</span>
+                                    <strong>Subtotal: $${Number(item.subtotal || 0).toFixed(2)}</strong>
+                                </div>
+                            `).join("")}
+                        </div>
+
+                        <div class="sales-delivery-data">
+                            <span>Datos de entrega</span>
+                            <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
+                        </div>
+
+                        <h3 class="order-total">
+                            Total de tus productos: $${Number(order.seller_total || 0).toFixed(2)}
+                        </h3>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
 // =====================================================
 // HACER FUNCIONES GLOBALES
 // NECESARIO PARA onclick="..."
@@ -2198,6 +2379,8 @@ window.showMyOrders = showMyOrders;
 window.showMarketplaceContent = showMarketplaceContent;
 window.loadMyOrders = loadMyOrders;
 window.openOrderDetail = openOrderDetail;
+window.showReceivedOrders = showReceivedOrders;
+window.loadReceivedOrders = loadReceivedOrders;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

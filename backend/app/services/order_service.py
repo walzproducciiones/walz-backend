@@ -161,3 +161,59 @@ def cancel_order_by_buyer(
     except SQLAlchemyError:
         db.rollback()
         raise
+
+def get_orders_received_by_seller(db: Session, seller_id: UUID):
+    orders = (
+        db.query(Order)
+        .join(OrderItem, OrderItem.order_id == Order.id)
+        .join(Product, Product.id == OrderItem.product_id)
+        .options(
+            selectinload(Order.buyer),
+            selectinload(Order.items).selectinload(OrderItem.product),
+        )
+        .filter(Product.seller_id == seller_id)
+        .distinct()
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    received_orders = []
+
+    for order in orders:
+        seller_items = []
+        seller_total = 0.0
+
+        for item in order.items:
+            if not item.product or item.product.seller_id != seller_id:
+                continue
+
+            subtotal = round(
+                float(item.price_at_purchase) * item.quantity,
+                2,
+            )
+            seller_total += subtotal
+
+            seller_items.append({
+                "id": str(item.id),
+                "product_id": str(item.product_id),
+                "product_name": item.product.name,
+                "quantity": item.quantity,
+                "price_at_purchase": float(item.price_at_purchase),
+                "subtotal": subtotal,
+            })
+
+        received_orders.append({
+            "id": str(order.id),
+            "status": order.status.value,
+            "created_at": order.created_at,
+            "shipping_address": order.shipping_address,
+            "seller_total": round(seller_total, 2),
+            "buyer": {
+                "name": f"{order.buyer.first_name} {order.buyer.last_name}",
+                "email": order.buyer.email,
+                "phone": order.buyer.phone,
+            },
+            "items": seller_items,
+        })
+
+    return received_orders
