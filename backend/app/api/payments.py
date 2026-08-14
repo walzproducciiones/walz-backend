@@ -1,33 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from backend.app.database.session import SessionLocal
-from backend.app.api.auth import get_current_user
-from backend.app.models.user import User
-from backend.app.services.order_service import create_order
-from backend.app.schemas.order import OrderCreate
+from fastapi import APIRouter, HTTPException, status
+
+from backend.app.services.payment_service import get_payment_configuration
+
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+@router.get("/configuration")
+def payment_configuration():
+    return get_payment_configuration()
+
 
 @router.post("/create-preference")
-def create_preference(
-    order_data: OrderCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # Crear la orden en la base de datos
-    new_order, error = create_order(db, current_user.id, order_data)
-    if error:
-        raise HTTPException(status_code=400, detail=error)
-    
-    # Devolver la respuesta
-    return {
-        "preference_id": str(new_order.id),
-        "init_point": "/order-success.html"
-    }
+def create_preference():
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "Los pagos online todavia no estan habilitados. "
+            "La orden no fue creada ni se desconto stock."
+        ),
+    )
