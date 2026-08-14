@@ -259,6 +259,12 @@
                 placeholder="Descripcion del producto"
             ></textarea>
 
+            <input
+                type="url"
+                id="prod-image-url"
+                placeholder="Enlace de la imagen (opcional)"
+            >
+
             <button
                 type="button"
                 onclick="handleCreateProduct()"
@@ -335,6 +341,10 @@
             ✕
         </button>
 
+
+        <div id="detail-product-image-container" class="detail-product-image-container">
+            <span>Sin imagen</span>
+        </div>
 
         <h2 id="detail-product-name">
             Producto

@@ -247,6 +247,9 @@ async function handleCreateProduct() {
     const description =
         document.getElementById("prod-description").value.trim();
 
+    const imageUrl =
+        document.getElementById("prod-image-url").value.trim();
+
     if (!name || isNaN(price) || isNaN(stock)) {
 
         showMessage(
@@ -274,7 +277,8 @@ async function handleCreateProduct() {
                     price,
                     stock,
                     category: category || null,
-                    description: description || null
+                    description: description || null,
+                    image_url: imageUrl || null
                 })
             }
         );
@@ -307,6 +311,7 @@ async function handleCreateProduct() {
 
             document.getElementById("prod-category").value = "";
             document.getElementById("prod-description").value = "";
+            document.getElementById("prod-image-url").value = "";
 
             await loadProducts();
 
@@ -464,6 +469,17 @@ function syncCartWithProducts(products) {
 // MOSTRAR PRODUCTOS
 // =====================================================
 
+function getProductImageUrl(value) {
+    const url = String(value || "").trim();
+    return /^https?:\/\//i.test(url) ? url : "";
+}
+
+function renderProductImage(value, altText, className) {
+    const url = getProductImageUrl(value);
+    if (!url) return `<div class="${className} product-image-placeholder">Sin imagen</div>`;
+    return `<img class="${className}" src="${escapeHtml(url)}" alt="${escapeHtml(altText || "Producto")}" loading="lazy" onerror="this.outerHTML='<div class=&quot;${className} product-image-placeholder&quot;>Imagen no disponible</div>'">`;
+}
+
 function renderProducts(products) {
 
     const list =
@@ -509,6 +525,8 @@ function renderProducts(products) {
                 class="product-item"
                 onclick="openProductDetail('${product.id}')"
             >
+
+                ${renderProductImage(product.image_url, product.name, "product-card-image")}
 
                 <div class="product-card-content">
 
@@ -720,6 +738,11 @@ function openProductDetail(productId) {
         );
 
         return;
+    }
+
+    const imageContainer = document.getElementById("detail-product-image-container");
+    if (imageContainer) {
+        imageContainer.innerHTML = renderProductImage(product.image_url, product.name, "detail-product-image");
     }
 
     const nameElement =
@@ -2756,6 +2779,7 @@ function renderMyProducts(products) {
         <div class="my-products-list">
             ${products.map(product => `
                 <article class="my-product-card">
+                    ${renderProductImage(product.image_url, product.name, "my-product-image")}
                     <div class="my-product-card-header">
                         <div>
                             <span>Producto</span>
@@ -2857,6 +2881,15 @@ function renderMyProductEditor(product) {
                     maxlength="1000"
                 >${escapeHtml(product.description || "")}</textarea>
             </label>
+            <label class="my-product-description-field">
+                <span>Enlace de la imagen</span>
+                <input
+                    id="edit-product-image-${escapeHtml(String(product.id))}"
+                    type="url"
+                    value="${escapeHtml(product.image_url || "")}"
+                    placeholder="https://..."
+                >
+            </label>
             <div class="my-product-editor-actions">
                 <button
                     type="button"
@@ -2880,6 +2913,7 @@ async function saveMyProductChanges(productId) {
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
     const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
+    const imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
 
     if (!name) {
         showMessage("El nombre del producto es obligatorio.", "error");
@@ -2909,7 +2943,7 @@ async function saveMyProductChanges(productId) {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ name, price, stock, category: category || null, description: description || null })
+            body: JSON.stringify({ name, price, stock, category: category || null, description: description || null, image_url: imageUrl })
         });
         const data = await res.json().catch(() => ({}));
 

@@ -35,4 +35,5 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = Field(default=None, ge=0)
     description: Optional[str] = None
     category: Optional[str] = None
+    image_url: Optional[str] = None
     is_active: Optional[bool] = None
