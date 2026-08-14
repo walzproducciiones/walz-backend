@@ -2724,9 +2724,28 @@ function applyMyProductsFilters() {
         document.getElementById("my-products-status-filter")?.value || ""
     );
 
+    const summary = document.getElementById("my-products-stock-summary");
+    const activeCount = allProducts.filter(product => product.is_active).length;
+    const pausedCount = allProducts.filter(product => !product.is_active).length;
+    const lowStockCount = allProducts.filter(product => Number(product.stock) > 0 && Number(product.stock) <= 5).length;
+    const outOfStockCount = allProducts.filter(product => Number(product.stock) <= 0).length;
+
+    if (summary) {
+        summary.innerHTML = `
+            <button type="button" onclick="setMyProductsStatusFilter('')"><span>Total</span><strong>${allProducts.length}</strong></button>
+            <button type="button" onclick="setMyProductsStatusFilter('active')"><span>Activos</span><strong>${activeCount}</strong></button>
+            <button type="button" onclick="setMyProductsStatusFilter('paused')"><span>Pausados</span><strong>${pausedCount}</strong></button>
+            <button type="button" class="low-stock" onclick="setMyProductsStatusFilter('low_stock')"><span>Stock bajo</span><strong>${lowStockCount}</strong></button>
+            <button type="button" class="out-of-stock" onclick="setMyProductsStatusFilter('out_of_stock')"><span>Agotados</span><strong>${outOfStockCount}</strong></button>
+        `;
+    }
+
     const filteredProducts = allProducts.filter(product => {
+        const stock = Number(product.stock || 0);
         if (selectedStatus === "active" && !product.is_active) return false;
         if (selectedStatus === "paused" && product.is_active) return false;
+        if (selectedStatus === "low_stock" && !(stock > 0 && stock <= 5)) return false;
+        if (selectedStatus === "out_of_stock" && stock > 0) return false;
 
         if (!search) return true;
 
@@ -2748,6 +2767,13 @@ function applyMyProductsFilters() {
     }
 
     renderMyProducts(filteredProducts);
+}
+
+
+function setMyProductsStatusFilter(value) {
+    const status = document.getElementById("my-products-status-filter");
+    if (status) status.value = value;
+    applyMyProductsFilters();
 }
 
 
@@ -2785,9 +2811,16 @@ function renderMyProducts(products) {
                             <span>Producto</span>
                             <h3>${escapeHtml(product.name || "Sin nombre")}</h3>
                         </div>
-                        <span class="my-product-state ${product.is_active ? "active" : "paused"}">
-                            ${product.is_active ? "Activo" : "Pausado"}
-                        </span>
+                        <div class="my-product-badges">
+                            <span class="my-product-state ${product.is_active ? "active" : "paused"}">
+                                ${product.is_active ? "Activo" : "Pausado"}
+                            </span>
+                            ${Number(product.stock || 0) <= 0
+                                ? '<span class="my-product-stock-state out">Agotado</span>'
+                                : Number(product.stock || 0) <= 5
+                                    ? '<span class="my-product-stock-state low">Stock bajo</span>'
+                                    : ''}
+                        </div>
                     </div>
                     <div class="my-product-summary">
                         <div><span>Precio</span><strong>$${Number(product.price || 0).toFixed(2)}</strong></div>
@@ -3065,6 +3098,7 @@ window.showMyProducts = showMyProducts;
 window.loadMyProducts = loadMyProducts;
 window.applyMyProductsFilters = applyMyProductsFilters;
 window.clearMyProductsFilters = clearMyProductsFilters;
+window.setMyProductsStatusFilter = setMyProductsStatusFilter;
 window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
