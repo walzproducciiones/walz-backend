@@ -1246,3 +1246,112 @@ button[onclick="toggleCart()"] {
 #sales-orders-content .orders-state-card p {
     color: #f5f5f5;
 }
+
+/* FASE 5K PASO 1 - MIS PRODUCTOS */
+.my-products-intro,
+.my-products-results-count,
+.my-product-code {
+    color: #555;
+}
+
+.my-products-filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin: 20px 0 10px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #242424;
+}
+
+.my-products-filters label {
+    display: grid;
+    gap: 6px;
+    color: #f5f5f5;
+}
+
+.my-products-filters input,
+.my-products-filters select {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #111;
+    color: #f5f5f5;
+}
+
+.my-products-list {
+    display: grid;
+    gap: 14px;
+}
+
+.my-product-card {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 12px;
+    background: #1f1f1f;
+    color: #f5f5f5;
+}
+
+.my-product-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.my-product-card h3 {
+    margin: 4px 0 0;
+}
+
+.my-product-card-header > div > span,
+.my-product-summary span {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.my-product-state {
+    align-self: start;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.my-product-state.active {
+    background: #194d35;
+    color: #a6f0ca;
+}
+
+.my-product-state.paused {
+    background: #5a4819;
+    color: #ffe49a;
+}
+
+.my-product-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.my-product-summary div {
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #292929;
+}
+
+.my-product-code {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+@media (max-width: 760px) {
+    .my-products-filters,
+    .my-product-summary {
+        grid-template-columns: 1fr;
+    }
+}

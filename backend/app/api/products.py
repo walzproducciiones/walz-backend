@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
 from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter
-from backend.app.services.product_service import create_product, get_products
+from backend.app.services.product_service import create_product, get_products, get_products_by_seller
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
 from uuid import UUID
@@ -46,3 +46,10 @@ def list_products(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/mine", response_model=list[ProductResponse])
+def list_my_products(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_products_by_seller(db, current_user.id)

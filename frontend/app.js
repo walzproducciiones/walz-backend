@@ -991,6 +991,12 @@ function showMarketplaceContent() {
     if (salesOrdersSection) {
         salesOrdersSection.style.display = "none";
     }
+    const myProductsSection =
+        document.getElementById("my-products-section");
+
+    if (myProductsSection) {
+        myProductsSection.style.display = "none";
+    }
     loadProducts();
 }
 
@@ -2592,6 +2598,162 @@ function clearReceivedOrdersFilters() {
     applyReceivedOrdersFilters();
 }
 
+
+
+// =====================================================
+// FASE 5K - MIS PRODUCTOS
+// =====================================================
+
+function showMyProducts() {
+    const marketplaceContent = document.getElementById("marketplace-content");
+    const ordersSection = document.getElementById("orders-section");
+    const salesOrdersSection = document.getElementById("sales-orders-section");
+    const myProductsSection = document.getElementById("my-products-section");
+
+    if (!myProductsSection) {
+        console.error("No existe la seccion Mis productos.");
+        return;
+    }
+
+    if (marketplaceContent) marketplaceContent.style.display = "none";
+    if (ordersSection) ordersSection.style.display = "none";
+    if (salesOrdersSection) salesOrdersSection.style.display = "none";
+    myProductsSection.style.display = "block";
+
+    loadMyProducts();
+}
+
+
+async function loadMyProducts() {
+    const container = document.getElementById("my-products-content");
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!container) return;
+
+    if (!currentToken) {
+        container.innerHTML = '<div class="orders-state-card orders-error">Tu sesion vencio.</div>';
+        return;
+    }
+
+    container.innerHTML = '<div class="orders-state-card">Cargando productos...</div>';
+
+    try {
+        const res = await fetch(`${API_URL}/products/mine`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const data = await res.json().catch(() => ([]));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        window.walzMyProducts = Array.isArray(data) ? data : [];
+        applyMyProductsFilters();
+
+    } catch (error) {
+        console.error("Error cargando productos propios:", error);
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                No pudimos cargar tus productos.
+            </div>
+        `;
+    }
+}
+
+
+function applyMyProductsFilters() {
+    const allProducts = Array.isArray(window.walzMyProducts)
+        ? window.walzMyProducts
+        : [];
+    const search = normalizeSalesSearchText(
+        document.getElementById("my-products-search")?.value
+    );
+    const selectedStatus = String(
+        document.getElementById("my-products-status-filter")?.value || ""
+    );
+
+    const filteredProducts = allProducts.filter(product => {
+        if (selectedStatus === "active" && !product.is_active) return false;
+        if (selectedStatus === "paused" && product.is_active) return false;
+
+        if (!search) return true;
+
+        const searchable = normalizeSalesSearchText([
+            product.id,
+            product.name,
+            product.category,
+            product.description
+        ].join(" "));
+
+        return searchable.includes(search);
+    });
+
+    const counter = document.getElementById("my-products-results-count");
+    if (counter) {
+        counter.textContent = allProducts.length === filteredProducts.length
+            ? `${allProducts.length} producto${allProducts.length === 1 ? "" : "s"}`
+            : `${filteredProducts.length} de ${allProducts.length} productos`;
+    }
+
+    renderMyProducts(filteredProducts);
+}
+
+
+function clearMyProductsFilters() {
+    const search = document.getElementById("my-products-search");
+    const status = document.getElementById("my-products-status-filter");
+    if (search) search.value = "";
+    if (status) status.value = "";
+    applyMyProductsFilters();
+}
+
+
+function renderMyProducts(products) {
+    const container = document.getElementById("my-products-content");
+    if (!container) return;
+
+    if (!Array.isArray(products) || products.length === 0) {
+        const hasProducts = Array.isArray(window.walzMyProducts) && window.walzMyProducts.length > 0;
+        container.innerHTML = `
+            <div class="orders-state-card my-products-empty">
+                <h3>${hasProducts ? "No encontramos productos" : "Todavia no publicaste productos"}</h3>
+                <p>${hasProducts ? "Proba otra busqueda." : "Publica tu primer producto desde el marketplace."}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="my-products-list">
+            ${products.map(product => `
+                <article class="my-product-card">
+                    <div class="my-product-card-header">
+                        <div>
+                            <span>Producto</span>
+                            <h3>${escapeHtml(product.name || "Sin nombre")}</h3>
+                        </div>
+                        <span class="my-product-state ${product.is_active ? "active" : "paused"}">
+                            ${product.is_active ? "Activo" : "Pausado"}
+                        </span>
+                    </div>
+                    <div class="my-product-summary">
+                        <div><span>Precio</span><strong>$${Number(product.price || 0).toFixed(2)}</strong></div>
+                        <div><span>Stock</span><strong>${Number(product.stock || 0)}</strong></div>
+                        <div><span>Categoria</span><strong>${escapeHtml(product.category || "Sin categoria")}</strong></div>
+                    </div>
+                    <p class="my-product-code">Codigo: #${escapeHtml(String(product.id || ""))}</p>
+                </article>
+            `).join("")}
+        </div>
+    `;
+}
+
 // =====================================================
 // HACER FUNCIONES GLOBALES
 // NECESARIO PARA onclick="..."
@@ -2622,6 +2784,10 @@ window.loadReceivedOrders = loadReceivedOrders;
 window.updateSellerOrderStatus = updateSellerOrderStatus;
 window.applyReceivedOrdersFilters = applyReceivedOrdersFilters;
 window.clearReceivedOrdersFilters = clearReceivedOrdersFilters;
+window.showMyProducts = showMyProducts;
+window.loadMyProducts = loadMyProducts;
+window.applyMyProductsFilters = applyMyProductsFilters;
+window.clearMyProductsFilters = clearMyProductsFilters;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

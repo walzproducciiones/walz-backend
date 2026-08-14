@@ -188,6 +188,15 @@
 
     <button
         type="button"
+        class="orders-button my-products-button"
+        onclick="showMyProducts()"
+    >
+        <span aria-hidden="true">&#128230;</span>
+        <span>Mis productos</span>
+    </button>
+
+    <button
+        type="button"
         onclick="handleLogout()"
         class="logout-btn"
     >
@@ -572,11 +581,61 @@
                 Cargando pedidos recibidos...
             </div>
         </section>
+        <!-- =================================================
+             MIS PRODUCTOS
+        ================================================== -->
+
+        <section
+            id="my-products-section"
+            style="display:none; margin-top:30px;"
+        >
+            <button type="button" onclick="showMarketplaceContent()">
+                &larr; Volver al marketplace
+            </button>
+
+            <h2>&#128230; Mis productos</h2>
+            <p class="my-products-intro">
+                Productos publicados por esta cuenta.
+            </p>
+
+            <div class="my-products-filters">
+                <label>
+                    <span>Buscar producto</span>
+                    <input
+                        type="search"
+                        id="my-products-search"
+                        placeholder="Nombre, categoria o codigo"
+                        oninput="applyMyProductsFilters()"
+                    >
+                </label>
+
+                <label>
+                    <span>Estado</span>
+                    <select
+                        id="my-products-status-filter"
+                        onchange="applyMyProductsFilters()"
+                    >
+                        <option value="">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="paused">Pausados</option>
+                    </select>
+                </label>
+
+                <button type="button" onclick="clearMyProductsFilters()">
+                    Limpiar busqueda
+                </button>
+            </div>
+
+            <p id="my-products-results-count" class="my-products-results-count"></p>
+
+            <div id="my-products-content">
+                Cargando productos...
+            </div>
+        </section>
 
     </div>
 
 </div>
-
 <!-- =====================================================
      CONFIRMACION DE COMPRA
 ====================================================== -->
