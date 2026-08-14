@@ -1901,7 +1901,7 @@ async function confirmCheckout() {
     const orderData = pendingCheckout;
 
     try {
-        const res = await fetch(`${API_URL}/orders/`, {
+        const res = await fetch(`${API_URL}/orders/checkout`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -1934,7 +1934,11 @@ async function confirmCheckout() {
             return;
         }
 
-        const order = JSON.parse(responseText);
+        const orders = JSON.parse(responseText);
+
+        if (!Array.isArray(orders) || orders.length === 0) {
+            throw new Error("El servidor no devolvio los pedidos creados.");
+        }
 
         pendingCheckout = null;
 
@@ -1978,7 +1982,7 @@ async function confirmCheckout() {
     }
         }
 
-        renderOrderSuccess(order, orderData.delivery);
+        renderOrderSuccess(orders, orderData.delivery);
 
     } catch (checkoutError) {
         console.error("Error de conexion checkout:", checkoutError);
@@ -1996,8 +2000,7 @@ async function confirmCheckout() {
     }
 }
 
-function renderOrderSuccess(order, delivery) {
-
+function renderOrderSuccess(orders, delivery) {
     const container =
         document.getElementById("orders-content");
 
@@ -2005,53 +2008,71 @@ function renderOrderSuccess(order, delivery) {
         return;
     }
 
-    const orderId = String(order.id || "");
-    const status = order.status || "pending";
+    const createdOrders = Array.isArray(orders)
+        ? orders
+        : [orders];
     const method = delivery?.method === "pickup"
         ? "Retiro en el local"
         : "Envio a domicilio";
+    const multipleOrders = createdOrders.length > 1;
+    const grandTotal = createdOrders.reduce(
+        (total, order) => total + Number(order.total_amount || 0),
+        0
+    );
 
     container.innerHTML = `
         <article class="order-success-card">
-            <div class="order-success-icon" aria-hidden="true">âœ“</div>
+            <div class="order-success-icon" aria-hidden="true">&#10003;</div>
 
-            <h2>Compra realizada correctamente</h2>
-            <p>Tu pedido fue creado y ya esta registrado en WalZ.</p>
+            <h2>${multipleOrders
+                ? "Compra dividida correctamente por vendedor"
+                : "Compra realizada correctamente"
+            }</h2>
+            <p>${multipleOrders
+                ? `WalZ creo ${createdOrders.length} pedidos, uno para cada vendedor.`
+                : "Tu pedido fue creado y ya esta registrado en WalZ."
+            }</p>
+
+            <div class="checkout-created-orders">
+                ${createdOrders.map((order, index) => `
+                    <div class="checkout-created-order">
+                        <span>Pedido ${index + 1}</span>
+                        <strong>#${escapeHtml(String(order.id || ""))}</strong>
+                        <span>Estado: ${escapeHtml(order.status || "pending")}</span>
+                        <strong>Total: $${Number(order.total_amount || 0).toFixed(2)}</strong>
+                        <button
+                            type="button"
+                            onclick="openOrderDetail('${escapeJs(String(order.id || ""))}')"
+                        >
+                            Ver pedido
+                        </button>
+                    </div>
+                `).join("")}
+            </div>
 
             <dl class="order-success-summary">
                 <div>
-                    <dt>Numero de pedido</dt>
-                    <dd>${escapeHtml(orderId)}</dd>
-                </div>
-                <div>
-                    <dt>Estado inicial</dt>
-                    <dd>${escapeHtml(status)}</dd>
+                    <dt>Pedidos creados</dt>
+                    <dd>${createdOrders.length}</dd>
                 </div>
                 <div>
                     <dt>Metodo de entrega</dt>
                     <dd>${escapeHtml(method)}</dd>
                 </div>
                 <div>
-                    <dt>Total</dt>
-                    <dd>$${Number(order.total_amount || 0).toFixed(2)}</dd>
+                    <dt>Total general</dt>
+                    <dd>$${grandTotal.toFixed(2)}</dd>
                 </div>
             </dl>
 
             ${delivery?.method === "pickup"
                 ? `<p class="order-success-note">
-                       La direccion y el horario del local se confirmaran cuando el pedido este listo.
+                       La direccion y el horario de retiro se confirmaran cuando cada pedido este listo.
                    </p>`
                 : ""
             }
 
             <div class="order-success-actions">
-                <button
-                    type="button"
-                    onclick="openOrderDetail('${escapeJs(orderId)}')"
-                >
-                    Ver pedido
-                </button>
-
                 <button
                     type="button"
                     onclick="loadMyOrders()"

@@ -30,6 +30,15 @@ def create_order(db: Session, buyer_id: UUID, order_data: OrderCreate):
             for product in products
         }
 
+        seller_ids = {
+            product.seller_id
+            for product in products
+        }
+
+        if len(seller_ids) > 1:
+            db.rollback()
+            return None, "El carrito contiene productos de distintos vendedores. Usa el checkout agrupado."
+
         order_items = []
         total = 0.0
 
@@ -217,3 +226,90 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
         })
 
     return received_orders
+
+def create_orders_by_seller(
+    db: Session,
+    buyer_id: UUID,
+    order_data: OrderCreate,
+):
+    quantities_by_product = defaultdict(int)
+
+    for item in order_data.items:
+        quantities_by_product[item.product_id] += item.quantity
+
+    try:
+        product_ids = list(quantities_by_product.keys())
+        products = (
+            db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .with_for_update()
+            .all()
+        )
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
+        items_by_seller = defaultdict(list)
+
+        for product_id, quantity in quantities_by_product.items():
+            product = products_by_id.get(product_id)
+
+            if not product or not product.is_active:
+                db.rollback()
+                return None, "El producto solicitado no esta disponible."
+
+            if product.stock is None or product.stock < quantity:
+                db.rollback()
+                return (
+                    None,
+                    f"Stock insuficiente para {product.name}. "
+                    f"Disponible: {max(product.stock or 0, 0)}.",
+                )
+
+            price = float(product.price)
+            items_by_seller[product.seller_id].append({
+                "product": product,
+                "quantity": quantity,
+                "price_at_purchase": price,
+            })
+
+        created_order_ids = []
+
+        for seller_items in items_by_seller.values():
+            seller_total = round(
+                sum(
+                    item["price_at_purchase"] * item["quantity"]
+                    for item in seller_items
+                ),
+                2,
+            )
+            new_order = Order(
+                buyer_id=buyer_id,
+                total_amount=seller_total,
+                shipping_address=order_data.shipping_address,
+            )
+            db.add(new_order)
+            db.flush()
+            created_order_ids.append(new_order.id)
+
+            for item_data in seller_items:
+                product = item_data["product"]
+                db.add(OrderItem(
+                    order_id=new_order.id,
+                    product_id=product.id,
+                    quantity=item_data["quantity"],
+                    price_at_purchase=item_data["price_at_purchase"],
+                ))
+                product.stock -= item_data["quantity"]
+
+        db.commit()
+
+        created_orders = [
+            get_order_by_id(db, order_id, buyer_id)
+            for order_id in created_order_ids
+        ]
+        return created_orders, None
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise

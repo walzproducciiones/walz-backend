@@ -11,6 +11,7 @@ from backend.app.schemas.order import OrderCreate, OrderResponse
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
     create_order,
+    create_orders_by_seller,
     get_order_by_id,
     get_orders_by_buyer,
     get_orders_received_by_seller,
@@ -98,3 +99,20 @@ def get_received_orders(
     current_user: User = Depends(get_current_user),
 ):
     return get_orders_received_by_seller(db, current_user.id)
+
+@router.post("/checkout", response_model=List[OrderResponse])
+def create_checkout_orders(
+    order: OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    new_orders, error = create_orders_by_seller(
+        db,
+        current_user.id,
+        order,
+    )
+
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    return new_orders

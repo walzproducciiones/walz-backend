@@ -1135,3 +1135,32 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* FASE 5J PASO 2 - RESULTADO POR VENDEDOR */
+.checkout-created-orders {
+    display: grid;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.checkout-created-order {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 9px;
+    background: #292929;
+    text-align: left;
+}
+
+.checkout-created-order span {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.checkout-created-order strong {
+    overflow-wrap: anywhere;
+}
+
+.checkout-created-order button {
+    justify-self: start;
+}
