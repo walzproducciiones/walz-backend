@@ -993,21 +993,27 @@ async function loadMyOrders() {
     }
 
     if (!token) {
-        container.innerHTML =
-            '<p class="orders-error">Debes iniciar sesión para ver tus pedidos.</p>';
+        renderOrdersSessionExpired();
         return;
     }
 
-    container.innerHTML =
-        '<p class="orders-loading">Cargando pedidos...</p>';
+    container.innerHTML = `
+        <div class="orders-state-card orders-loading">
+            Cargando pedidos...
+        </div>
+    `;
 
     try {
-
         const res = await fetch(`${API_URL}/orders/`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
         });
+
+        if (res.status === 401) {
+            renderOrdersSessionExpired();
+            return;
+        }
 
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
@@ -1018,19 +1024,91 @@ async function loadMyOrders() {
 
         renderMyOrders(orders);
 
-    } catch (e) {
-
-        console.error("Error cargando pedidos:", e);
+    } catch (ordersError) {
+        console.error("Error cargando pedidos:", ordersError);
 
         container.innerHTML = `
-            <p class="orders-error">
-                No se pudieron cargar los pedidos. ${escapeHtml(e.message)}
-            </p>
-            <button type="button" onclick="loadMyOrders()">
-                Reintentar
-            </button>
+            <div class="orders-state-card orders-error">
+                <h3>No pudimos cargar tus pedidos</h3>
+                <p>Verifica la conexion e intenta nuevamente.</p>
+                <button type="button" onclick="loadMyOrders()">
+                    Reintentar
+                </button>
+            </div>
         `;
     }
+}
+
+
+function renderOrdersSessionExpired() {
+
+    const container =
+        document.getElementById("orders-content");
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="orders-state-card orders-error">
+            <h3>Tu sesion vencio</h3>
+            <p>Inicia sesion nuevamente. Tu carrito permanece guardado.</p>
+            <button type="button" onclick="handleLogout()">
+                Ir al inicio de sesion
+            </button>
+        </div>
+    `;
+}
+
+
+function getOrderStatusInfo(status) {
+
+    const normalizedStatus =
+        String(status || "pending").toLowerCase();
+
+    const statuses = {
+        pending: {
+            label: "Pendiente",
+            className: "order-status-pending"
+        },
+        paid: {
+            label: "Pagado",
+            className: "order-status-paid"
+        },
+        shipped: {
+            label: "Enviado",
+            className: "order-status-shipped"
+        },
+        delivered: {
+            label: "Entregado",
+            className: "order-status-delivered"
+        },
+        cancelled: {
+            label: "Cancelado",
+            className: "order-status-cancelled"
+        }
+    };
+
+    return statuses[normalizedStatus] || {
+        label: normalizedStatus,
+        className: "order-status-unknown"
+    };
+}
+
+
+function getOrderDeliveryMethod(shippingAddress) {
+
+    const address = String(shippingAddress || "");
+
+    if (address.includes("Metodo: Retiro en el local")) {
+        return "Retiro en el local";
+    }
+
+    if (address.includes("Metodo: Envio a domicilio")) {
+        return "Envio a domicilio";
+    }
+
+    return "Entrega no especificada";
 }
 
 
@@ -1045,41 +1123,87 @@ function renderMyOrders(orders) {
 
     if (!Array.isArray(orders) || orders.length === 0) {
         container.innerHTML = `
-            <p class="orders-empty">
-                Aún no realizaste pedidos.
-            </p>
+            <div class="orders-state-card orders-empty">
+                <h3>Todavia no realizaste pedidos</h3>
+                <p>Cuando completes una compra aparecera en esta seccion.</p>
+                <button type="button" onclick="showMarketplaceContent()">
+                    Explorar productos
+                </button>
+            </div>
         `;
         return;
     }
 
-    container.innerHTML = orders.map(order => {
+    const sortedOrders = [...orders].sort(
+        (first, second) =>
+            new Date(second.created_at || 0) -
+            new Date(first.created_at || 0)
+    );
 
-        const createdAt = order.created_at
-            ? new Date(order.created_at).toLocaleString("es-AR")
-            : "Fecha no disponible";
+    container.innerHTML = `
+        <div class="orders-list">
+            ${sortedOrders.map(order => {
+                const createdAt = order.created_at
+                    ? new Date(order.created_at).toLocaleString("es-AR")
+                    : "Fecha no disponible";
 
-        const itemCount = Array.isArray(order.items)
-            ? order.items.reduce(
-                (total, item) => total + Number(item.quantity || 0),
-                0
-            )
-            : 0;
+                const itemCount = Array.isArray(order.items)
+                    ? order.items.reduce(
+                        (total, item) =>
+                            total + Number(item.quantity || 0),
+                        0
+                    )
+                    : 0;
 
-        return `
-            <article class="order-item">
-                <h3>Pedido #${escapeHtml(String(order.id))}</h3>
-                <p>Fecha: ${escapeHtml(createdAt)}</p>
-                <p>Estado: ${escapeHtml(order.status || "Sin estado")}</p>
-                <p>Artículos: ${itemCount}</p>
-                <p>Total: $${Number(order.total_amount || 0).toFixed(2)}</p>
-                <button type="button" onclick="openOrderDetail('${escapeJs(String(order.id))}')">
-                    Ver detalle
-                </button>
-            </article>
-        `;
-    }).join("");
+                const statusInfo =
+                    getOrderStatusInfo(order.status);
+
+                const deliveryMethod =
+                    getOrderDeliveryMethod(order.shipping_address);
+
+                return `
+                    <article class="order-item order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <span class="order-card-label">Pedido</span>
+                                <h3>#${escapeHtml(String(order.id))}</h3>
+                            </div>
+                            <span class="order-status ${statusInfo.className}">
+                                ${escapeHtml(statusInfo.label)}
+                            </span>
+                        </div>
+
+                        <div class="order-card-summary">
+                            <div>
+                                <span>Fecha</span>
+                                <strong>${escapeHtml(createdAt)}</strong>
+                            </div>
+                            <div>
+                                <span>Entrega</span>
+                                <strong>${escapeHtml(deliveryMethod)}</strong>
+                            </div>
+                            <div>
+                                <span>Articulos</span>
+                                <strong>${itemCount}</strong>
+                            </div>
+                            <div>
+                                <span>Total</span>
+                                <strong>$${Number(order.total_amount || 0).toFixed(2)}</strong>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onclick="openOrderDetail('${escapeJs(String(order.id))}')"
+                        >
+                            Ver pedido
+                        </button>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
 }
-
 
 async function openOrderDetail(orderId) {
 
@@ -1103,6 +1227,11 @@ async function openOrderDetail(orderId) {
                 "Authorization": `Bearer ${token}`
             }
         });
+
+        if (res.status === 401) {
+            renderOrdersSessionExpired();
+            return;
+        }
 
         if (res.status === 404) {
             renderOrderNotFound();

@@ -939,3 +939,114 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* FASE 5G - MIS PEDIDOS */
+.orders-list {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.order-card {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+}
+
+.order-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.order-card-header h3 {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+}
+
+.order-card-label,
+.order-card-summary span {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.order-status {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.order-status-pending {
+    background: #5a4819;
+    color: #ffe49a;
+}
+
+.order-status-paid,
+.order-status-shipped {
+    background: #193f5a;
+    color: #a9ddff;
+}
+
+.order-status-delivered {
+    background: #194d35;
+    color: #a6f0ca;
+}
+
+.order-status-cancelled {
+    background: #5a2222;
+    color: #ffb2b2;
+}
+
+.order-status-unknown {
+    background: #3d3d3d;
+    color: #e2e2e2;
+}
+
+.order-card-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.order-card-summary div {
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #292929;
+}
+
+.orders-state-card {
+    margin-top: 18px;
+    padding: 24px;
+    border-radius: 12px;
+    background: #1f1f1f;
+    text-align: center;
+}
+
+.orders-state-card h3 {
+    margin-top: 0;
+}
+
+.orders-error {
+    border: 1px solid #703434;
+}
+
+@media (max-width: 720px) {
+    .order-card-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .order-card-header {
+        flex-direction: column;
+    }
+
+    .order-card-summary {
+        grid-template-columns: 1fr;
+    }
+}
