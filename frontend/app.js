@@ -2757,6 +2757,13 @@ function renderMyProducts(products) {
                                >
                                    Editar producto
                                </button>
+                               <button
+                                   type="button"
+                                   class="${product.is_active ? "pause-product-button" : "reactivate-product-button"}"
+                                   onclick="toggleMyProductStatus('${escapeJs(String(product.id))}', ${product.is_active ? "false" : "true"})"
+                               >
+                                   ${product.is_active ? "Pausar producto" : "Reactivar producto"}
+                               </button>
                            </div>`
                     }
                 </article>
@@ -2895,6 +2902,61 @@ async function saveMyProductChanges(productId) {
 }
 
 // =====================================================
+// FASE 5K PASO 3 - PAUSAR Y REACTIVAR PRODUCTOS
+async function toggleMyProductStatus(productId, shouldActivate) {
+    const currentToken = localStorage.getItem("walz_token");
+    const action = shouldActivate ? "reactivar" : "pausar";
+
+    if (!currentToken) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        handleLogout();
+        return;
+    }
+
+    if (!confirm(`Confirmas que queres ${action} este producto?`)) return;
+
+    try {
+        const res = await fetch(`${API_URL}/products/${productId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify({ is_active: Boolean(shouldActivate) })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const index = (window.walzMyProducts || []).findIndex(
+            product => String(product.id) === String(data.id)
+        );
+        if (index >= 0) window.walzMyProducts[index] = data;
+
+        showMessage(
+            shouldActivate
+                ? "Producto reactivado correctamente."
+                : "Producto pausado correctamente.",
+            "success"
+        );
+        applyMyProductsFilters();
+        await loadProducts();
+
+    } catch (error) {
+        console.error("Error cambiando estado del producto:", error);
+        showMessage(error.message || "No se pudo cambiar el estado del producto.", "error");
+    }
+}
+
+
 // HACER FUNCIONES GLOBALES
 // NECESARIO PARA onclick="..."
 // =====================================================
@@ -2931,6 +2993,7 @@ window.clearMyProductsFilters = clearMyProductsFilters;
 window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
+window.toggleMyProductStatus = toggleMyProductStatus;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

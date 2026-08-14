@@ -1400,3 +1400,20 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* FASE 5K PASO 3 - PAUSAR Y REACTIVAR PRODUCTOS */
+.pause-product-button {
+    background: #6b4c12;
+    color: #fff3c4;
+}
+
+.reactivate-product-button {
+    background: #17613d;
+    color: #d2f8e4;
+}
+
+.pause-product-button:hover,
+.reactivate-product-button:hover {
+    filter: brightness(1.12);
+}
