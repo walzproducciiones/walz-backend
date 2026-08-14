@@ -1087,11 +1087,11 @@ function getOrderStatusInfo(status) {
             className: "order-status-pending"
         },
         paid: {
-            label: "Pagado",
+            label: "Confirmado",
             className: "order-status-paid"
         },
         shipped: {
-            label: "Enviado",
+            label: "Enviado / listo para retirar",
             className: "order-status-shipped"
         },
         delivered: {
@@ -2366,13 +2366,138 @@ function renderReceivedOrders(orders) {
                         </div>
 
                         <h3 class="order-total">
-                            Total de tus productos: $${Number(order.seller_total || 0).toFixed(2)}
+                            Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
                         </h3>
+
+                        ${renderSellerOrderActions(order)}
                     </article>
                 `;
             }).join("")}
         </div>
     `;
+}
+
+
+
+function renderSellerOrderActions(order) {
+    const status = String(order.status || "pending").toLowerCase();
+    const orderId = escapeJs(String(order.id || ""));
+    const isPickup = String(order.shipping_address || "")
+        .toLowerCase()
+        .includes("retiro en el local");
+
+    if (status === "pending") {
+        return `
+            <div class="seller-order-actions">
+                <button
+                    type="button"
+                    onclick="updateSellerOrderStatus('${orderId}', 'paid', 'Confirmar pedido')"
+                >
+                    Confirmar pedido
+                </button>
+                <button
+                    type="button"
+                    class="seller-cancel-button"
+                    onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')"
+                >
+                    Cancelar venta
+                </button>
+            </div>
+        `;
+    }
+
+    if (status === "paid") {
+        const actionLabel = isPickup
+            ? "Marcar listo para retirar"
+            : "Marcar como enviado";
+
+        return `
+            <div class="seller-order-actions">
+                <button
+                    type="button"
+                    onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')"
+                >
+                    ${actionLabel}
+                </button>
+                <button
+                    type="button"
+                    class="seller-cancel-button"
+                    onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')"
+                >
+                    Cancelar venta
+                </button>
+            </div>
+        `;
+    }
+
+    if (status === "shipped") {
+        return `
+            <div class="seller-order-actions">
+                <button
+                    type="button"
+                    onclick="updateSellerOrderStatus('${orderId}', 'delivered', 'Marcar como entregado')"
+                >
+                    Marcar como entregado
+                </button>
+            </div>
+        `;
+    }
+
+    return "";
+}
+
+
+async function updateSellerOrderStatus(orderId, newStatus, actionLabel) {
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        handleLogout();
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `${actionLabel}: ¿confirmas esta accion?`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${API_URL}/orders/seller/${orderId}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            }
+        );
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        showMessage("Estado del pedido actualizado.", "success");
+        await loadReceivedOrders();
+
+    } catch (error) {
+        console.error("Error actualizando estado del pedido:", error);
+        showMessage(
+            error.message || "No se pudo actualizar el pedido.",
+            "error"
+        );
+    }
 }
 
 // =====================================================
@@ -2402,6 +2527,7 @@ window.loadMyOrders = loadMyOrders;
 window.openOrderDetail = openOrderDetail;
 window.showReceivedOrders = showReceivedOrders;
 window.loadReceivedOrders = loadReceivedOrders;
+window.updateSellerOrderStatus = updateSellerOrderStatus;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

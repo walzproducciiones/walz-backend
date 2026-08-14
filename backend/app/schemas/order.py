@@ -46,3 +46,6 @@ class OrderResponse(OrderBase):
 
     class Config:
         from_attributes = True
+
+class OrderStatusUpdate(BaseModel):
+    status: str = Field(..., min_length=1, max_length=30)

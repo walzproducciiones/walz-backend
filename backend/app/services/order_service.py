@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
 from backend.app.schemas.order import OrderCreate
+from backend.app.services.order_status_service import can_transition_order_status
 
 
 def create_order(db: Session, buyer_id: UUID, order_data: OrderCreate):
@@ -309,6 +310,81 @@ def create_orders_by_seller(
             for order_id in created_order_ids
         ]
         return created_orders, None
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+def update_order_status_by_seller(
+    db: Session,
+    order_id: UUID,
+    seller_id: UUID,
+    requested_status: str,
+):
+    try:
+        try:
+            new_status = OrderStatus(requested_status.lower())
+        except (ValueError, AttributeError):
+            return None, "Estado de pedido no valido."
+
+        order = (
+            db.query(Order)
+            .filter(Order.id == order_id)
+            .with_for_update()
+            .first()
+        )
+
+        if not order:
+            db.rollback()
+            return None, "not_found"
+
+        product_ids = [item.product_id for item in order.items]
+        products = (
+            db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .with_for_update()
+            .all()
+        )
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
+
+        if (
+            len(products_by_id) != len(set(product_ids))
+            or any(
+                product.seller_id != seller_id
+                for product in products
+            )
+        ):
+            db.rollback()
+            return None, "not_found"
+
+        current_status = order.status
+
+        if not can_transition_order_status(current_status, new_status):
+            db.rollback()
+            return (
+                None,
+                "No se puede realizar ese cambio desde el estado actual.",
+            )
+
+        if (
+            new_status == OrderStatus.CANCELLED
+            and current_status != OrderStatus.CANCELLED
+        ):
+            for item in order.items:
+                product = products_by_id.get(item.product_id)
+                if product:
+                    product.stock = max(product.stock or 0, 0) + item.quantity
+
+        order.status = new_status
+        db.commit()
+
+        return {
+            "id": str(order.id),
+            "status": order.status.value,
+        }, None
 
     except SQLAlchemyError:
         db.rollback()

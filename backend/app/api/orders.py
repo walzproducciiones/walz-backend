@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import OrderCreate, OrderResponse
+from backend.app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
     create_order,
@@ -15,6 +15,7 @@ from backend.app.services.order_service import (
     get_order_by_id,
     get_orders_by_buyer,
     get_orders_received_by_seller,
+    update_order_status_by_seller,
 )
 
 
@@ -116,3 +117,28 @@ def create_checkout_orders(
         raise HTTPException(status_code=400, detail=error)
 
     return new_orders
+
+@router.patch("/seller/{order_id}/status")
+def update_received_order_status(
+    order_id: UUID,
+    status_update: OrderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = update_order_status_by_seller(
+        db,
+        order_id,
+        current_user.id,
+        status_update.status,
+    )
+
+    if error == "not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Pedido no encontrado.",
+        )
+
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    return result

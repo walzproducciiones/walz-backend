@@ -1164,3 +1164,34 @@ button[onclick="toggleCart()"] {
 .checkout-created-order button {
     justify-self: start;
 }
+
+/* FASE 5J PASO 3 - ACCIONES DEL VENDEDOR */
+.seller-order-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid #3b3b3b;
+}
+
+.seller-cancel-button {
+    border: 1px solid #a84747;
+    background: #5a2222;
+    color: #ffd0d0;
+}
+
+.seller-cancel-button:hover {
+    background: #733030;
+}
+
+/* CORRECCION VISUAL FASE 5J - CONTRASTE DE PEDIDOS RECIBIDOS */
+.sales-order-card .sales-buyer-data strong,
+.sales-order-card .sales-order-item strong,
+.sales-order-card .sales-delivery-data p {
+    color: #f5f5f5;
+}
+
+.sales-order-card .sales-order-item,
+.sales-order-card .sales-delivery-data {
+    color: #f5f5f5;
+}
