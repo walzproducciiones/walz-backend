@@ -2289,7 +2289,8 @@ async function loadReceivedOrders() {
             throw new Error(data.detail || `HTTP ${res.status}`);
         }
 
-        renderReceivedOrders(data);
+        window.walzReceivedOrders = Array.isArray(data) ? data : [];
+        applyReceivedOrdersFilters();
 
     } catch (error) {
         console.error("Error cargando pedidos recibidos:", error);
@@ -2312,10 +2313,20 @@ function renderReceivedOrders(orders) {
     }
 
     if (!Array.isArray(orders) || orders.length === 0) {
+        const hasReceivedOrders =
+            Array.isArray(window.walzReceivedOrders) &&
+            window.walzReceivedOrders.length > 0;
+
         container.innerHTML = `
             <div class="orders-state-card orders-empty">
-                <h3>Todavia no recibiste pedidos</h3>
-                <p>Cuando alguien compre uno de tus productos aparecera aqui.</p>
+                <h3>${hasReceivedOrders
+                    ? "No encontramos ventas con esos filtros"
+                    : "Todavia no recibiste pedidos"
+                }</h3>
+                <p>${hasReceivedOrders
+                    ? "Proba otra palabra o selecciona otro estado."
+                    : "Cuando alguien compre uno de tus productos aparecera aqui."
+                }</p>
             </div>
         `;
         return;
@@ -2500,6 +2511,87 @@ async function updateSellerOrderStatus(orderId, newStatus, actionLabel) {
     }
 }
 
+
+
+function normalizeSalesSearchText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/^#+/, "");
+}
+
+
+function applyReceivedOrdersFilters() {
+    const allOrders = Array.isArray(window.walzReceivedOrders)
+        ? window.walzReceivedOrders
+        : [];
+    const search = normalizeSalesSearchText(
+        document.getElementById("sales-orders-search")?.value
+    );
+    const selectedStatus = String(
+        document.getElementById("sales-orders-status-filter")?.value || ""
+    ).toLowerCase();
+
+    const filteredOrders = allOrders.filter(order => {
+        const status = String(order.status || "").toLowerCase();
+
+        if (selectedStatus && status !== selectedStatus) {
+            return false;
+        }
+
+        if (!search) {
+            return true;
+        }
+
+        const itemNames = (Array.isArray(order.items) ? order.items : [])
+            .map(item => item.product_name || "")
+            .join(" ");
+        const searchableText = normalizeSalesSearchText([
+            order.id,
+            status,
+            getOrderStatusInfo(status).label,
+            order.buyer?.name,
+            order.buyer?.email,
+            order.buyer?.phone,
+            order.shipping_address,
+            itemNames
+        ].join(" "));
+
+        return searchableText.includes(search);
+    });
+
+    const counter =
+        document.getElementById("sales-orders-results-count");
+
+    if (counter) {
+        counter.textContent = allOrders.length === filteredOrders.length
+            ? `${allOrders.length} venta${allOrders.length === 1 ? "" : "s"}`
+            : `${filteredOrders.length} de ${allOrders.length} ventas`;
+    }
+
+    renderReceivedOrders(filteredOrders);
+}
+
+
+function clearReceivedOrdersFilters() {
+    const searchInput =
+        document.getElementById("sales-orders-search");
+    const statusFilter =
+        document.getElementById("sales-orders-status-filter");
+
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
+    if (statusFilter) {
+        statusFilter.value = "";
+    }
+
+    applyReceivedOrdersFilters();
+}
+
 // =====================================================
 // HACER FUNCIONES GLOBALES
 // NECESARIO PARA onclick="..."
@@ -2528,6 +2620,8 @@ window.openOrderDetail = openOrderDetail;
 window.showReceivedOrders = showReceivedOrders;
 window.loadReceivedOrders = loadReceivedOrders;
 window.updateSellerOrderStatus = updateSellerOrderStatus;
+window.applyReceivedOrdersFilters = applyReceivedOrdersFilters;
+window.clearReceivedOrdersFilters = clearReceivedOrdersFilters;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;

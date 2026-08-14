@@ -528,6 +528,46 @@
                 Aqui aparecen solamente los productos vendidos por esta cuenta.
             </p>
 
+            <div class="sales-orders-filters">
+                <label>
+                    <span>Buscar venta</span>
+                    <input
+                        type="search"
+                        id="sales-orders-search"
+                        placeholder="Pedido, comprador, email o producto"
+                        oninput="applyReceivedOrdersFilters()"
+                    >
+                </label>
+
+                <label>
+                    <span>Estado</span>
+                    <select
+                        id="sales-orders-status-filter"
+                        onchange="applyReceivedOrdersFilters()"
+                    >
+                        <option value="">Todos</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="paid">Confirmado</option>
+                        <option value="shipped">Enviado / listo para retirar</option>
+                        <option value="delivered">Entregado</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
+                </label>
+
+                <button
+                    type="button"
+                    onclick="clearReceivedOrdersFilters()"
+                >
+                    Limpiar busqueda
+                </button>
+            </div>
+
+            <p
+                id="sales-orders-results-count"
+                class="sales-orders-results-count"
+                aria-live="polite"
+            ></p>
+
             <div id="sales-orders-content">
                 Cargando pedidos recibidos...
             </div>

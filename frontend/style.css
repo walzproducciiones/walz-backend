@@ -1195,3 +1195,54 @@ button[onclick="toggleCart()"] {
 .sales-order-card .sales-delivery-data {
     color: #f5f5f5;
 }
+
+/* FASE 5J PASO 4 - BUSQUEDA DE VENTAS */
+.sales-orders-filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin: 20px 0 10px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #242424;
+}
+
+.sales-orders-filters label {
+    display: grid;
+    gap: 6px;
+}
+
+.sales-orders-filters label span,
+.sales-orders-results-count {
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.sales-orders-filters input,
+.sales-orders-filters select {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #111;
+    color: #f5f5f5;
+}
+
+.sales-orders-results-count {
+    margin: 0 0 10px;
+}
+
+@media (max-width: 760px) {
+    .sales-orders-filters {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+}
+
+/* CORRECCION FASE 5J PASO 4 - MENSAJES Y CODIGOS */
+#sales-orders-content .orders-state-card,
+#sales-orders-content .orders-state-card h3,
+#sales-orders-content .orders-state-card p {
+    color: #f5f5f5;
+}
