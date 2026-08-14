@@ -1,15 +1,20 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
 from backend.app.schemas.product import ProductResponse
+
 
 class OrderItemBase(BaseModel):
     product_id: UUID
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1, le=999)
+
 
 class OrderItemCreate(OrderItemBase):
     pass
+
 
 class OrderItemResponse(OrderItemBase):
     id: UUID
@@ -19,11 +24,17 @@ class OrderItemResponse(OrderItemBase):
     class Config:
         from_attributes = True
 
+
 class OrderBase(BaseModel):
-    shipping_address: Optional[str] = None
+    shipping_address: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
 
 class OrderCreate(OrderBase):
-    items: List[OrderItemCreate]
+    items: List[OrderItemCreate] = Field(min_length=1, max_length=100)
+
 
 class OrderResponse(OrderBase):
     id: UUID
