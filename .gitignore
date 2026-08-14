@@ -1,2 +1,8 @@
 venv/
 .env
+__pycache__/
+*.py[cod]
+*.bak
+*.pre-*
+*.fase*-backup
+walz_local.db
