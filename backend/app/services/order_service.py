@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
+from backend.app.services.product_service import get_effective_product_price
 from backend.app.schemas.order import OrderCreate
 from backend.app.services.order_status_service import can_transition_order_status
 
@@ -58,7 +59,7 @@ def create_order(db: Session, buyer_id: UUID, order_data: OrderCreate):
                     f"Disponible: {max(product.stock or 0, 0)}.",
                 )
 
-            price = float(product.price)
+            price = get_effective_product_price(product)
             total += price * quantity
 
             order_items.append({
@@ -267,7 +268,7 @@ def create_orders_by_seller(
                     f"Disponible: {max(product.stock or 0, 0)}.",
                 )
 
-            price = float(product.price)
+            price = get_effective_product_price(product)
             items_by_seller[product.seller_id].append({
                 "product": product,
                 "quantity": quantity,

@@ -4,6 +4,18 @@ from backend.app.models.product import Product
 from backend.app.schemas.product import ProductCreate, ProductFilter, ProductUpdate
 from uuid import UUID
 
+def get_effective_product_price(product: Product) -> float:
+    if (
+        product.offer_active
+        and product.offer_price is not None
+        and float(product.offer_price) > 0
+        and float(product.offer_price) < float(product.price)
+    ):
+        return float(product.offer_price)
+
+    return float(product.price)
+
+
 def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
     new_product = Product(
         seller_id=seller_id,
@@ -60,8 +72,20 @@ def update_product_by_seller(
 
     updates = product_data.model_dump(exclude_unset=True)
 
+    resulting_price = updates.get("price", product.price)
+    resulting_offer_price = updates.get("offer_price", product.offer_price)
+    resulting_offer_active = updates.get("offer_active", product.offer_active)
+
+    if resulting_offer_active:
+        if resulting_offer_price is None:
+            raise ValueError("Ingresa un precio de oferta antes de activarla.")
+        if float(resulting_offer_price) >= float(resulting_price):
+            raise ValueError("El precio de oferta debe ser menor que el precio normal.")
+
     for field, value in updates.items():
-        if value is not None:
+        if field == "offer_price":
+            setattr(product, field, value)
+        elif value is not None:
             setattr(product, field, value)
 
     db.commit()

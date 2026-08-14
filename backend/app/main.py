@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.api import auth, products, orders, payments
 from backend.app.database.session import engine
+from backend.app.database.schema_updates import ensure_product_promotion_columns
 
 from backend.app.models import user, product, order
 
@@ -15,6 +16,7 @@ from backend.app.models import user, product, order
 user.Base.metadata.create_all(bind=engine)
 product.Base.metadata.create_all(bind=engine)
 order.Base.metadata.create_all(bind=engine)
+ensure_product_promotion_columns(engine)
 
 
 # ============================================================

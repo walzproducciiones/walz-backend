@@ -48,6 +48,18 @@ class Product(Base):
         nullable=False
     )
 
+    offer_price = Column(
+        Float,
+        nullable=True
+    )
+
+    offer_active = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
+    )
+
     stock = Column(
         Integer,
         default=0

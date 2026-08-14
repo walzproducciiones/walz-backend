@@ -7,6 +7,8 @@ class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
     price: float = Field(..., gt=0)
+    offer_price: Optional[float] = Field(default=None, gt=0)
+    offer_active: bool = False
     stock: int = Field(0, ge=0)
     category: Optional[str] = None
     image_url: Optional[str] = None
@@ -36,4 +38,6 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     image_url: Optional[str] = None
+    offer_price: Optional[float] = Field(default=None, gt=0)
+    offer_active: Optional[bool] = None
     is_active: Optional[bool] = None

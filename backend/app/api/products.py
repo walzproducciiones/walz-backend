@@ -61,12 +61,18 @@ def update_my_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    updated_product = update_product_by_seller(
-        db,
-        product_id,
-        current_user.id,
-        product,
-    )
+    try:
+        updated_product = update_product_by_seller(
+            db,
+            product_id,
+            current_user.id,
+            product,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
     if not updated_product:
         raise HTTPException(

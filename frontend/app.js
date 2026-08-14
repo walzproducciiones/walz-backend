@@ -417,7 +417,7 @@ function syncCartWithProducts(products) {
             const synchronizedItem = {
                 ...item,
                 name: product.name,
-                price: Number(product.price),
+                price: getProductEffectivePrice(product),
                 stock: currentStock,
                 qty: Math.min(
                     Number(item.qty || 1),
@@ -480,6 +480,34 @@ function renderProductImage(value, altText, className) {
     return `<img class="${className}" src="${escapeHtml(url)}" alt="${escapeHtml(altText || "Producto")}" loading="lazy" onerror="this.outerHTML='<div class=&quot;${className} product-image-placeholder&quot;>Imagen no disponible</div>'">`;
 }
 
+function hasActiveProductOffer(product) {
+    const normalPrice = Number(product?.price || 0);
+    const offerPrice = Number(product?.offer_price || 0);
+    return Boolean(product?.offer_active) && offerPrice > 0 && offerPrice < normalPrice;
+}
+
+function getProductEffectivePrice(product) {
+    return hasActiveProductOffer(product)
+        ? Number(product.offer_price)
+        : Number(product.price || 0);
+}
+
+function renderProductPrice(product) {
+    const normalPrice = Number(product?.price || 0);
+    const effectivePrice = getProductEffectivePrice(product);
+
+    if (hasActiveProductOffer(product)) {
+        return `
+            <span class="product-normal-price">$${normalPrice.toFixed(2)}</span>
+            <span class="product-offer-price">$${effectivePrice.toFixed(2)}</span>
+            <span class="product-offer-badge">Oferta</span>
+        `;
+    }
+
+    return `<span class="product-current-price">$${normalPrice.toFixed(2)}</span>`;
+}
+
+
 function renderProducts(products) {
 
     const list =
@@ -534,9 +562,7 @@ function renderProducts(products) {
                         ${escapeHtml(product.name)}
                     </h4>
 
-                    <p class="product-price">
-                        💰 $${Number(product.price).toFixed(2)}
-                    </p>
+                    <p class="product-price">${renderProductPrice(product)}</p>
 
                     <p class="product-stock">
                         📦 Stock: ${stockValue}
@@ -570,7 +596,7 @@ function renderProducts(products) {
                                 addToCart(
                                     '${product.id}',
                                     '${escapeJs(product.name)}',
-                                    ${Number(product.price)},
+                                    ${getProductEffectivePrice(product)},
                                     ${stockValue}
                                 )
                             "
@@ -628,7 +654,7 @@ function filterProducts() {
                     .toLowerCase();
 
             const price =
-                Number(product.price || 0);
+                getProductEffectivePrice(product);
 
             if (
                 search &&
@@ -767,9 +793,7 @@ function openProductDetail(productId) {
     }
 
     if (priceElement) {
-
-        priceElement.textContent =
-            `$${Number(product.price).toFixed(2)}`;
+        priceElement.innerHTML = renderProductPrice(product);
     }
 
     if (stockElement) {
@@ -974,12 +998,14 @@ function toggleCart() {
     if (isHidden) {
 
         section.style.display = "block";
+        document.body.classList.add("cart-panel-open");
 
         renderCart();
 
     } else {
 
         section.style.display = "none";
+        document.body.classList.remove("cart-panel-open");
     }
 }
 
@@ -2017,6 +2043,7 @@ async function confirmCheckout() {
 
         if (cartSection) {
             cartSection.style.display = "none";
+            document.body.classList.remove("cart-panel-open");
         }
 
         if (marketplaceContent) {
@@ -2823,7 +2850,7 @@ function renderMyProducts(products) {
                         </div>
                     </div>
                     <div class="my-product-summary">
-                        <div><span>Precio</span><strong>$${Number(product.price || 0).toFixed(2)}</strong></div>
+                        <div><span>Precio</span><strong class="my-product-price-display">${renderProductPrice(product)}</strong></div>
                         <div><span>Stock</span><strong>${Number(product.stock || 0)}</strong></div>
                         <div><span>Categoria</span><strong>${escapeHtml(product.category || "Sin categoria")}</strong></div>
                     </div>
@@ -2879,7 +2906,7 @@ function renderMyProductEditor(product) {
                 >
             </label>
             <label>
-                <span>Precio</span>
+                <span>Precio normal</span>
                 <input
                     id="edit-product-price-${escapeHtml(String(product.id))}"
                     type="number"
@@ -2887,6 +2914,25 @@ function renderMyProductEditor(product) {
                     step="0.01"
                     value="${Number(product.price || 0)}"
                 >
+            </label>
+            <label>
+                <span>Precio de oferta</span>
+                <input
+                    id="edit-product-offer-price-${escapeHtml(String(product.id))}"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value="${product.offer_price == null ? "" : Number(product.offer_price)}"
+                    placeholder="Opcional"
+                >
+            </label>
+            <label class="my-product-offer-toggle">
+                <input
+                    id="edit-product-offer-active-${escapeHtml(String(product.id))}"
+                    type="checkbox"
+                    ${product.offer_active ? "checked" : ""}
+                >
+                <span>Oferta activa</span>
             </label>
             <label>
                 <span>Stock</span>
@@ -2943,6 +2989,9 @@ async function saveMyProductChanges(productId) {
     const currentToken = localStorage.getItem("walz_token");
     const name = document.getElementById(`edit-product-name-${productId}`)?.value.trim() || "";
     const price = Number(document.getElementById(`edit-product-price-${productId}`)?.value);
+    const offerPriceText = document.getElementById(`edit-product-offer-price-${productId}`)?.value.trim() || "";
+    const offerPrice = offerPriceText ? Number(offerPriceText) : null;
+    const offerActive = Boolean(document.getElementById(`edit-product-offer-active-${productId}`)?.checked);
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
     const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
@@ -2963,6 +3012,16 @@ async function saveMyProductChanges(productId) {
         return;
     }
 
+    if (offerActive && (!Number.isFinite(offerPrice) || offerPrice <= 0)) {
+        showMessage("Ingresa un precio de oferta valido antes de activarla.", "error");
+        return;
+    }
+
+    if (offerActive && offerPrice >= price) {
+        showMessage("El precio de oferta debe ser menor que el precio normal.", "error");
+        return;
+    }
+
     if (!currentToken) {
         showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
         handleLogout();
@@ -2976,7 +3035,7 @@ async function saveMyProductChanges(productId) {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ name, price, stock, category: category || null, description: description || null, image_url: imageUrl })
+            body: JSON.stringify({ name, price, offer_price: offerPrice, offer_active: offerActive, stock, category: category || null, description: description || null, image_url: imageUrl })
         });
         const data = await res.json().catch(() => ({}));
 
