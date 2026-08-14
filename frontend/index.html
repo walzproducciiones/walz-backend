@@ -246,6 +246,19 @@
                 placeholder="Stock"
             >
 
+            <input
+                type="text"
+                id="prod-category"
+                maxlength="100"
+                placeholder="Categoria"
+            >
+
+            <textarea
+                id="prod-description"
+                maxlength="1000"
+                placeholder="Descripcion del producto"
+            ></textarea>
+
             <button
                 type="button"
                 onclick="handleCreateProduct()"
@@ -350,7 +363,8 @@
                 Información del producto
             </h3>
 
-            <p>
+            <p id="detail-product-category"></p>
+            <p id="detail-product-description-text">
                 Producto disponible en WalZ.
             </p>
 

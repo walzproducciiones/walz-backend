@@ -33,4 +33,6 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
     price: Optional[float] = Field(default=None, gt=0)
     stock: Optional[int] = Field(default=None, ge=0)
+    description: Optional[str] = None
+    category: Optional[str] = None
     is_active: Optional[bool] = None

@@ -1417,3 +1417,28 @@ button[onclick="toggleCart()"] {
 .reactivate-product-button:hover {
     filter: brightness(1.12);
 }
+
+/* FASE 5K PASO 4 - DATOS COMPLETOS DEL PRODUCTO */
+.product-form textarea {
+    min-height: 84px;
+    resize: vertical;
+}
+
+.my-product-description-field {
+    grid-column: 1 / -1;
+}
+
+.my-product-editor textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #111;
+    color: #f5f5f5;
+    resize: vertical;
+}
+
+#detail-product-category {
+    font-weight: 700;
+}

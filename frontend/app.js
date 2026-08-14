@@ -241,6 +241,12 @@ async function handleCreateProduct() {
             document.getElementById("prod-stock").value
         );
 
+    const category =
+        document.getElementById("prod-category").value.trim();
+
+    const description =
+        document.getElementById("prod-description").value.trim();
+
     if (!name || isNaN(price) || isNaN(stock)) {
 
         showMessage(
@@ -267,7 +273,8 @@ async function handleCreateProduct() {
                     name,
                     price,
                     stock,
-                    category: ""
+                    category: category || null,
+                    description: description || null
                 })
             }
         );
@@ -297,6 +304,9 @@ async function handleCreateProduct() {
             document.getElementById(
                 "prod-stock"
             ).value = "";
+
+            document.getElementById("prod-category").value = "";
+            document.getElementById("prod-description").value = "";
 
             await loadProducts();
 
@@ -745,6 +755,19 @@ function openProductDetail(productId) {
             product.stock > 0
                 ? `📦 Stock disponible: ${product.stock}`
                 : "Sin stock";
+    }
+
+    const categoryElement = document.getElementById("detail-product-category");
+    const descriptionElement = document.getElementById("detail-product-description-text");
+
+    if (categoryElement) {
+        categoryElement.textContent = product.category
+            ? `Categoria: ${product.category}`
+            : "";
+    }
+
+    if (descriptionElement) {
+        descriptionElement.textContent = product.description || "Producto disponible en WalZ.";
     }
 
     modal.dataset.productId =
@@ -2818,6 +2841,22 @@ function renderMyProductEditor(product) {
                     value="${Number(product.stock || 0)}"
                 >
             </label>
+            <label>
+                <span>Categoria</span>
+                <input
+                    id="edit-product-category-${escapeHtml(String(product.id))}"
+                    type="text"
+                    maxlength="100"
+                    value="${escapeHtml(product.category || "")}"
+                >
+            </label>
+            <label class="my-product-description-field">
+                <span>Descripcion</span>
+                <textarea
+                    id="edit-product-description-${escapeHtml(String(product.id))}"
+                    maxlength="1000"
+                >${escapeHtml(product.description || "")}</textarea>
+            </label>
             <div class="my-product-editor-actions">
                 <button
                     type="button"
@@ -2839,6 +2878,8 @@ async function saveMyProductChanges(productId) {
     const name = document.getElementById(`edit-product-name-${productId}`)?.value.trim() || "";
     const price = Number(document.getElementById(`edit-product-price-${productId}`)?.value);
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
+    const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
+    const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
 
     if (!name) {
         showMessage("El nombre del producto es obligatorio.", "error");
@@ -2868,7 +2909,7 @@ async function saveMyProductChanges(productId) {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ name, price, stock })
+            body: JSON.stringify({ name, price, stock, category: category || null, description: description || null })
         });
         const data = await res.json().catch(() => ({}));
 
