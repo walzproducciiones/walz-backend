@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
-from backend.app.models.order import Order, OrderItem
+from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
 from backend.app.schemas.order import OrderCreate
 
@@ -111,3 +111,53 @@ def get_order_by_id(db: Session, order_id: UUID, buyer_id: UUID):
         )
         .first()
     )
+
+def cancel_order_by_buyer(
+    db: Session,
+    order_id: UUID,
+    buyer_id: UUID,
+):
+    try:
+        order = (
+            db.query(Order)
+            .filter(
+                Order.id == order_id,
+                Order.buyer_id == buyer_id,
+            )
+            .with_for_update()
+            .first()
+        )
+
+        if not order:
+            db.rollback()
+            return None, "not_found"
+
+        if order.status != OrderStatus.PENDING:
+            db.rollback()
+            return None, "Solo se pueden cancelar pedidos pendientes."
+
+        product_ids = [item.product_id for item in order.items]
+        products = (
+            db.query(Product)
+            .filter(Product.id.in_(product_ids))
+            .with_for_update()
+            .all()
+        )
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
+
+        for item in order.items:
+            product = products_by_id.get(item.product_id)
+            if product:
+                product.stock = max(product.stock or 0, 0) + item.quantity
+
+        order.status = OrderStatus.CANCELLED
+        db.commit()
+
+        return get_order_by_id(db, order.id, buyer_id), None
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise

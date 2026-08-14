@@ -1050,3 +1050,29 @@ button[onclick="toggleCart()"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* FASE 5I - CANCELACION DE PEDIDOS PENDIENTES */
+.order-cancel-actions {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #3b3b3b;
+}
+
+.order-cancel-actions p {
+    margin: 0;
+    color: #bdbdbd;
+    font-size: 13px;
+}
+
+.order-cancel-button {
+    border: 1px solid #a84747;
+    background: #5a2222;
+    color: #ffd0d0;
+}
+
+.order-cancel-button:hover {
+    background: #733030;
+}

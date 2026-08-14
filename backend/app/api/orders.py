@@ -9,6 +9,7 @@ from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.order import OrderCreate, OrderResponse
 from backend.app.services.order_service import (
+    cancel_order_by_buyer,
     create_order,
     get_order_by_id,
     get_orders_by_buyer,
@@ -60,6 +61,32 @@ def get_my_order_detail(
         raise HTTPException(
             status_code=404,
             detail="Order not found"
+        )
+
+    return order
+
+@router.patch("/{order_id}/cancel", response_model=OrderResponse)
+def cancel_my_order(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    order, error = cancel_order_by_buyer(
+        db,
+        order_id,
+        current_user.id,
+    )
+
+    if error == "not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Pedido no encontrado.",
+        )
+
+    if error:
+        raise HTTPException(
+            status_code=400,
+            detail=error,
         )
 
     return order

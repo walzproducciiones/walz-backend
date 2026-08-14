@@ -977,6 +977,8 @@ function showMarketplaceContent() {
     if (ordersSection) {
         ordersSection.style.display = "none";
     }
+
+    loadProducts();
 }
 
 
@@ -1281,6 +1283,8 @@ function renderOrderDetail(order, items) {
 
     const address = order.shipping_address || "Dirección no disponible";
 
+    const canCancel = String(order.status || '').toLowerCase() === 'pending';
+
     container.innerHTML = `
         <button type="button" onclick="loadMyOrders()">
             ← Volver a mis pedidos
@@ -1310,10 +1314,69 @@ function renderOrderDetail(order, items) {
                 }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+            ${canCancel ? `
+                <div class="order-cancel-actions">
+                    <button
+                        type="button"
+                        class="order-cancel-button"
+                        onclick="cancelPendingOrder('${escapeJs(String(order.id))}')"
+                    >
+                        Cancelar pedido
+                    </button>
+                    <p>Al cancelar, las unidades volveran automaticamente al stock.</p>
+                </div>
+            ` : ""}
         </article>
     `;
 }
 
+
+async function cancelPendingOrder(orderId) {
+    const token = localStorage.getItem("walz_token");
+
+    if (!token) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        handleLogout();
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Â¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
+            method: "PATCH",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        showMessage("Pedido cancelado. El stock fue restituido.", "success");
+        await loadProducts();
+        renderOrderDetail(data, Array.isArray(data.items) ? data.items : []);
+
+    } catch (error) {
+        console.error("Error cancelando pedido:", error);
+        showMessage(error.message || "No se pudo cancelar el pedido.", "error");
+    }
+}
 
 function renderOrderNotFound() {
 
@@ -2135,6 +2198,7 @@ window.showMyOrders = showMyOrders;
 window.showMarketplaceContent = showMarketplaceContent;
 window.loadMyOrders = loadMyOrders;
 window.openOrderDetail = openOrderDetail;
+window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;
 
