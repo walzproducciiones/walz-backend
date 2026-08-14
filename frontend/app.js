@@ -1341,7 +1341,7 @@ async function cancelPendingOrder(orderId) {
     }
 
     const confirmed = window.confirm(
-        "Â¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
+        "¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
     );
 
     if (!confirmed) {
