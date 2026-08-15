@@ -583,6 +583,13 @@ function renderProducts(products) {
                     class="product-actions"
                     onclick="event.stopPropagation()"
                 >
+                    <button
+                        type="button"
+                        class="product-store-link"
+                        onclick="showPublicStore('${product.seller_id}')"
+                    >
+                        Ver tienda
+                    </button>
 
                     ${
                         hasStock
@@ -1023,6 +1030,8 @@ function toggleCart() {
 // =====================================================
 
 function showMyOrders() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
     hideBannerAdminSection();
 
     const marketplaceContent =
@@ -1051,6 +1060,8 @@ function showMyOrders() {
 
 
 function showMarketplaceContent() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
 
     const marketplaceContent =
         document.getElementById("marketplace-content");
@@ -2313,6 +2324,8 @@ function showMarketplace() {
 // =====================================================
 
 function showReceivedOrders() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
     hideBannerAdminSection();
     const marketplaceContent =
         document.getElementById("marketplace-content");
@@ -2692,6 +2705,8 @@ function clearReceivedOrdersFilters() {
 // =====================================================
 
 function showMyProducts() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
     hideBannerAdminSection();
     hideBannerProposalSection();
     const marketplaceContent = document.getElementById("marketplace-content");
@@ -3147,6 +3162,10 @@ async function toggleMyProductStatus(productId, shouldActivate) {
 function updateAdminBannerVisibility() {
     const button = document.getElementById("banner-admin-button");
     if (button) button.style.display = currentUserRole === "ADMIN" ? "inline-flex" : "none";
+
+    const storeButton = document.getElementById("store-profile-button");
+    const canManageStore = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
+    if (storeButton) storeButton.style.display = canManageStore ? "inline-flex" : "none";
 }
 
 
@@ -3287,6 +3306,193 @@ async function loadActiveBanners() {
 }
 
 
+function hidePublicStoreSection() {
+    const section = document.getElementById("public-store-section");
+    if (section) section.style.display = "none";
+}
+
+
+async function showPublicStore(sellerId) {
+    const section = document.getElementById("public-store-section");
+    const container = document.getElementById("public-store-content");
+    if (!section || !container) return;
+
+    document.getElementById("marketplace-content")?.style.setProperty("display", "none");
+    document.getElementById("orders-section")?.style.setProperty("display", "none");
+    document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
+    document.getElementById("my-products-section")?.style.setProperty("display", "none");
+    document.getElementById("store-profile-section")?.style.setProperty("display", "none");
+    document.getElementById("banner-admin-section")?.style.setProperty("display", "none");
+    document.getElementById("banner-proposal-section")?.style.setProperty("display", "none");
+    section.style.display = "block";
+    container.innerHTML = '<div class="orders-state-card">Cargando tienda...</div>';
+
+    try {
+        const [storeResponse, productsResponse] = await Promise.all([
+            fetch(`${API_URL}/stores/seller/${sellerId}`),
+            fetch(`${API_URL}/products/`)
+        ]);
+        const store = await storeResponse.json().catch(() => ({}));
+        const products = await productsResponse.json().catch(() => ([]));
+        if (!storeResponse.ok) throw new Error(store.detail || "Esta tienda todavia no completo su perfil.");
+        if (!productsResponse.ok) throw new Error("No se pudieron cargar los productos de la tienda.");
+
+        const storeProducts = (Array.isArray(products) ? products : []).filter(
+            product => String(product.seller_id) === String(sellerId) && product.is_active
+        );
+        container.innerHTML = `
+            <header class="public-store-header">
+                ${renderProductImage(store.logo_url, store.name, "public-store-logo")}
+                <div class="public-store-copy">
+                    <span>Tienda en WalZ One</span>
+                    <h1>${escapeHtml(store.name || "Tienda")}</h1>
+                    ${store.description ? `<p>${escapeHtml(store.description)}</p>` : ""}
+                    <div class="public-store-contact">
+                        ${store.city ? `<span>Ciudad: <strong>${escapeHtml(store.city)}</strong></span>` : ""}
+                        ${store.phone ? `<span>Telefono: <strong>${escapeHtml(store.phone)}</strong></span>` : ""}
+                        ${store.address ? `<span>Direccion: <strong>${escapeHtml(store.address)}</strong></span>` : ""}
+                    </div>
+                </div>
+            </header>
+            <h2>Productos de ${escapeHtml(store.name || "la tienda")}</h2>
+            ${storeProducts.length ? `<div class="public-store-products">${storeProducts.map(product => `
+                <article class="public-store-product" onclick="openProductDetail('${escapeJs(String(product.id))}')">
+                    ${renderProductImage(product.image_url, product.name, "public-store-product-image")}
+                    <div>
+                        <h3>${escapeHtml(product.name || "Producto")}</h3>
+                        <p class="product-price">${renderProductPrice(product)}</p>
+                        <span>Stock: ${Number(product.stock || 0)}</span>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); openProductDetail('${escapeJs(String(product.id))}')">Ver producto</button>
+                </article>
+            `).join("")}</div>` : '<div class="orders-state-card">Esta tienda no tiene productos activos en este momento.</div>'}
+        `;
+    } catch (error) {
+        container.innerHTML = `<div class="orders-state-card orders-error"><h3>No pudimos abrir la tienda</h3><p>${escapeHtml(error.message || "Intenta nuevamente.")}</p></div>`;
+    }
+}
+
+
+function hideStoreProfileSection() {
+    const section = document.getElementById("store-profile-section");
+    if (section) section.style.display = "none";
+}
+
+
+function renderStorePreview() {
+    const container = document.getElementById("store-profile-preview");
+    if (!container) return;
+    const name = document.getElementById("store-name")?.value.trim() || "Nombre de tu tienda";
+    const description = document.getElementById("store-description")?.value.trim() || "La descripcion de tu negocio aparecera aqui.";
+    const logoUrl = document.getElementById("store-logo-url")?.value.trim() || "";
+    container.innerHTML = `
+        <div class="store-preview-brand">
+            ${renderProductImage(logoUrl, name, "store-preview-logo")}
+            <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(description)}</p></div>
+        </div>
+    `;
+}
+
+
+async function showStoreProfile() {
+    hidePublicStoreSection();
+    const section = document.getElementById("store-profile-section");
+    if (!section) return;
+    document.getElementById("marketplace-content")?.style.setProperty("display", "none");
+    document.getElementById("orders-section")?.style.setProperty("display", "none");
+    document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
+    document.getElementById("my-products-section")?.style.setProperty("display", "none");
+    document.getElementById("banner-admin-section")?.style.setProperty("display", "none");
+    document.getElementById("banner-proposal-section")?.style.setProperty("display", "none");
+    section.style.display = "block";
+    await loadStoreProfile();
+}
+
+
+async function loadStoreProfile() {
+    const currentToken = localStorage.getItem("walz_token");
+    const errorElement = document.getElementById("store-profile-error");
+    if (errorElement) errorElement.textContent = "";
+    try {
+        const response = await fetch(`${API_URL}/stores/mine`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const store = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(store?.detail || `HTTP ${response.status}`);
+        const values = store || {};
+        const fields = {
+            "store-name": values.name || "",
+            "store-logo-url": values.logo_url || "",
+            "store-description": values.description || "",
+            "store-phone": values.phone || "",
+            "store-city": values.city || "",
+            "store-address": values.address || ""
+        };
+        for (const [id, value] of Object.entries(fields)) {
+            const input = document.getElementById(id);
+            if (input) input.value = value;
+        }
+        renderStorePreview();
+    } catch (error) {
+        if (errorElement) errorElement.textContent = error.message || "No se pudo cargar la tienda.";
+        renderStorePreview();
+    }
+}
+
+
+async function saveStoreProfile(event) {
+    event?.preventDefault();
+    const currentToken = localStorage.getItem("walz_token");
+    const errorElement = document.getElementById("store-profile-error");
+    const saveButton = document.getElementById("store-save-button");
+    const value = id => document.getElementById(id)?.value.trim() || "";
+    const name = value("store-name");
+    const logoUrl = value("store-logo-url");
+    if (errorElement) {
+        errorElement.textContent = "";
+        errorElement.classList.remove("store-profile-success-message");
+    }
+    if (name.length < 2) {
+        if (errorElement) errorElement.textContent = "Completa el nombre de la tienda.";
+        return;
+    }
+    if (logoUrl && !getProductImageUrl(logoUrl)) {
+        if (errorElement) errorElement.textContent = "El enlace del logo debe comenzar con http:// o https://";
+        return;
+    }
+    if (saveButton) saveButton.disabled = true;
+    try {
+        const response = await fetch(`${API_URL}/stores/mine`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+            body: JSON.stringify({
+                name,
+                logo_url: logoUrl || null,
+                description: value("store-description") || null,
+                phone: value("store-phone") || null,
+                city: value("store-city") || null,
+                address: value("store-address") || null
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage("Tienda guardada correctamente.", "success");
+        if (errorElement) {
+            errorElement.textContent = "Tienda guardada correctamente.";
+            errorElement.classList.add("store-profile-success-message");
+        }
+        renderStorePreview();
+    } catch (error) {
+        if (errorElement) {
+            errorElement.classList.remove("store-profile-success-message");
+            errorElement.textContent = error.message || "No se pudo guardar la tienda.";
+        }
+    } finally {
+        if (saveButton) saveButton.disabled = false;
+    }
+}
+
+
 function hideBannerAdminSection() {
     const section = document.getElementById("banner-admin-section");
     if (section) section.style.display = "none";
@@ -3308,6 +3514,8 @@ function getBannerProposalStatus(status) {
 
 
 async function showBannerProposal() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
     const section = document.getElementById("banner-proposal-section");
     if (!section) return;
     document.getElementById("marketplace-content")?.style.setProperty("display", "none");
@@ -3413,6 +3621,8 @@ async function loadMyBannerProposals() {
 
 
 function showBannerAdmin() {
+    hidePublicStoreSection();
+    hideStoreProfileSection();
     if (currentUserRole !== "ADMIN") {
         showMessage("Se requiere una cuenta administradora.", "error");
         return;
@@ -3624,6 +3834,11 @@ window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
 window.toggleMyProductStatus = toggleMyProductStatus;
+window.showPublicStore = showPublicStore;
+window.showStoreProfile = showStoreProfile;
+window.loadStoreProfile = loadStoreProfile;
+window.saveStoreProfile = saveStoreProfile;
+window.renderStorePreview = renderStorePreview;
 window.showBannerAdmin = showBannerAdmin;
 window.showBannerProposal = showBannerProposal;
 window.submitBannerProposal = submitBannerProposal;

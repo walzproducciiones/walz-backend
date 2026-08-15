@@ -197,6 +197,17 @@
 
     <button
         type="button"
+        id="store-profile-button"
+        class="orders-button store-profile-button"
+        onclick="showStoreProfile()"
+        style="display:none;"
+    >
+        <span aria-hidden="true">&#127978;</span>
+        <span>Mi tienda</span>
+    </button>
+
+    <button
+        type="button"
         id="banner-admin-button"
         class="orders-button banner-admin-button"
         onclick="showBannerAdmin()"
@@ -684,6 +695,59 @@
     </div>
 
 </div>
+<!-- =====================================================
+     TIENDA PUBLICA DEL VENDEDOR
+====================================================== -->
+<section id="public-store-section" class="public-store-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
+    <div id="public-store-content">Cargando tienda...</div>
+</section>
+
+<!-- =====================================================
+     PERFIL COMERCIAL DE LA TIENDA
+====================================================== -->
+<section id="store-profile-section" class="store-profile-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
+    <h2>&#127978; Mi tienda</h2>
+    <p>Estos datos identifican tu comercio frente a los compradores.</p>
+
+    <div class="store-profile-layout">
+        <form class="store-profile-form" onsubmit="saveStoreProfile(event)">
+            <label>
+                <span>Nombre de la tienda</span>
+                <input id="store-name" type="text" minlength="2" maxlength="160" required placeholder="Ejemplo: Farmacia del Centro" oninput="renderStorePreview()">
+            </label>
+            <label>
+                <span>Enlace p&uacute;blico del logo (opcional)</span>
+                <input id="store-logo-url" type="url" maxlength="500" placeholder="https://..." oninput="renderStorePreview()">
+            </label>
+            <label class="store-profile-wide">
+                <span>Descripci&oacute;n</span>
+                <textarea id="store-description" maxlength="1200" placeholder="Cont&aacute; brevemente qu&eacute; ofrece tu negocio" oninput="renderStorePreview()"></textarea>
+            </label>
+            <label>
+                <span>Tel&eacute;fono comercial</span>
+                <input id="store-phone" type="text" maxlength="40" placeholder="Ejemplo: 02281 123456">
+            </label>
+            <label>
+                <span>Ciudad</span>
+                <input id="store-city" type="text" maxlength="120" placeholder="Ejemplo: Azul">
+            </label>
+            <label class="store-profile-wide">
+                <span>Direcci&oacute;n (opcional)</span>
+                <input id="store-address" type="text" maxlength="250" placeholder="Pod&eacute;s completarla m&aacute;s adelante">
+            </label>
+            <button type="submit" id="store-save-button">Guardar tienda</button>
+        </form>
+
+        <aside class="store-preview-panel">
+            <span>Vista previa</span>
+            <div id="store-profile-preview"></div>
+        </aside>
+    </div>
+    <p id="store-profile-error" class="delivery-error" role="alert"></p>
+</section>
+
 <!-- =====================================================
      PROPUESTAS DE PUBLICIDAD DEL VENDEDOR
 ====================================================== -->
