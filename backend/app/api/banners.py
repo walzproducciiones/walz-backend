@@ -3,14 +3,23 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.api.auth import require_admin_user
+from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.banner import BannerCreate, BannerResponse, BannerUpdate
+from backend.app.schemas.banner import (
+    BannerCreate,
+    BannerProposalCreate,
+    BannerResponse,
+    BannerReviewUpdate,
+    BannerUpdate,
+)
 from backend.app.services.banner_service import (
     create_banner,
+    create_banner_proposal,
     get_active_banners,
     get_all_banners,
+    get_banner_proposals_by_seller,
+    review_banner_proposal,
     update_banner,
 )
 
@@ -37,6 +46,39 @@ def list_all_banners(
     admin: User = Depends(require_admin_user),
 ):
     return get_all_banners(db)
+
+
+@router.post("/proposals", response_model=BannerResponse, status_code=201)
+def submit_banner_proposal(
+    data: BannerProposalCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    proposal, error = create_banner_proposal(db, current_user.id, data)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return proposal
+
+
+@router.get("/proposals/mine", response_model=list[BannerResponse])
+def list_my_banner_proposals(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_banner_proposals_by_seller(db, current_user.id)
+
+
+@router.patch("/{banner_id}/review", response_model=BannerResponse)
+def review_existing_banner_proposal(
+    banner_id: UUID,
+    data: BannerReviewUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    banner = review_banner_proposal(db, banner_id, admin.id, data.status)
+    if not banner:
+        raise HTTPException(status_code=404, detail="Propuesta no encontrada.")
+    return banner
 
 
 @router.post("/", response_model=BannerResponse, status_code=201)

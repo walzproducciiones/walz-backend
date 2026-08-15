@@ -638,6 +638,9 @@
             <p class="my-products-intro">
                 Productos publicados por esta cuenta.
             </p>
+            <button type="button" class="banner-proposal-open" onclick="showBannerProposal()">
+                Proponer publicidad de un producto
+            </button>
 
             <div id="my-products-stock-summary" class="my-products-stock-summary"></div>
 
@@ -681,6 +684,38 @@
     </div>
 
 </div>
+<!-- =====================================================
+     PROPUESTAS DE PUBLICIDAD DEL VENDEDOR
+====================================================== -->
+<section id="banner-proposal-section" class="banner-admin-section banner-proposal-section" style="display:none;">
+    <button type="button" onclick="showMyProducts()">&larr; Volver a Mis productos</button>
+    <h2>Proponer publicidad</h2>
+    <p>Eleg&iacute; uno de tus productos. La publicidad se mostrar&aacute; cuando WalZ la apruebe.</p>
+
+    <div class="banner-admin-form banner-proposal-form">
+        <label>
+            <span>Producto</span>
+            <select id="banner-proposal-product"><option value="">Cargando productos...</option></select>
+        </label>
+        <label>
+            <span>T&iacute;tulo</span>
+            <input id="banner-proposal-title" type="text" maxlength="160" placeholder="Ejemplo: Oferta especial de verano">
+        </label>
+        <label>
+            <span>Texto breve (opcional)</span>
+            <textarea id="banner-proposal-subtitle" maxlength="500" placeholder="Cont&aacute; brevemente qu&eacute; ofrec&eacute;s"></textarea>
+        </label>
+        <label>
+            <span>Enlace p&uacute;blico de la imagen</span>
+            <input id="banner-proposal-image" type="url" placeholder="https://...">
+        </label>
+        <button type="button" onclick="submitBannerProposal()">Enviar para revisi&oacute;n</button>
+    </div>
+    <p id="banner-proposal-error" class="delivery-error" role="alert"></p>
+    <h3>Mis propuestas</h3>
+    <div id="banner-proposal-list">Cargando propuestas...</div>
+</section>
+
 <!-- =====================================================
      ADMINISTRACION DE PUBLICIDAD
 ====================================================== -->

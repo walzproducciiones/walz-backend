@@ -1079,6 +1079,7 @@ function showMarketplaceContent() {
         myProductsSection.style.display = "none";
     }
     hideBannerAdminSection();
+    hideBannerProposalSection();
     loadProducts();
     loadActiveBanners();
 }
@@ -2692,6 +2693,7 @@ function clearReceivedOrdersFilters() {
 
 function showMyProducts() {
     hideBannerAdminSection();
+    hideBannerProposalSection();
     const marketplaceContent = document.getElementById("marketplace-content");
     const ordersSection = document.getElementById("orders-section");
     const salesOrdersSection = document.getElementById("sales-orders-section");
@@ -3201,6 +3203,9 @@ function renderMarketplaceBanner() {
     window.walzBannerIndex = index;
     const banner = banners[index];
     const link = getSafeBannerLink(banner.link_url);
+    const productButton = banner.product_id
+        ? `<button type="button" onclick="openPromotedProduct('${escapeJs(String(banner.product_id))}')">${escapeHtml(banner.button_text || "Ver producto")}</button>`
+        : "";
 
     container.innerHTML = `
         <article class="marketplace-banner-card">
@@ -3210,6 +3215,7 @@ function renderMarketplaceBanner() {
                 <h2>${escapeHtml(banner.title || "")}</h2>
                 ${banner.subtitle ? `<p>${escapeHtml(banner.subtitle)}</p>` : ""}
                 ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(banner.button_text || "Ver mas")}</a>` : ""}
+                ${productButton}
             </div>
             ${banners.length > 1 ? `
                 <button type="button" class="banner-carousel-arrow previous" onclick="moveMarketplaceBanner(-1)" aria-label="Publicidad anterior">&#10094;</button>
@@ -3220,6 +3226,16 @@ function renderMarketplaceBanner() {
             ` : ""}
         </article>
     `;
+}
+
+
+function openPromotedProduct(productId) {
+    showMarketplaceContent();
+    window.setTimeout(() => {
+        const product = (window.walzProducts || []).find(item => String(item.id) === String(productId));
+        if (product) openProductDetail(productId);
+        else showMessage("El producto anunciado ya no esta disponible.", "error");
+    }, 350);
 }
 
 
@@ -3277,6 +3293,125 @@ function hideBannerAdminSection() {
 }
 
 
+function hideBannerProposalSection() {
+    const section = document.getElementById("banner-proposal-section");
+    if (section) section.style.display = "none";
+}
+
+
+function getBannerProposalStatus(status) {
+    const value = String(status || "pending").toLowerCase();
+    if (value === "approved") return { label: "Aprobada", css: "approved" };
+    if (value === "rejected") return { label: "Rechazada", css: "rejected" };
+    return { label: "Pendiente de revision", css: "pending" };
+}
+
+
+async function showBannerProposal() {
+    const section = document.getElementById("banner-proposal-section");
+    if (!section) return;
+    document.getElementById("marketplace-content")?.style.setProperty("display", "none");
+    document.getElementById("orders-section")?.style.setProperty("display", "none");
+    document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
+    document.getElementById("my-products-section")?.style.setProperty("display", "none");
+    hideBannerProposalSection();
+    hideBannerAdminSection();
+    section.style.display = "block";
+    await Promise.all([loadBannerProposalProducts(), loadMyBannerProposals()]);
+}
+
+
+async function loadBannerProposalProducts() {
+    const select = document.getElementById("banner-proposal-product");
+    const currentToken = localStorage.getItem("walz_token");
+    if (!select) return;
+    try {
+        const response = await fetch(`${API_URL}/products/mine`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const products = await response.json().catch(() => ([]));
+        if (!response.ok) throw new Error(products.detail || `HTTP ${response.status}`);
+        const activeProducts = (Array.isArray(products) ? products : []).filter(product => product.is_active);
+        select.innerHTML = activeProducts.length
+            ? `<option value="">Selecciona un producto</option>${activeProducts.map(product => `<option value="${escapeHtml(String(product.id))}">${escapeHtml(product.name || "Producto")}</option>`).join("")}`
+            : '<option value="">No tenes productos activos</option>';
+    } catch (error) {
+        select.innerHTML = '<option value="">No se pudieron cargar</option>';
+    }
+}
+
+
+async function submitBannerProposal() {
+    const currentToken = localStorage.getItem("walz_token");
+    const errorElement = document.getElementById("banner-proposal-error");
+    const productId = document.getElementById("banner-proposal-product")?.value || "";
+    const title = document.getElementById("banner-proposal-title")?.value.trim() || "";
+    const subtitle = document.getElementById("banner-proposal-subtitle")?.value.trim() || "";
+    const imageUrl = document.getElementById("banner-proposal-image")?.value.trim() || "";
+    if (errorElement) errorElement.textContent = "";
+    if (!productId || !title || !getProductImageUrl(imageUrl)) {
+        if (errorElement) errorElement.textContent = "Selecciona el producto, completa el titulo y usa un enlace de imagen valido.";
+        return;
+    }
+    try {
+        const response = await fetch(`${API_URL}/banners/proposals`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                title,
+                subtitle: subtitle || null,
+                image_url: imageUrl
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage("Propuesta enviada para revision.", "success");
+        for (const id of ["banner-proposal-title", "banner-proposal-subtitle", "banner-proposal-image"]) {
+            const input = document.getElementById(id);
+            if (input) input.value = "";
+        }
+        const select = document.getElementById("banner-proposal-product");
+        if (select) select.value = "";
+        await loadMyBannerProposals();
+    } catch (error) {
+        if (errorElement) errorElement.textContent = error.message || "No se pudo enviar la propuesta.";
+    }
+}
+
+
+async function loadMyBannerProposals() {
+    const container = document.getElementById("banner-proposal-list");
+    const currentToken = localStorage.getItem("walz_token");
+    if (!container) return;
+    container.innerHTML = "Cargando propuestas...";
+    try {
+        const response = await fetch(`${API_URL}/banners/proposals/mine`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const proposals = await response.json().catch(() => ([]));
+        if (!response.ok) throw new Error(proposals.detail || `HTTP ${response.status}`);
+        if (!Array.isArray(proposals) || proposals.length === 0) {
+            container.innerHTML = '<div class="orders-state-card">Todavia no enviaste propuestas.</div>';
+            return;
+        }
+        container.innerHTML = `<div class="banner-admin-list">${proposals.map(proposal => {
+            const state = getBannerProposalStatus(proposal.approval_status);
+            return `<article class="banner-admin-card banner-proposal-card">
+                ${renderProductImage(proposal.image_url, proposal.title, "banner-admin-image")}
+                <div><h3>${escapeHtml(proposal.title || "")}</h3><p>${escapeHtml(proposal.subtitle || "Sin texto adicional")}</p>
+                <span class="banner-review-state ${state.css}">${state.label}</span></div>
+            </article>`;
+        }).join("")}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudieron cargar las propuestas.")}</div>`;
+    }
+}
+
+
 function showBannerAdmin() {
     if (currentUserRole !== "ADMIN") {
         showMessage("Se requiere una cuenta administradora.", "error");
@@ -3287,6 +3422,7 @@ function showBannerAdmin() {
     document.getElementById("orders-section")?.style.setProperty("display", "none");
     document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
     document.getElementById("my-products-section")?.style.setProperty("display", "none");
+    hideBannerProposalSection();
     const section = document.getElementById("banner-admin-section");
     if (section) section.style.display = "block";
     loadAdminBanners();
@@ -3375,15 +3511,39 @@ async function loadAdminBanners() {
                 <div>
                     <h3>${escapeHtml(banner.title || "")}</h3>
                     <p>${escapeHtml(banner.subtitle || "Sin texto adicional")}</p>
-                    <span class="my-product-state ${banner.is_active ? "active" : "paused"}">${banner.is_active ? "Activo" : "Pausado"}</span>
+                    ${banner.seller_id ? `<span class="banner-review-state ${getBannerProposalStatus(banner.approval_status).css}">${getBannerProposalStatus(banner.approval_status).label}</span>` : `<span class="my-product-state ${banner.is_active ? "active" : "paused"}">${banner.is_active ? "Activo" : "Pausado"}</span>`}
                 </div>
-                <button type="button" onclick="toggleAdminBanner('${escapeJs(String(banner.id))}', ${banner.is_active ? "false" : "true"})">
-                    ${banner.is_active ? "Pausar" : "Activar"}
-                </button>
+                ${banner.seller_id && String(banner.approval_status) === "pending" ? `
+                    <div class="banner-review-actions">
+                        <button type="button" onclick="reviewBannerProposal('${escapeJs(String(banner.id))}', 'approved')">Aprobar</button>
+                        <button type="button" class="seller-cancel-button" onclick="reviewBannerProposal('${escapeJs(String(banner.id))}', 'rejected')">Rechazar</button>
+                    </div>
+                ` : `<button type="button" onclick="toggleAdminBanner('${escapeJs(String(banner.id))}', ${banner.is_active ? "false" : "true"})">${banner.is_active ? "Pausar" : "Activar"}</button>`}
             </article>
         `).join("")}</div>`;
     } catch (error) {
         container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudieron cargar los banners.")}</div>`;
+    }
+}
+
+
+async function reviewBannerProposal(bannerId, status) {
+    const action = status === "approved" ? "aprobar" : "rechazar";
+    if (!confirm(`Confirmas que queres ${action} esta publicidad?`)) return;
+    const currentToken = localStorage.getItem("walz_token");
+    try {
+        const response = await fetch(`${API_URL}/banners/${bannerId}/review`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+            body: JSON.stringify({ status })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage(status === "approved" ? "Publicidad aprobada y publicada." : "Publicidad rechazada.", "success");
+        await loadAdminBanners();
+        await loadActiveBanners();
+    } catch (error) {
+        showMessage(error.message || "No se pudo revisar la publicidad.", "error");
     }
 }
 
@@ -3456,6 +3616,11 @@ window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
 window.toggleMyProductStatus = toggleMyProductStatus;
 window.showBannerAdmin = showBannerAdmin;
+window.showBannerProposal = showBannerProposal;
+window.submitBannerProposal = submitBannerProposal;
+window.loadMyBannerProposals = loadMyBannerProposals;
+window.reviewBannerProposal = reviewBannerProposal;
+window.openPromotedProduct = openPromotedProduct;
 window.createAdminBanner = createAdminBanner;
 window.loadAdminBanners = loadAdminBanners;
 window.toggleAdminBanner = toggleAdminBanner;

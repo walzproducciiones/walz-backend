@@ -43,3 +43,28 @@ def ensure_admin_user(engine, admin_email):
             ),
             {"admin_email": normalized_email},
         )
+
+def ensure_banner_proposal_columns(engine):
+    inspector = inspect(engine)
+    if "banners" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("banners")
+    }
+
+    definitions = {
+        "seller_id": "UUID",
+        "product_id": "UUID",
+        "approval_status": "VARCHAR(20) NOT NULL DEFAULT 'approved'",
+        "reviewed_by": "UUID",
+        "reviewed_at": "TIMESTAMP",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    f"ALTER TABLE banners ADD COLUMN {column_name} {definition}"
+                ))

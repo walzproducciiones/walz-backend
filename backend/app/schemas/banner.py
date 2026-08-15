@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -36,8 +36,23 @@ class BannerUpdate(BaseModel):
 class BannerResponse(BannerBase):
     id: UUID
     created_by: UUID
+    seller_id: Optional[UUID] = None
+    product_id: Optional[UUID] = None
+    approval_status: str = "approved"
+    reviewed_by: Optional[UUID] = None
+    reviewed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class BannerProposalCreate(BaseModel):
+    product_id: UUID
+    title: str = Field(..., min_length=1, max_length=160)
+    subtitle: Optional[str] = Field(default=None, max_length=500)
+    image_url: str = Field(..., min_length=1, max_length=500)
+
+
+class BannerReviewUpdate(BaseModel):
+    status: Literal["approved", "rejected"]

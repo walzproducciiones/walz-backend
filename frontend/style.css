@@ -1985,3 +1985,44 @@ body.has-walz-news-bar .cart-button {
         bottom: 66px;
     }
 }
+/* FASE 5M PASO 6 - PROPUESTAS DE PUBLICIDAD */
+.banner-proposal-open {
+    margin: 0 0 18px;
+    background: #1e5c35;
+}
+
+.banner-proposal-form select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: #f7f7f7;
+    background: #151515;
+    border: 1px solid #555;
+    border-radius: 8px;
+}
+
+.banner-review-state {
+    display: inline-flex;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.banner-review-state.pending { background: #fff0b8; color: #684d00; }
+.banner-review-state.approved { background: #cdeed9; color: #155b32; }
+.banner-review-state.rejected { background: #f5cccc; color: #792525; }
+
+.banner-review-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.marketplace-banner-copy button {
+    width: max-content;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: #176b3a;
+    color: white;
+}

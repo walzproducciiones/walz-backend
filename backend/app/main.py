@@ -7,6 +7,7 @@ from backend.app.api import auth, banners, products, orders, payments
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
+    ensure_banner_proposal_columns,
     ensure_product_promotion_columns,
 )
 
@@ -23,6 +24,7 @@ order.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
+ensure_banner_proposal_columns(engine)
 
 
 # ============================================================
