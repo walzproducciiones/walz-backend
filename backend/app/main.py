@@ -3,14 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from backend.app.api import auth, products, orders, payments
+from backend.app.api import auth, banners, products, orders, payments
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
     ensure_product_promotion_columns,
 )
 
-from backend.app.models import user, product, order
+from backend.app.models import banner, user, product, order
 
 
 # ============================================================
@@ -20,6 +20,7 @@ from backend.app.models import user, product, order
 user.Base.metadata.create_all(bind=engine)
 product.Base.metadata.create_all(bind=engine)
 order.Base.metadata.create_all(bind=engine)
+banner.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 
@@ -61,6 +62,7 @@ app.add_middleware(
 # ============================================================
 
 app.include_router(auth.router)
+app.include_router(banners.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(payments.router)

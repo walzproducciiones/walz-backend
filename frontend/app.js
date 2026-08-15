@@ -2,6 +2,7 @@ const API_URL = window.location.origin;
 
 let token = localStorage.getItem("walz_token");
 let currentUserId = localStorage.getItem("walz_user_id");
+let currentUserRole = localStorage.getItem("walz_user_role") || "";
 
 let cart = loadCart();
 let pendingCheckout = null;
@@ -148,6 +149,9 @@ async function handleLogin() {
 
             currentUserId = data.user.id;
             localStorage.setItem("walz_user_id", currentUserId);
+            currentUserRole = String(data.user.role || "").toUpperCase();
+            localStorage.setItem("walz_user_role", currentUserRole);
+            updateAdminBannerVisibility();
             cart = loadCart();
 
             showMessage(
@@ -160,6 +164,7 @@ async function handleLogin() {
             await loadProducts();
 
             updateCartUI();
+        document.body.classList.add("has-walz-news-bar");
 
         } else {
 
@@ -193,6 +198,9 @@ function handleLogout() {
     currentUserId = null;
 
     localStorage.removeItem("walz_user_id");
+    currentUserRole = "";
+    localStorage.removeItem("walz_user_role");
+    updateAdminBannerVisibility();
 
     cart = [];
 
@@ -1015,6 +1023,7 @@ function toggleCart() {
 // =====================================================
 
 function showMyOrders() {
+    hideBannerAdminSection();
 
     const marketplaceContent =
         document.getElementById("marketplace-content");
@@ -1069,7 +1078,9 @@ function showMarketplaceContent() {
     if (myProductsSection) {
         myProductsSection.style.display = "none";
     }
+    hideBannerAdminSection();
     loadProducts();
+    loadActiveBanners();
 }
 
 
@@ -2031,6 +2042,7 @@ async function confirmCheckout() {
         clearCartStorage();
         renderCart();
         updateCartUI();
+        document.body.classList.add("has-walz-news-bar");
 
         await loadProducts();
 
@@ -2300,6 +2312,7 @@ function showMarketplace() {
 // =====================================================
 
 function showReceivedOrders() {
+    hideBannerAdminSection();
     const marketplaceContent =
         document.getElementById("marketplace-content");
     const ordersSection =
@@ -2678,6 +2691,7 @@ function clearReceivedOrdersFilters() {
 // =====================================================
 
 function showMyProducts() {
+    hideBannerAdminSection();
     const marketplaceContent = document.getElementById("marketplace-content");
     const ordersSection = document.getElementById("orders-section");
     const salesOrdersSection = document.getElementById("sales-orders-section");
@@ -3124,6 +3138,285 @@ async function toggleMyProductStatus(productId, shouldActivate) {
 }
 
 
+// =====================================================
+// FASE 5M - PUBLICIDAD Y BANNERS
+// =====================================================
+
+function updateAdminBannerVisibility() {
+    const button = document.getElementById("banner-admin-button");
+    if (button) button.style.display = currentUserRole === "ADMIN" ? "inline-flex" : "none";
+}
+
+
+async function loadCurrentUserProfile() {
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return;
+
+    try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        if (!response.ok) return;
+        const user = await response.json();
+        currentUserRole = String(user.role || "").toUpperCase();
+        localStorage.setItem("walz_user_role", currentUserRole);
+        updateAdminBannerVisibility();
+    } catch (error) {
+        console.error("No se pudo cargar el perfil:", error);
+    }
+}
+
+
+function getSafeBannerLink(value) {
+    const url = String(value || "").trim();
+    return /^https?:\/\//i.test(url) ? url : "";
+}
+
+
+function stopMarketplaceBannerRotation() {
+    if (window.walzBannerTimer) {
+        clearInterval(window.walzBannerTimer);
+        window.walzBannerTimer = null;
+    }
+}
+
+
+function startMarketplaceBannerRotation() {
+    stopMarketplaceBannerRotation();
+    const banners = Array.isArray(window.walzActiveBanners) ? window.walzActiveBanners : [];
+    if (banners.length <= 1) return;
+
+    window.walzBannerTimer = setInterval(() => {
+        moveMarketplaceBanner(1, false);
+    }, 6000);
+}
+
+
+function renderMarketplaceBanner() {
+    const container = document.getElementById("marketplace-banners");
+    const banners = Array.isArray(window.walzActiveBanners) ? window.walzActiveBanners : [];
+    if (!container || banners.length === 0) return;
+
+    const index = Math.max(0, Math.min(Number(window.walzBannerIndex || 0), banners.length - 1));
+    window.walzBannerIndex = index;
+    const banner = banners[index];
+    const link = getSafeBannerLink(banner.link_url);
+
+    container.innerHTML = `
+        <article class="marketplace-banner-card">
+            ${renderProductImage(banner.image_url, banner.title, "marketplace-banner-image")}
+            <div class="marketplace-banner-copy">
+                <span class="marketplace-banner-label">Publicidad</span>
+                <h2>${escapeHtml(banner.title || "")}</h2>
+                ${banner.subtitle ? `<p>${escapeHtml(banner.subtitle)}</p>` : ""}
+                ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(banner.button_text || "Ver mas")}</a>` : ""}
+            </div>
+            ${banners.length > 1 ? `
+                <button type="button" class="banner-carousel-arrow previous" onclick="moveMarketplaceBanner(-1)" aria-label="Publicidad anterior">&#10094;</button>
+                <button type="button" class="banner-carousel-arrow next" onclick="moveMarketplaceBanner(1)" aria-label="Publicidad siguiente">&#10095;</button>
+                <div class="banner-carousel-dots">
+                    ${banners.map((_, dotIndex) => `<button type="button" class="${dotIndex === index ? "active" : ""}" onclick="selectMarketplaceBanner(${dotIndex})" aria-label="Ver publicidad ${dotIndex + 1}"></button>`).join("")}
+                </div>
+            ` : ""}
+        </article>
+    `;
+}
+
+
+function moveMarketplaceBanner(direction, restartTimer = true) {
+    const banners = Array.isArray(window.walzActiveBanners) ? window.walzActiveBanners : [];
+    if (banners.length === 0) return;
+    window.walzBannerIndex = (Number(window.walzBannerIndex || 0) + direction + banners.length) % banners.length;
+    renderMarketplaceBanner();
+    if (restartTimer) startMarketplaceBannerRotation();
+}
+
+
+function selectMarketplaceBanner(index) {
+    window.walzBannerIndex = Number(index || 0);
+    renderMarketplaceBanner();
+    startMarketplaceBannerRotation();
+}
+
+
+async function loadActiveBanners() {
+    const container = document.getElementById("marketplace-banners");
+    if (!container) return;
+
+    try {
+        const response = await fetch(`${API_URL}/banners/active`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const banners = await response.json();
+
+        if (!Array.isArray(banners) || banners.length === 0) {
+            stopMarketplaceBannerRotation();
+            window.walzActiveBanners = [];
+            container.style.display = "none";
+            container.innerHTML = "";
+            return;
+        }
+
+        window.walzActiveBanners = banners;
+        window.walzBannerIndex = 0;
+        renderMarketplaceBanner();
+        container.style.display = "block";
+        container.onmouseenter = stopMarketplaceBannerRotation;
+        container.onmouseleave = startMarketplaceBannerRotation;
+        startMarketplaceBannerRotation();
+    } catch (error) {
+        console.error("No se pudieron cargar los banners:", error);
+        stopMarketplaceBannerRotation();
+        container.style.display = "none";
+    }
+}
+
+
+function hideBannerAdminSection() {
+    const section = document.getElementById("banner-admin-section");
+    if (section) section.style.display = "none";
+}
+
+
+function showBannerAdmin() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    document.getElementById("marketplace-content")?.style.setProperty("display", "none");
+    document.getElementById("orders-section")?.style.setProperty("display", "none");
+    document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
+    document.getElementById("my-products-section")?.style.setProperty("display", "none");
+    const section = document.getElementById("banner-admin-section");
+    if (section) section.style.display = "block";
+    loadAdminBanners();
+}
+
+
+function bannerDateToIso(inputId) {
+    const value = document.getElementById(inputId)?.value || "";
+    return value ? new Date(value).toISOString() : null;
+}
+
+
+async function createAdminBanner() {
+    const currentToken = localStorage.getItem("walz_token");
+    const errorElement = document.getElementById("banner-admin-error");
+    const title = document.getElementById("banner-title")?.value.trim() || "";
+    const subtitle = document.getElementById("banner-subtitle")?.value.trim() || "";
+    const imageUrl = document.getElementById("banner-image-url")?.value.trim() || "";
+    const linkUrl = document.getElementById("banner-link-url")?.value.trim() || "";
+    const buttonText = document.getElementById("banner-button-text")?.value.trim() || "";
+    const displayOrder = Number(document.getElementById("banner-display-order")?.value || 0);
+    const isActive = Boolean(document.getElementById("banner-is-active")?.checked);
+
+    if (errorElement) errorElement.textContent = "";
+    if (!title || !getProductImageUrl(imageUrl)) {
+        if (errorElement) errorElement.textContent = "Completa el titulo y un enlace de imagen valido.";
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/banners/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify({
+                title,
+                subtitle: subtitle || null,
+                image_url: imageUrl,
+                link_url: getSafeBannerLink(linkUrl) || null,
+                button_text: buttonText || null,
+                is_active: isActive,
+                starts_at: bannerDateToIso("banner-starts-at"),
+                ends_at: bannerDateToIso("banner-ends-at"),
+                display_order: Number.isInteger(displayOrder) && displayOrder >= 0 ? displayOrder : 0
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+
+        showMessage("Banner creado correctamente.", "success");
+        for (const id of ["banner-title", "banner-subtitle", "banner-image-url", "banner-link-url", "banner-button-text", "banner-starts-at", "banner-ends-at"]) {
+            const input = document.getElementById(id);
+            if (input) input.value = "";
+        }
+        await loadAdminBanners();
+        await loadActiveBanners();
+    } catch (error) {
+        if (errorElement) errorElement.textContent = error.message || "No se pudo crear el banner.";
+    }
+}
+
+
+async function loadAdminBanners() {
+    const container = document.getElementById("banner-admin-list");
+    const currentToken = localStorage.getItem("walz_token");
+    if (!container) return;
+    container.innerHTML = "Cargando banners...";
+
+    try {
+        const response = await fetch(`${API_URL}/banners/admin`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const banners = await response.json().catch(() => ([]));
+        if (!response.ok) throw new Error(banners.detail || `HTTP ${response.status}`);
+
+        if (!Array.isArray(banners) || banners.length === 0) {
+            container.innerHTML = '<div class="orders-state-card">Todavia no hay banners.</div>';
+            return;
+        }
+
+        container.innerHTML = `<div class="banner-admin-list">${banners.map(banner => `
+            <article class="banner-admin-card">
+                ${renderProductImage(banner.image_url, banner.title, "banner-admin-image")}
+                <div>
+                    <h3>${escapeHtml(banner.title || "")}</h3>
+                    <p>${escapeHtml(banner.subtitle || "Sin texto adicional")}</p>
+                    <span class="my-product-state ${banner.is_active ? "active" : "paused"}">${banner.is_active ? "Activo" : "Pausado"}</span>
+                </div>
+                <button type="button" onclick="toggleAdminBanner('${escapeJs(String(banner.id))}', ${banner.is_active ? "false" : "true"})">
+                    ${banner.is_active ? "Pausar" : "Activar"}
+                </button>
+            </article>
+        `).join("")}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudieron cargar los banners.")}</div>`;
+    }
+}
+
+
+async function toggleAdminBanner(bannerId, shouldActivate) {
+    const currentToken = localStorage.getItem("walz_token");
+    try {
+        const response = await fetch(`${API_URL}/banners/${bannerId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify({ is_active: Boolean(shouldActivate) })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage(shouldActivate ? "Banner activado." : "Banner pausado.", "success");
+        await loadAdminBanners();
+        await loadActiveBanners();
+    } catch (error) {
+        showMessage(error.message || "No se pudo modificar el banner.", "error");
+    }
+}
+
+
+function closeWalzNewsBar() {
+    const bar = document.getElementById("walz-news-bar");
+    if (bar) bar.style.display = "none";
+    document.body.classList.remove("has-walz-news-bar");
+}
+
+
 // HACER FUNCIONES GLOBALES
 // NECESARIO PARA onclick="..."
 // =====================================================
@@ -3162,6 +3455,13 @@ window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
 window.toggleMyProductStatus = toggleMyProductStatus;
+window.showBannerAdmin = showBannerAdmin;
+window.createAdminBanner = createAdminBanner;
+window.loadAdminBanners = loadAdminBanners;
+window.toggleAdminBanner = toggleAdminBanner;
+window.closeWalzNewsBar = closeWalzNewsBar;
+window.moveMarketplaceBanner = moveMarketplaceBanner;
+window.selectMarketplaceBanner = selectMarketplaceBanner;
 window.cancelPendingOrder = cancelPendingOrder;
 
 window.showMessage = showMessage;
@@ -3190,10 +3490,14 @@ document.addEventListener(
         );
 
         updateCartUI();
+        document.body.classList.add("has-walz-news-bar");
 
         if (token) {
 
             showMarketplace();
+            updateAdminBannerVisibility();
+            loadCurrentUserProfile();
+            loadActiveBanners();
 
             loadProducts();
 

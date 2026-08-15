@@ -197,6 +197,16 @@
 
     <button
         type="button"
+        id="banner-admin-button"
+        class="orders-button banner-admin-button"
+        onclick="showBannerAdmin()"
+        style="display:none;"
+    >
+        <span>Publicidad</span>
+    </button>
+
+    <button
+        type="button"
         onclick="handleLogout()"
         class="logout-btn"
     >
@@ -208,6 +218,8 @@
     </div>
 
 </header>
+
+<div id="marketplace-banners" class="marketplace-banners" style="display:none;"></div>
 
 <div class="marketplace-title">
 
@@ -669,6 +681,66 @@
     </div>
 
 </div>
+<!-- =====================================================
+     ADMINISTRACION DE PUBLICIDAD
+====================================================== -->
+<section id="banner-admin-section" class="banner-admin-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">
+        &larr; Volver al marketplace
+    </button>
+
+    <h2>Publicidad y banners</h2>
+    <p>Solo la cuenta administradora puede modificar esta seccion.</p>
+
+    <div class="banner-admin-form">
+        <label>
+            <span>Titulo</span>
+            <input id="banner-title" type="text" maxlength="160" placeholder="Nueva linea o promocion">
+        </label>
+        <label>
+            <span>Texto</span>
+            <textarea id="banner-subtitle" maxlength="500" placeholder="Descripcion breve"></textarea>
+        </label>
+        <label>
+            <span>Enlace de la imagen</span>
+            <input id="banner-image-url" type="url" placeholder="https://...">
+        </label>
+        <label>
+            <span>Enlace del boton (opcional)</span>
+            <input id="banner-link-url" type="url" placeholder="https://...">
+        </label>
+        <label>
+            <span>Texto del boton</span>
+            <input id="banner-button-text" type="text" maxlength="60" placeholder="Ver productos">
+        </label>
+        <label>
+            <span>Orden</span>
+            <input id="banner-display-order" type="number" min="0" step="1" value="0">
+        </label>
+        <label>
+            <span>Inicio (opcional)</span>
+            <input id="banner-starts-at" type="datetime-local">
+        </label>
+        <label>
+            <span>Finalizacion (opcional)</span>
+            <input id="banner-ends-at" type="datetime-local">
+        </label>
+        <label class="banner-active-option">
+            <input id="banner-is-active" type="checkbox" checked>
+            <span>Publicar inmediatamente</span>
+        </label>
+        <button type="button" onclick="createAdminBanner()">Crear banner</button>
+    </div>
+
+    <p id="banner-admin-error" class="delivery-error" role="alert"></p>
+    <div id="banner-admin-list">Cargando banners...</div>
+</section>
+
+<aside id="walz-news-bar" class="walz-news-bar" aria-label="Novedades de WalZ">
+    <span>&iquest;Ten&eacute;s un negocio? Prob&aacute; WalZ One y empez&aacute; a vender online.</span>
+    <button type="button" onclick="closeWalzNewsBar()" aria-label="Cerrar novedades">Cerrar</button>
+</aside>
+
 <!-- =====================================================
      CONFIRMACION DE COMPRA
 ====================================================== -->
