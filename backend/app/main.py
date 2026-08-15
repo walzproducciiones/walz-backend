@@ -11,7 +11,7 @@ from backend.app.database.schema_updates import (
     ensure_product_promotion_columns,
 )
 
-from backend.app.models import banner, user, product, order, seller_application, store
+from backend.app.models import banner, user, product, order, password_reset_token, seller_application, store
 
 
 # ============================================================
@@ -24,6 +24,7 @@ order.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
 seller_application.Base.metadata.create_all(bind=engine)
+password_reset_token.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)

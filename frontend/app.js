@@ -113,6 +113,56 @@ async function handleRegister() {
 }
 
 
+async function handleForgotPassword() {
+    const emailInput = document.getElementById("forgot-password-email");
+    const button = document.getElementById("forgot-password-button");
+    const email = emailInput?.value.trim() || "";
+    if (!email) { showMessage("Ingresa tu correo electronico.", "error"); return; }
+    if (button) { button.disabled = true; button.textContent = "Enviando..."; }
+    try {
+        const response = await fetch(`${API_URL}/auth/forgot-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || "No se pudo procesar la solicitud.");
+        showMessage(data.message || "Si el correo esta registrado, recibiras un enlace.", "success");
+        if (emailInput) emailInput.value = "";
+    } catch (error) {
+        showMessage(error.message || "No se pudo procesar la solicitud.", "error");
+    } finally {
+        if (button) { button.disabled = false; button.textContent = "Enviar enlace"; }
+    }
+}
+
+async function handleResetPassword() {
+    const password = document.getElementById("reset-password-new")?.value || "";
+    const confirmation = document.getElementById("reset-password-confirm")?.value || "";
+    const button = document.getElementById("reset-password-button");
+    const resetToken = new URLSearchParams(window.location.search).get("reset_token") || "";
+    if (password.length < 8) { showMessage("La contrasena debe tener al menos 8 caracteres.", "error"); return; }
+    if (password !== confirmation) { showMessage("Las contrasenas no coinciden.", "error"); return; }
+    if (!resetToken) { showMessage("El enlace de recuperacion no es valido.", "error"); return; }
+    if (button) { button.disabled = true; button.textContent = "Guardando..."; }
+    try {
+        const response = await fetch(`${API_URL}/auth/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: resetToken, new_password: password })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || "No se pudo actualizar la contrasena.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showLogin();
+        showMessage("Contrasena actualizada. Ya puedes iniciar sesion.", "success");
+    } catch (error) {
+        showMessage(error.message || "No se pudo actualizar la contrasena.", "error");
+    } finally {
+        if (button) { button.disabled = false; button.textContent = "Guardar nueva contrasena"; }
+    }
+}
+
 async function handleLogin() {
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
@@ -214,6 +264,17 @@ function handleLogout() {
         "Sesión cerrada.",
         "success"
     );
+}
+
+
+let isHandlingExpiredSession = false;
+
+function handleExpiredSession() {
+    if (isHandlingExpiredSession || !localStorage.getItem("walz_token")) return;
+    isHandlingExpiredSession = true;
+    handleLogout();
+    showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+    window.setTimeout(() => { isHandlingExpiredSession = false; }, 500);
 }
 
 
@@ -2265,49 +2326,25 @@ function showMessage(
 // UI AUTENTICACIÓN
 // =====================================================
 
-function showRegister() {
-
-    document.getElementById(
-        "login-form"
-    ).style.display = "none";
-
-    document.getElementById(
-        "register-form"
-    ).style.display = "block";
-
-    document.getElementById(
-        "message-box"
-    ).className = "message-box";
+function hideAuthForms() {
+    for (const id of ["login-form", "register-form", "forgot-password-form", "reset-password-form"]) {
+        const element = document.getElementById(id);
+        if (element) element.style.display = "none";
+    }
+    const message = document.getElementById("message-box");
+    if (message) message.className = "message-box";
 }
 
-
-function showLogin() {
-
-    document.getElementById(
-        "login-form"
-    ).style.display = "block";
-
-    document.getElementById(
-        "register-form"
-    ).style.display = "none";
-
-    document.getElementById(
-        "message-box"
-    ).className = "message-box";
-}
-
+function showRegister() { hideAuthForms(); document.getElementById("register-form").style.display = "flex"; }
+function showLogin() { hideAuthForms(); document.getElementById("login-form").style.display = "flex"; }
+function showForgotPassword() { hideAuthForms(); document.getElementById("forgot-password-form").style.display = "flex"; }
+function showResetPassword() { hideAuthForms(); document.getElementById("reset-password-form").style.display = "flex"; }
 
 function showAuth() {
-
-    document.getElementById(
-        "auth-section"
-    ).style.display = "block";
-
-    document.getElementById(
-        "marketplace-section"
-    ).style.display = "none";
+    document.getElementById("auth-section").style.display = "block";
+    document.getElementById("marketplace-section").style.display = "none";
+    if (new URLSearchParams(window.location.search).get("reset_token")) showResetPassword();
 }
-
 
 function showMarketplace() {
 
@@ -3454,6 +3491,11 @@ async function refreshSellerPendingOrderCount() {
             headers: { Authorization: `Bearer ${currentToken}` }
         });
         const orders = await response.json().catch(() => ([]));
+        if (response.status === 401) {
+            stopSellerOrderNotifications();
+            handleExpiredSession();
+            return;
+        }
         if (response.ok) {
             setSellerPendingOrderBadge((Array.isArray(orders) ? orders : []).filter(order => String(order.status || "").toLowerCase() === "pending").length);
         }
@@ -3502,6 +3544,11 @@ async function refreshAdminPendingCounts() {
         ]);
         const applications = await applicationsResponse.json().catch(() => ([]));
         const banners = await bannersResponse.json().catch(() => ([]));
+        if (applicationsResponse.status === 401 || bannersResponse.status === 401) {
+            stopAdminNotifications();
+            handleExpiredSession();
+            return;
+        }
         if (applicationsResponse.ok) {
             setAdminPendingBadge("seller-applications-pending-badge", (Array.isArray(applications) ? applications : []).filter(item => item.status === "pending").length);
         }
@@ -3529,6 +3576,10 @@ async function loadCurrentUserProfile() {
         const response = await fetch(`${API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${currentToken}` }
         });
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
         if (!response.ok) return;
         const user = await response.json();
         currentUserRole = String(user.role || "").toUpperCase();
@@ -4349,7 +4400,10 @@ function closeWalzNewsBar() {
 
 window.handleRegister = handleRegister;
 window.handleLogin = handleLogin;
+window.handleForgotPassword = handleForgotPassword;
+window.handleResetPassword = handleResetPassword;
 window.handleLogout = handleLogout;
+window.handleExpiredSession = handleExpiredSession;
 window.handleCreateProduct = handleCreateProduct;
 
 window.loadProducts = loadProducts;
@@ -4413,6 +4467,8 @@ window.cancelPendingOrder = cancelPendingOrder;
 window.showMessage = showMessage;
 
 window.showRegister = showRegister;
+window.showForgotPassword = showForgotPassword;
+window.showResetPassword = showResetPassword;
 window.showLogin = showLogin;
 window.showAuth = showAuth;
 window.showMarketplace = showMarketplace;
@@ -4438,7 +4494,12 @@ document.addEventListener(
         updateCartUI();
         showWalzNewsBarIfAllowed();
 
-        if (token) {
+        const resetTokenFromUrl = new URLSearchParams(window.location.search).get("reset_token");
+
+        if (resetTokenFromUrl) {
+            showAuth();
+            showResetPassword();
+        } else if (token) {
 
             showMarketplace();
             updateAdminBannerVisibility();

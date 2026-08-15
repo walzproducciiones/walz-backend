@@ -7,13 +7,15 @@ from sqlalchemy.orm import Session
 
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.user import UserCreate, UserLogin, UserResponse
+from backend.app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserCreate, UserLogin, UserResponse
 from backend.app.security.jwt import (
     create_access_token,
     create_refresh_token,
     decode_token,
 )
 from backend.app.security.password import verify_password
+from backend.app.services.email_service import send_password_reset_email
+from backend.app.services.password_reset_service import create_password_reset_token, reset_password_with_token
 from backend.app.services.auth_service import register_user
 
 
@@ -50,6 +52,39 @@ def register(
         )
 
     return new_user
+
+
+# ============================================================
+# PASSWORD RECOVERY
+# ============================================================
+
+@router.post("/forgot-password")
+def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    generic_message = "Si el correo esta registrado, recibiras un enlace para crear una nueva contrasena."
+    normalized_email = request.email.strip().lower()
+    user = db.query(User).filter(User.email == normalized_email).first()
+
+    if user and user.is_active:
+        reset_token = create_password_reset_token(db, user)
+        try:
+            send_password_reset_email(user.email, reset_token)
+        except Exception as error:
+            print("No se pudo enviar el correo de recuperacion:", error)
+
+    return {"message": generic_message}
+
+
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    if not reset_password_with_token(db, request.token, request.new_password):
+        raise HTTPException(status_code=400, detail="El enlace es invalido, ya fue utilizado o vencio.")
+    return {"message": "Contrasena actualizada correctamente."}
 
 
 # ============================================================

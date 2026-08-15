@@ -54,6 +54,9 @@
                 Ingresar
             </button>
 
+            <p class="switch-text auth-recovery-link">
+                <a href="#" onclick="showForgotPassword(); return false;">Olvide mi contrasena</a>
+            </p>
             <p class="switch-text">
 
                 ¿No tienes cuenta?
@@ -69,6 +72,25 @@
 
         </div>
 
+
+        <!-- RECUPERAR CONTRASENA -->
+        <div id="forgot-password-form" class="auth-alternate-form" style="display:none;">
+            <h3>Recuperar contrasena</h3>
+            <p>Ingresa el correo de tu cuenta. Si esta registrado, enviaremos un enlace temporal.</p>
+            <input type="email" id="forgot-password-email" placeholder="Correo electronico" autocomplete="email">
+            <button type="button" id="forgot-password-button" onclick="handleForgotPassword()">Enviar enlace</button>
+            <p class="switch-text"><a href="#" onclick="showLogin(); return false;">Volver a iniciar sesion</a></p>
+        </div>
+
+        <!-- NUEVA CONTRASENA -->
+        <div id="reset-password-form" class="auth-alternate-form" style="display:none;">
+            <h3>Crear nueva contrasena</h3>
+            <p>La nueva contrasena debe tener al menos 8 caracteres.</p>
+            <input type="password" id="reset-password-new" minlength="8" maxlength="128" placeholder="Nueva contrasena" autocomplete="new-password">
+            <input type="password" id="reset-password-confirm" minlength="8" maxlength="128" placeholder="Repetir nueva contrasena" autocomplete="new-password">
+            <button type="button" id="reset-password-button" onclick="handleResetPassword()">Guardar nueva contrasena</button>
+            <p class="switch-text"><a href="#" onclick="showLogin(); return false;">Volver a iniciar sesion</a></p>
+        </div>
 
         <!-- REGISTRO -->
 
