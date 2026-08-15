@@ -201,6 +201,8 @@ function handleLogout() {
     currentUserRole = "";
     localStorage.removeItem("walz_user_role");
     updateAdminBannerVisibility();
+    stopAdminNotifications();
+    stopSellerOrderNotifications();
 
     cart = [];
 
@@ -1030,6 +1032,7 @@ function toggleCart() {
 // =====================================================
 
 function showMyOrders() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
     hideBannerAdminSection();
@@ -1060,6 +1063,7 @@ function showMyOrders() {
 
 
 function showMarketplaceContent() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
 
@@ -2324,6 +2328,7 @@ function showMarketplace() {
 // =====================================================
 
 function showReceivedOrders() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
     hideBannerAdminSection();
@@ -2396,6 +2401,7 @@ async function loadReceivedOrders() {
         }
 
         window.walzReceivedOrders = Array.isArray(data) ? data : [];
+        setSellerPendingOrderBadge(window.walzReceivedOrders.filter(order => String(order.status || "").toLowerCase() === "pending").length);
         applyReceivedOrdersFilters();
 
     } catch (error) {
@@ -2705,6 +2711,7 @@ function clearReceivedOrdersFilters() {
 // =====================================================
 
 function showMyProducts() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
     hideBannerAdminSection();
@@ -3160,12 +3167,120 @@ async function toggleMyProductStatus(productId, shouldActivate) {
 // =====================================================
 
 function updateAdminBannerVisibility() {
-    const button = document.getElementById("banner-admin-button");
-    if (button) button.style.display = currentUserRole === "ADMIN" ? "inline-flex" : "none";
+    const isAdmin = currentUserRole === "ADMIN";
+    const canSell = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
+    const isBuyer = currentUserRole === "COMPRADOR";
 
-    const storeButton = document.getElementById("store-profile-button");
-    const canManageStore = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
-    if (storeButton) storeButton.style.display = canManageStore ? "inline-flex" : "none";
+    const bannerButton = document.getElementById("banner-admin-button");
+    if (bannerButton) bannerButton.style.display = isAdmin ? "inline-flex" : "none";
+
+    const adminApplicationsButton = document.getElementById("seller-applications-admin-button");
+    if (adminApplicationsButton) adminApplicationsButton.style.display = isAdmin ? "inline-flex" : "none";
+
+    const applicationButton = document.getElementById("seller-application-button");
+    if (applicationButton) applicationButton.style.display = isBuyer ? "inline-flex" : "none";
+
+    for (const id of ["store-profile-button", "sales-orders-button", "my-products-button"]) {
+        const sellerButton = document.getElementById(id);
+        if (sellerButton) sellerButton.style.display = canSell ? "inline-flex" : "none";
+    }
+}
+
+
+function setSellerPendingOrderBadge(count) {
+    const badge = document.getElementById("seller-pending-orders-badge");
+    if (!badge) return;
+    const value = Math.max(0, Number(count || 0));
+    badge.textContent = value > 99 ? "99+" : String(value);
+    badge.style.display = value > 0 ? "inline-flex" : "none";
+}
+
+
+function stopSellerOrderNotifications() {
+    if (window.walzSellerOrderNotificationTimer) {
+        clearInterval(window.walzSellerOrderNotificationTimer);
+        window.walzSellerOrderNotificationTimer = null;
+    }
+}
+
+
+async function refreshSellerPendingOrderCount() {
+    const canSell = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
+    if (!canSell) {
+        setSellerPendingOrderBadge(0);
+        return;
+    }
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return;
+    try {
+        const response = await fetch(`${API_URL}/orders/seller/received`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const orders = await response.json().catch(() => ([]));
+        if (response.ok) {
+            setSellerPendingOrderBadge((Array.isArray(orders) ? orders : []).filter(order => String(order.status || "").toLowerCase() === "pending").length);
+        }
+    } catch (error) {
+        console.error("No se pudo actualizar el aviso de pedidos:", error);
+    }
+}
+
+
+function startSellerOrderNotifications() {
+    stopSellerOrderNotifications();
+    refreshSellerPendingOrderCount();
+    window.walzSellerOrderNotificationTimer = setInterval(refreshSellerPendingOrderCount, 60000);
+}
+
+
+function setAdminPendingBadge(id, count) {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    const value = Math.max(0, Number(count || 0));
+    badge.textContent = value > 99 ? "99+" : String(value);
+    badge.style.display = value > 0 ? "inline-flex" : "none";
+}
+
+
+function stopAdminNotifications() {
+    if (window.walzAdminNotificationTimer) {
+        clearInterval(window.walzAdminNotificationTimer);
+        window.walzAdminNotificationTimer = null;
+    }
+}
+
+
+async function refreshAdminPendingCounts() {
+    if (currentUserRole !== "ADMIN") {
+        setAdminPendingBadge("seller-applications-pending-badge", 0);
+        setAdminPendingBadge("banner-proposals-pending-badge", 0);
+        return;
+    }
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return;
+    try {
+        const [applicationsResponse, bannersResponse] = await Promise.all([
+            fetch(`${API_URL}/seller-applications/admin`, { headers: { Authorization: `Bearer ${currentToken}` } }),
+            fetch(`${API_URL}/banners/admin`, { headers: { Authorization: `Bearer ${currentToken}` } })
+        ]);
+        const applications = await applicationsResponse.json().catch(() => ([]));
+        const banners = await bannersResponse.json().catch(() => ([]));
+        if (applicationsResponse.ok) {
+            setAdminPendingBadge("seller-applications-pending-badge", (Array.isArray(applications) ? applications : []).filter(item => item.status === "pending").length);
+        }
+        if (bannersResponse.ok) {
+            setAdminPendingBadge("banner-proposals-pending-badge", (Array.isArray(banners) ? banners : []).filter(item => item.seller_id && item.approval_status === "pending").length);
+        }
+    } catch (error) {
+        console.error("No se pudieron actualizar los avisos administrativos:", error);
+    }
+}
+
+
+function startAdminNotifications() {
+    stopAdminNotifications();
+    refreshAdminPendingCounts();
+    window.walzAdminNotificationTimer = setInterval(refreshAdminPendingCounts, 60000);
 }
 
 
@@ -3182,6 +3297,10 @@ async function loadCurrentUserProfile() {
         currentUserRole = String(user.role || "").toUpperCase();
         localStorage.setItem("walz_user_role", currentUserRole);
         updateAdminBannerVisibility();
+        if (currentUserRole === "ADMIN") startAdminNotifications();
+        else stopAdminNotifications();
+        if (["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole)) startSellerOrderNotifications();
+        else stopSellerOrderNotifications();
     } catch (error) {
         console.error("No se pudo cargar el perfil:", error);
     }
@@ -3306,6 +3425,190 @@ async function loadActiveBanners() {
 }
 
 
+function hideSellerApplicationSections() {
+    document.getElementById("seller-application-section")?.style.setProperty("display", "none");
+    document.getElementById("seller-applications-admin-section")?.style.setProperty("display", "none");
+}
+
+
+function getSellerApplicationStatus(status) {
+    const value = String(status || "pending").toLowerCase();
+    if (value === "approved") return { label: "Aprobada", css: "approved" };
+    if (value === "rejected") return { label: "Rechazada", css: "rejected" };
+    return { label: "Pendiente de revision", css: "pending" };
+}
+
+
+function renderSellerApplicationForm(application = null) {
+    const container = document.getElementById("seller-application-content");
+    if (!container) return;
+    const state = application ? getSellerApplicationStatus(application.status) : null;
+
+    if (application && application.status === "pending") {
+        container.innerHTML = `<div class="seller-application-card">
+            <span class="banner-review-state ${state.css}">${state.label}</span>
+            <h3>${escapeHtml(application.business_name || "")}</h3>
+            <p>${escapeHtml(application.reason || "")}</p>
+            ${application.city ? `<p>Ciudad: <strong>${escapeHtml(application.city)}</strong></p>` : ""}
+            <small>WalZ te avisara cuando la solicitud sea revisada.</small>
+        </div>`;
+        return;
+    }
+
+    if (application && application.status === "approved") {
+        container.innerHTML = `<div class="seller-application-card seller-application-approved">
+            <span class="banner-review-state approved">Aprobada</span>
+            <h3>Tu cuenta ya puede vender</h3>
+            <p>Actualiza la pagina o inicia sesion nuevamente para ver Mi tienda y Mis productos.</p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        ${application ? `<div class="seller-application-card seller-application-rejected">
+            <span class="banner-review-state rejected">Rechazada</span>
+            <p>${escapeHtml(application.admin_note || "Podes corregir la informacion y volver a enviarla.")}</p>
+        </div>` : ""}
+        <form class="seller-application-form" onsubmit="submitSellerApplication(event)">
+            <label><span>Nombre del negocio</span><input id="seller-application-business" type="text" minlength="2" maxlength="160" required value="${escapeHtml(application?.business_name || "")}"></label>
+            <label><span>Ciudad</span><input id="seller-application-city" type="text" maxlength="120" value="${escapeHtml(application?.city || "")}"></label>
+            <label class="seller-application-wide"><span>Contanos que queres vender</span><textarea id="seller-application-reason" minlength="10" maxlength="1200" required>${escapeHtml(application?.reason || "")}</textarea></label>
+            <button type="submit">Enviar solicitud</button>
+        </form>
+        <p id="seller-application-error" class="delivery-error"></p>
+    `;
+}
+
+
+async function showSellerApplication() {
+    hideAllWalzWorkSections();
+    const section = document.getElementById("seller-application-section");
+    if (section) section.style.display = "block";
+    await loadSellerApplication();
+}
+
+
+async function loadSellerApplication() {
+    const container = document.getElementById("seller-application-content");
+    const currentToken = localStorage.getItem("walz_token");
+    if (!container) return;
+    container.innerHTML = '<div class="orders-state-card">Cargando solicitud...</div>';
+    try {
+        const response = await fetch(`${API_URL}/seller-applications/mine`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const application = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(application?.detail || `HTTP ${response.status}`);
+        renderSellerApplicationForm(application);
+    } catch (error) {
+        container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudo cargar la solicitud.")}</div>`;
+    }
+}
+
+
+async function submitSellerApplication(event) {
+    event?.preventDefault();
+    const currentToken = localStorage.getItem("walz_token");
+    const errorElement = document.getElementById("seller-application-error");
+    const businessName = document.getElementById("seller-application-business")?.value.trim() || "";
+    const city = document.getElementById("seller-application-city")?.value.trim() || "";
+    const reason = document.getElementById("seller-application-reason")?.value.trim() || "";
+    if (errorElement) errorElement.textContent = "";
+    try {
+        const response = await fetch(`${API_URL}/seller-applications/mine`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+            body: JSON.stringify({ business_name: businessName, city: city || null, reason })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage("Solicitud enviada correctamente.", "success");
+        renderSellerApplicationForm(data);
+    } catch (error) {
+        if (errorElement) errorElement.textContent = error.message || "No se pudo enviar la solicitud.";
+    }
+}
+
+
+function hideAllWalzWorkSections() {
+    for (const id of [
+        "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
+        "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
+        "seller-application-section", "seller-applications-admin-section"
+    ]) {
+        document.getElementById(id)?.style.setProperty("display", "none");
+    }
+}
+
+
+async function showSellerApplicationsAdmin() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+    hideAllWalzWorkSections();
+    const section = document.getElementById("seller-applications-admin-section");
+    if (section) section.style.display = "block";
+    await loadSellerApplicationsAdmin();
+}
+
+
+async function loadSellerApplicationsAdmin() {
+    const container = document.getElementById("seller-applications-admin-list");
+    const currentToken = localStorage.getItem("walz_token");
+    if (!container) return;
+    container.innerHTML = '<div class="orders-state-card">Cargando solicitudes...</div>';
+    try {
+        const response = await fetch(`${API_URL}/seller-applications/admin`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+        const applications = await response.json().catch(() => ([]));
+        if (!response.ok) throw new Error(applications.detail || `HTTP ${response.status}`);
+        if (!Array.isArray(applications) || applications.length === 0) {
+            container.innerHTML = '<div class="orders-state-card">Todavia no hay solicitudes.</div>';
+            return;
+        }
+        container.innerHTML = `<div class="seller-applications-list">${applications.map(application => {
+            const state = getSellerApplicationStatus(application.status);
+            const isPending = application.status === "pending";
+            return `<article class="seller-application-card">
+                <div class="seller-application-heading"><div><small>Solicitante</small><h3>${escapeHtml(application.applicant_name || "")}</h3><p>${escapeHtml(application.applicant_email || "")}</p></div><span class="banner-review-state ${state.css}">${state.label}</span></div>
+                <p><strong>Negocio:</strong> ${escapeHtml(application.business_name || "")}</p>
+                ${application.city ? `<p><strong>Ciudad:</strong> ${escapeHtml(application.city)}</p>` : ""}
+                <p><strong>Propuesta:</strong> ${escapeHtml(application.reason || "")}</p>
+                ${application.admin_note ? `<p><strong>Observacion:</strong> ${escapeHtml(application.admin_note)}</p>` : ""}
+                ${isPending ? `<textarea id="seller-review-note-${escapeHtml(String(application.id))}" maxlength="1200" placeholder="Observacion opcional para el solicitante"></textarea>
+                <div class="banner-review-actions"><button type="button" onclick="reviewSellerApplication('${escapeJs(String(application.id))}', 'approved')">Aprobar vendedor</button><button type="button" class="seller-cancel-button" onclick="reviewSellerApplication('${escapeJs(String(application.id))}', 'rejected')">Rechazar</button></div>` : ""}
+            </article>`;
+        }).join("")}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudieron cargar las solicitudes.")}</div>`;
+    }
+}
+
+
+async function reviewSellerApplication(applicationId, status) {
+    const action = status === "approved" ? "aprobar" : "rechazar";
+    if (!confirm(`Confirmas que queres ${action} esta solicitud?`)) return;
+    const currentToken = localStorage.getItem("walz_token");
+    const note = document.getElementById(`seller-review-note-${applicationId}`)?.value.trim() || "";
+    try {
+        const response = await fetch(`${API_URL}/seller-applications/admin/${applicationId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+            body: JSON.stringify({ status, admin_note: note || null })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        showMessage(status === "approved" ? "Vendedor aprobado correctamente." : "Solicitud rechazada.", "success");
+        await loadSellerApplicationsAdmin();
+        await refreshAdminPendingCounts();
+    } catch (error) {
+        showMessage(error.message || "No se pudo revisar la solicitud.", "error");
+    }
+}
+
+
 function hidePublicStoreSection() {
     const section = document.getElementById("public-store-section");
     if (section) section.style.display = "none";
@@ -3313,6 +3616,7 @@ function hidePublicStoreSection() {
 
 
 async function showPublicStore(sellerId) {
+    hideSellerApplicationSections();
     const section = document.getElementById("public-store-section");
     const container = document.getElementById("public-store-content");
     if (!section || !container) return;
@@ -3395,6 +3699,7 @@ function renderStorePreview() {
 
 
 async function showStoreProfile() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     const section = document.getElementById("store-profile-section");
     if (!section) return;
@@ -3514,6 +3819,7 @@ function getBannerProposalStatus(status) {
 
 
 async function showBannerProposal() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
     const section = document.getElementById("banner-proposal-section");
@@ -3621,6 +3927,7 @@ async function loadMyBannerProposals() {
 
 
 function showBannerAdmin() {
+    hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
     if (currentUserRole !== "ADMIN") {
@@ -3691,6 +3998,7 @@ async function createAdminBanner() {
         }
         await loadAdminBanners();
         await loadActiveBanners();
+        await refreshAdminPendingCounts();
     } catch (error) {
         if (errorElement) errorElement.textContent = error.message || "No se pudo crear el banner.";
     }
@@ -3752,6 +4060,7 @@ async function reviewBannerProposal(bannerId, status) {
         showMessage(status === "approved" ? "Publicidad aprobada y publicada." : "Publicidad rechazada.", "success");
         await loadAdminBanners();
         await loadActiveBanners();
+        await refreshAdminPendingCounts();
     } catch (error) {
         showMessage(error.message || "No se pudo revisar la publicidad.", "error");
     }
@@ -3774,6 +4083,7 @@ async function toggleAdminBanner(bannerId, shouldActivate) {
         showMessage(shouldActivate ? "Banner activado." : "Banner pausado.", "success");
         await loadAdminBanners();
         await loadActiveBanners();
+        await refreshAdminPendingCounts();
     } catch (error) {
         showMessage(error.message || "No se pudo modificar el banner.", "error");
     }
@@ -3834,6 +4144,13 @@ window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
 window.toggleMyProductStatus = toggleMyProductStatus;
+window.refreshAdminPendingCounts = refreshAdminPendingCounts;
+window.refreshSellerPendingOrderCount = refreshSellerPendingOrderCount;
+window.showSellerApplication = showSellerApplication;
+window.submitSellerApplication = submitSellerApplication;
+window.showSellerApplicationsAdmin = showSellerApplicationsAdmin;
+window.loadSellerApplicationsAdmin = loadSellerApplicationsAdmin;
+window.reviewSellerApplication = reviewSellerApplication;
 window.showPublicStore = showPublicStore;
 window.showStoreProfile = showStoreProfile;
 window.loadStoreProfile = loadStoreProfile;

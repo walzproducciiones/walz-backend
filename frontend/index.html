@@ -179,20 +179,44 @@
 
     <button
         type="button"
+        id="sales-orders-button"
         class="orders-button sales-orders-button"
         onclick="showReceivedOrders()"
     >
         <span aria-hidden="true">&#128230;</span>
         <span>Pedidos recibidos</span>
+        <span id="seller-pending-orders-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
     <button
         type="button"
+        id="my-products-button"
         class="orders-button my-products-button"
         onclick="showMyProducts()"
     >
         <span aria-hidden="true">&#128230;</span>
         <span>Mis productos</span>
+    </button>
+
+    <button
+        type="button"
+        id="seller-application-button"
+        class="orders-button seller-application-button"
+        onclick="showSellerApplication()"
+        style="display:none;"
+    >
+        <span>Quiero vender</span>
+    </button>
+
+    <button
+        type="button"
+        id="seller-applications-admin-button"
+        class="orders-button seller-applications-admin-button"
+        onclick="showSellerApplicationsAdmin()"
+        style="display:none;"
+    >
+        <span>Solicitudes</span>
+        <span id="seller-applications-pending-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
     <button
@@ -214,6 +238,7 @@
         style="display:none;"
     >
         <span>Publicidad</span>
+        <span id="banner-proposals-pending-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
     <button
@@ -695,6 +720,26 @@
     </div>
 
 </div>
+<!-- =====================================================
+     SOLICITUD PARA VENDER
+====================================================== -->
+<section id="seller-application-section" class="seller-application-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
+    <h2>Quiero vender en WalZ</h2>
+    <p>Contanos brevemente sobre tu negocio. WalZ revisar&aacute; la solicitud antes de habilitar las ventas.</p>
+    <div id="seller-application-content">Cargando solicitud...</div>
+</section>
+
+<!-- =====================================================
+     REVISION ADMINISTRATIVA DE VENDEDORES
+====================================================== -->
+<section id="seller-applications-admin-section" class="seller-application-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
+    <h2>Solicitudes de vendedores</h2>
+    <p>Revis&aacute; los datos antes de habilitar una cuenta para vender.</p>
+    <div id="seller-applications-admin-list">Cargando solicitudes...</div>
+</section>
+
 <!-- =====================================================
      TIENDA PUBLICA DEL VENDEDOR
 ====================================================== -->

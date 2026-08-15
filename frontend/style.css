@@ -2210,3 +2210,91 @@ body.has-walz-news-bar .cart-button {
     .public-store-logo { max-width: 240px; margin: auto; }
     .public-store-contact { justify-content: center; }
 }
+/* FASE 5O - SOLICITUDES DE VENDEDORES */
+.seller-application-section {
+    max-width: 1000px;
+    margin: 28px auto 90px;
+    padding: 0 18px;
+}
+.seller-application-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 20px;
+    border-radius: 14px;
+    background: #242424;
+    color: #fff;
+}
+.seller-application-form label { display: grid; gap: 7px; }
+.seller-application-form .seller-application-wide { grid-column: 1 / -1; }
+.seller-application-form input,
+.seller-application-form textarea,
+.seller-application-card textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #151515;
+    color: #fff;
+}
+.seller-application-form textarea,
+.seller-application-card textarea { min-height: 110px; resize: vertical; }
+.seller-application-form button { grid-column: 1 / -1; }
+.seller-applications-list { display: grid; gap: 16px; }
+.seller-application-card {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 14px;
+    background: #fff;
+}
+.seller-application-heading { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.seller-application-heading h3 { margin: 4px 0; }
+.seller-application-heading p { margin: 0; color: #555; }
+.seller-application-card .banner-review-actions { margin-top: 12px; }
+.seller-application-approved { border-color: #8bd3a6; background: #effaf3; }
+.seller-application-rejected { border-color: #e2aaaa; background: #fff3f3; margin-bottom: 14px; }
+
+@media (max-width: 650px) {
+    .seller-application-form { grid-template-columns: 1fr; }
+    .seller-application-form .seller-application-wide,
+    .seller-application-form button { grid-column: auto; }
+    .seller-application-heading { display: grid; }
+}
+/* CONTRASTE SOLICITUDES 5O */
+.seller-application-section .orders-state-card {
+    background: #242424;
+    color: #f7f7f7;
+}
+
+.seller-application-section .orders-state-card h3,
+.seller-application-section .orders-state-card p {
+    color: #f7f7f7;
+}
+/* AVISOS ADMINISTRATIVOS PENDIENTES */
+#seller-applications-admin-button,
+#banner-admin-button {
+    position: relative;
+}
+
+.admin-pending-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #d62828;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+/* AVISO DE PEDIDOS RECIBIDOS */
+#sales-orders-button {
+    position: relative;
+}
