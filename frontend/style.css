@@ -2026,3 +2026,58 @@ body.has-walz-news-bar .cart-button {
     background: #176b3a;
     color: white;
 }
+/* MOVIMIENTO SUAVE DE PUBLICIDAD Y NOVEDADES */
+.marketplace-banner-card {
+    animation: walz-banner-enter 420ms ease-out;
+}
+
+@keyframes walz-banner-enter {
+    from { opacity: 0; transform: translateX(18px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.walz-news-bar {
+    justify-content: stretch;
+    overflow: hidden;
+}
+
+.walz-news-viewport {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.walz-news-track {
+    display: flex;
+    width: max-content;
+    animation: walz-news-scroll 20s linear infinite;
+    will-change: transform;
+}
+
+.walz-news-track span {
+    min-width: 100vw;
+    padding: 0 50px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.walz-news-bar:hover .walz-news-track,
+.walz-news-bar:focus-within .walz-news-track {
+    animation-play-state: paused;
+}
+
+@keyframes walz-news-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marketplace-banner-card { animation: none; }
+    .walz-news-track { animation: none; }
+}
+
+@media (max-width: 600px) {
+    .walz-news-track span {
+        padding: 0 24px;
+    }
+}

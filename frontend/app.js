@@ -164,7 +164,7 @@ async function handleLogin() {
             await loadProducts();
 
             updateCartUI();
-        document.body.classList.add("has-walz-news-bar");
+        showWalzNewsBarIfAllowed();
 
         } else {
 
@@ -2043,7 +2043,7 @@ async function confirmCheckout() {
         clearCartStorage();
         renderCart();
         updateCartUI();
-        document.body.classList.add("has-walz-news-bar");
+        showWalzNewsBarIfAllowed();
 
         await loadProducts();
 
@@ -3570,7 +3570,16 @@ async function toggleAdminBanner(bannerId, shouldActivate) {
 }
 
 
+function showWalzNewsBarIfAllowed() {
+    const bar = document.getElementById("walz-news-bar");
+    const wasClosed = sessionStorage.getItem("walz_news_closed") === "1";
+    if (bar) bar.style.display = wasClosed ? "none" : "flex";
+    document.body.classList.toggle("has-walz-news-bar", !wasClosed);
+}
+
+
 function closeWalzNewsBar() {
+    sessionStorage.setItem("walz_news_closed", "1");
     const bar = document.getElementById("walz-news-bar");
     if (bar) bar.style.display = "none";
     document.body.classList.remove("has-walz-news-bar");
@@ -3655,7 +3664,7 @@ document.addEventListener(
         );
 
         updateCartUI();
-        document.body.classList.add("has-walz-news-bar");
+        showWalzNewsBarIfAllowed();
 
         if (token) {
 
