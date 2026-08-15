@@ -680,6 +680,29 @@
 
             <div id="my-products-stock-summary" class="my-products-stock-summary"></div>
 
+            <section id="bulk-products-panel" class="bulk-products-panel">
+                <div class="bulk-products-heading">
+                    <div>
+                        <span class="bulk-products-kicker">Carga masiva</span>
+                        <h3>Agregar productos desde Excel</h3>
+                        <p>Descarga la plantilla, completala en Excel y guardala como CSV UTF-8.</p>
+                    </div>
+                    <button type="button" class="bulk-template-button" onclick="downloadBulkProductsTemplate()">
+                        Descargar plantilla
+                    </button>
+                </div>
+
+                <label class="bulk-file-label" for="bulk-products-file">
+                    Seleccionar archivo CSV
+                    <input id="bulk-products-file" type="file" accept=".csv,text/csv" onchange="previewBulkProductsFile(event)">
+                </label>
+
+                <p class="bulk-products-help">
+                    Columnas: nombre, precio, stock, categoria, descripcion y enlace_imagen. En este paso solo se revisan los datos; todavia no se publican.
+                </p>
+                <div id="bulk-products-preview" class="bulk-products-preview" aria-live="polite"></div>
+            </section>
+
             <div class="my-products-filters">
                 <label>
                     <span>Buscar producto</span>

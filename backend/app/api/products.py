@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
 from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter, ProductUpdate
-from backend.app.services.product_service import create_product, get_products, get_products_by_seller, update_product_by_seller
+from backend.app.services.product_service import create_product, create_products_bulk, get_products, get_products_by_seller, update_product_by_seller
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
 from uuid import UUID
@@ -24,6 +24,29 @@ def create_new_product(
     current_user: User = Depends(get_current_user)
 ):
     return create_product(db, current_user.id, product)
+
+@router.post("/bulk", response_model=list[ProductResponse])
+def create_products_in_bulk(
+    products: list[ProductCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    role = str(current_user.role or "").upper()
+    if role not in {"VENDEDOR", "SELLER", "ADMIN"}:
+        raise HTTPException(status_code=403, detail="Tu cuenta no esta habilitada para vender.")
+    if not products:
+        raise HTTPException(status_code=400, detail="La planilla no contiene productos.")
+    if len(products) > 500:
+        raise HTTPException(status_code=400, detail="Se permiten hasta 500 productos por carga.")
+
+    try:
+        return create_products_bulk(db, current_user.id, products)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No se pudo completar la carga masiva.")
+
 
 @router.get("/", response_model=list[ProductResponse])
 def list_products(

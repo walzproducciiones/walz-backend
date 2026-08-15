@@ -2707,6 +2707,243 @@ function clearReceivedOrdersFilters() {
 
 
 // =====================================================
+// FASE 5P - CARGA MASIVA DE PRODUCTOS (VISTA PREVIA)
+// =====================================================
+
+function downloadBulkProductsTemplate() {
+    const separator = ";";
+    const rows = [
+        ["nombre", "precio", "stock", "categoria", "descripcion", "enlace_imagen"],
+        ["Producto de ejemplo", "1500", "10", "Cuidado personal", "Descripcion opcional", "https://ejemplo.com/imagen.webp"]
+    ];
+    const csv = "\uFEFF" + rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(separator)).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "plantilla-productos-walz.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showMessage("Plantilla descargada. Abrila con Excel.", "success");
+}
+
+function parseBulkCsvLine(line, separator) {
+    const values = [];
+    let value = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+        const character = line[index];
+        if (character === '"') {
+            if (quoted && line[index + 1] === '"') {
+                value += '"';
+                index += 1;
+            } else {
+                quoted = !quoted;
+            }
+        } else if (character === separator && !quoted) {
+            values.push(value.trim());
+            value = "";
+        } else {
+            value += character;
+        }
+    }
+    values.push(value.trim());
+    return values;
+}
+
+function normalizeBulkHeader(value) {
+    return String(value || "")
+        .replace(/^\uFEFF/, "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "_");
+}
+
+function renderBulkProductsPreview(validRows, errors) {
+    const container = document.getElementById("bulk-products-preview");
+    if (!container) return;
+
+    const summaryClass = errors.length ? "bulk-preview-warning" : "bulk-preview-success";
+    const table = validRows.length ? `
+        <div class="bulk-preview-table-wrap">
+            <table class="bulk-preview-table">
+                <thead><tr><th>Fila</th><th>Producto</th><th>Precio</th><th>Stock</th><th>Categoria</th><th>Imagen</th></tr></thead>
+                <tbody>${validRows.slice(0, 50).map(item => `
+                    <tr>
+                        <td>${item.rowNumber}</td>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>$${Number(item.price).toFixed(2)}</td>
+                        <td>${item.stock}</td>
+                        <td>${escapeHtml(item.category || "-")}</td>
+                        <td>${item.image_url ? "Si" : "No"}</td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>
+        </div>` : "";
+
+    const errorList = errors.length ? `
+        <div class="bulk-preview-errors">
+            <strong>Corregir antes de publicar:</strong>
+            <ul>${errors.slice(0, 20).map(error => `<li>${escapeHtml(error)}</li>`).join("")}</ul>
+        </div>` : "";
+
+    container.innerHTML = `
+        <div class="bulk-preview-summary ${summaryClass}">
+            <strong>${validRows.length} producto${validRows.length === 1 ? "" : "s"} listo${validRows.length === 1 ? "" : "s"} para importar</strong>
+            <span>${errors.length} fila${errors.length === 1 ? "" : "s"} con errores</span>
+        </div>
+        ${table}
+        ${validRows.length > 50 ? `<p>Se muestran las primeras 50 filas de ${validRows.length}.</p>` : ""}
+        ${errorList}
+        <p class="bulk-preview-notice">Vista previa solamente: ningun producto fue publicado.</p>
+        ${validRows.length && !errors.length ? `
+            <button type="button" id="bulk-products-publish-button" class="bulk-products-publish-button" onclick="publishBulkProducts()">
+                Publicar ${validRows.length} productos
+            </button>` : ""}`;
+}
+
+async function publishBulkProducts() {
+    const products = Array.isArray(window.walzBulkProductsPreview) ? window.walzBulkProductsPreview : [];
+    const errors = Array.isArray(window.walzBulkProductsErrors) ? window.walzBulkProductsErrors : [];
+    const currentToken = localStorage.getItem("walz_token");
+    const button = document.getElementById("bulk-products-publish-button");
+
+    if (!currentToken) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        return;
+    }
+    if (!products.length || errors.length) {
+        showMessage("Revisa la planilla antes de publicarla.", "error");
+        return;
+    }
+    if (!confirm(`Confirmas la publicacion de ${products.length} productos?`)) return;
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Publicando productos...";
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/products/bulk`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify(products.map(product => ({
+                name: product.name,
+                price: product.price,
+                stock: product.stock,
+                category: product.category || null,
+                description: product.description || null,
+                image_url: product.image_url || null
+            })))
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+
+        const createdCount = Array.isArray(data) ? data.length : products.length;
+        window.walzBulkProductsPreview = [];
+        window.walzBulkProductsErrors = [];
+        const fileInput = document.getElementById("bulk-products-file");
+        const preview = document.getElementById("bulk-products-preview");
+        if (fileInput) fileInput.value = "";
+        if (preview) preview.innerHTML = `
+            <div class="bulk-import-complete">
+                <strong>${createdCount} productos publicados correctamente.</strong>
+                <span>Ya aparecen en tu catalogo y en WalZ.</span>
+            </div>`;
+        showMessage(`${createdCount} productos publicados correctamente.`, "success");
+        await Promise.all([loadMyProducts(), loadProducts()]);
+    } catch (error) {
+        console.error("Error en carga masiva:", error);
+        showMessage(error.message || "No se pudo completar la carga masiva.", "error");
+        if (button) {
+            button.disabled = false;
+            button.textContent = `Publicar ${products.length} productos`;
+        }
+    }
+}
+
+async function previewBulkProductsFile(event) {
+    const file = event?.target?.files?.[0];
+    const container = document.getElementById("bulk-products-preview");
+    window.walzBulkProductsPreview = [];
+    window.walzBulkProductsErrors = [];
+    if (!file || !container) return;
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+        container.innerHTML = '<div class="bulk-preview-errors">El archivo debe estar guardado como CSV UTF-8.</div>';
+        return;
+    }
+
+    try {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        if (lines.length < 2) throw new Error("La planilla no contiene productos.");
+
+        const separator = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
+        const headers = parseBulkCsvLine(lines[0], separator).map(normalizeBulkHeader);
+        const required = ["nombre", "precio", "stock"];
+        const missing = required.filter(header => !headers.includes(header));
+        if (missing.length) throw new Error(`Faltan columnas obligatorias: ${missing.join(", ")}.`);
+
+        const column = name => headers.indexOf(name);
+        const validRows = [];
+        const errors = [];
+
+        lines.slice(1).forEach((line, index) => {
+            const rowNumber = index + 2;
+            const values = parseBulkCsvLine(line, separator);
+            const name = values[column("nombre")]?.trim() || "";
+            const rawPrice = values[column("precio")]?.trim().replace(/\s/g, "").replace(",", ".") || "";
+            const rawStock = values[column("stock")]?.trim() || "";
+            const price = Number(rawPrice);
+            const stock = Number(rawStock);
+            const rowErrors = [];
+
+            if (!name) rowErrors.push("falta el nombre");
+            if (!Number.isFinite(price) || price <= 0) rowErrors.push("el precio debe ser mayor que 0");
+            if (!Number.isInteger(stock) || stock < 0) rowErrors.push("el stock debe ser un numero entero igual o mayor que 0");
+            if (name.length > 200) rowErrors.push("el nombre supera los 200 caracteres");
+
+            if (rowErrors.length) {
+                errors.push(`Fila ${rowNumber}: ${rowErrors.join("; ")}.`);
+                return;
+            }
+
+            validRows.push({
+                rowNumber,
+                name,
+                price,
+                stock,
+                category: column("categoria") >= 0 ? values[column("categoria")]?.trim() || "" : "",
+                description: column("descripcion") >= 0 ? values[column("descripcion")]?.trim() || "" : "",
+                image_url: column("enlace_imagen") >= 0 ? values[column("enlace_imagen")]?.trim() || "" : ""
+            });
+        });
+
+        window.walzBulkProductsPreview = validRows;
+        window.walzBulkProductsErrors = errors;
+        renderBulkProductsPreview(validRows, errors);
+    } catch (error) {
+        console.error("Error leyendo la planilla:", error);
+        container.innerHTML = `<div class="bulk-preview-errors">${escapeHtml(error.message || "No pudimos leer el archivo.")}</div>`;
+    }
+}
+
+
+// =====================================================
 // FASE 5K - MIS PRODUCTOS
 // =====================================================
 
@@ -4135,6 +4372,9 @@ window.loadReceivedOrders = loadReceivedOrders;
 window.updateSellerOrderStatus = updateSellerOrderStatus;
 window.applyReceivedOrdersFilters = applyReceivedOrdersFilters;
 window.clearReceivedOrdersFilters = clearReceivedOrdersFilters;
+window.downloadBulkProductsTemplate = downloadBulkProductsTemplate;
+window.previewBulkProductsFile = previewBulkProductsFile;
+window.publishBulkProducts = publishBulkProducts;
 window.showMyProducts = showMyProducts;
 window.loadMyProducts = loadMyProducts;
 window.applyMyProductsFilters = applyMyProductsFilters;

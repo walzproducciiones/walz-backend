@@ -31,6 +31,40 @@ def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
     db.refresh(new_product)
     return new_product
 
+def create_products_bulk(db: Session, seller_id: UUID, products_data: list[ProductCreate]):
+    new_products = []
+    try:
+        for position, product_data in enumerate(products_data, start=1):
+            if product_data.offer_active:
+                if product_data.offer_price is None:
+                    raise ValueError(f"Producto {position}: falta el precio de oferta.")
+                if float(product_data.offer_price) >= float(product_data.price):
+                    raise ValueError(f"Producto {position}: el precio de oferta debe ser menor que el precio normal.")
+
+            new_product = Product(
+                seller_id=seller_id,
+                name=product_data.name,
+                description=product_data.description,
+                price=product_data.price,
+                offer_price=product_data.offer_price,
+                offer_active=product_data.offer_active,
+                stock=product_data.stock,
+                category=product_data.category,
+                image_url=product_data.image_url,
+                is_active=True,
+            )
+            db.add(new_product)
+            new_products.append(new_product)
+
+        db.commit()
+        for product in new_products:
+            db.refresh(product)
+        return new_products
+    except Exception:
+        db.rollback()
+        raise
+
+
 def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductFilter = None):
     query = db.query(Product).filter(Product.is_active == True)
     
