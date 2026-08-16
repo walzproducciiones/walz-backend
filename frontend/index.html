@@ -892,10 +892,14 @@
                 <span>Nombre de la tienda</span>
                 <input id="store-name" type="text" minlength="2" maxlength="160" required placeholder="Ejemplo: Farmacia del Centro" oninput="renderStorePreview()">
             </label>
-            <label>
-                <span>Enlace p&uacute;blico del logo (opcional)</span>
-                <input id="store-logo-url" type="url" maxlength="500" placeholder="https://..." oninput="renderStorePreview()">
+            <label class="store-profile-wide store-logo-upload-label">
+                <span>Logo de la tienda (opcional)</span>
+                <small>Eleg&iacute; una imagen JPG, PNG o WebP. WalZ la prepara y guarda autom&aacute;ticamente.</small>
+                <input id="store-logo-file" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewStoreLogoFile()">
+                <span class="store-logo-file-button">Elegir logo</span>
+                <span id="store-logo-file-name" class="store-logo-file-name">Ning&uacute;n archivo seleccionado</span>
             </label>
+            <input id="store-logo-url" type="hidden" value="">
             <label class="store-profile-wide">
                 <span>Descripci&oacute;n</span>
                 <textarea id="store-description" maxlength="1200" placeholder="Cont&aacute; brevemente qu&eacute; ofrece tu negocio" oninput="renderStorePreview()"></textarea>

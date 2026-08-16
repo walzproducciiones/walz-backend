@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.app.api.auth import get_current_user
@@ -8,6 +8,7 @@ from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.store import StoreProfileUpdate, StoreResponse
 from backend.app.services.store_service import get_active_stores, get_store_by_owner, save_store_profile
+from backend.app.services.product_image_service import upload_store_logo
 
 
 router = APIRouter(prefix="/stores", tags=["Stores"])
@@ -37,6 +38,21 @@ def get_my_store(
     current_user: User = Depends(require_store_manager),
 ):
     return get_store_by_owner(db, current_user.id)
+
+
+@router.post("/logo")
+async def upload_my_store_logo(
+    image: UploadFile = File(...),
+    current_user: User = Depends(require_store_manager),
+):
+    content = await image.read()
+    try:
+        logo_url = upload_store_logo(current_user.id, content, image.content_type or "")
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    return {"logo_url": logo_url}
 
 
 @router.put("/mine", response_model=StoreResponse)

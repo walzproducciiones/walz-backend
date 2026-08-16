@@ -2988,3 +2988,50 @@ body {
 .product-actions .product-store-link {
     display: none;
 }
+/* CARGA AUTOMATICA DEL LOGO DE TIENDA */
+.store-logo-upload-label {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 12px;
+    padding: 14px;
+    background: #edf8f6;
+    border: 1px dashed #8acac7;
+    border-radius: 12px;
+}
+
+.store-logo-upload-label > span:first-child,
+.store-logo-upload-label > small {
+    grid-column: 1 / -1;
+}
+
+.store-logo-upload-label small {
+    color: #567176;
+}
+
+.store-logo-upload-label input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.store-logo-file-button {
+    display: inline-flex;
+    justify-content: center;
+    padding: 10px 14px;
+    background: var(--walz-petrol);
+    border-radius: 9px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.store-logo-file-name {
+    overflow: hidden;
+    color: #476267;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

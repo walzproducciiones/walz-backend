@@ -757,7 +757,7 @@ function syncCartWithProducts(products) {
 
 function getProductImageUrl(value) {
     const url = String(value || "").trim();
-    return /^https?:\/\//i.test(url) ? url : "";
+    return /^(https?:\/\/|blob:)/i.test(url) ? url : "";
 }
 
 function renderProductImage(value, altText, className) {
@@ -3855,7 +3855,7 @@ async function loadCurrentUserProfile() {
 
 function getSafeBannerLink(value) {
     const url = String(value || "").trim();
-    return /^https?:\/\//i.test(url) ? url : "";
+    return /^(https?:\/\/|blob:)/i.test(url) ? url : "";
 }
 
 
@@ -4229,12 +4229,57 @@ function hideStoreProfileSection() {
 }
 
 
+function previewStoreLogoFile() {
+    const input = document.getElementById("store-logo-file");
+    const file = input?.files?.[0] || null;
+    const fileName = document.getElementById("store-logo-file-name");
+    if (window.walzStoreLogoPreviewUrl) {
+        URL.revokeObjectURL(window.walzStoreLogoPreviewUrl);
+        window.walzStoreLogoPreviewUrl = "";
+    }
+    if (!file) {
+        if (fileName) fileName.textContent = "Ningun archivo seleccionado";
+        renderStorePreview();
+        return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        input.value = "";
+        if (fileName) fileName.textContent = "Formato no permitido";
+        showMessage("Selecciona un logo JPG, PNG o WebP.", "error");
+        return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+        input.value = "";
+        if (fileName) fileName.textContent = "La imagen supera 12 MB";
+        showMessage("El logo original no puede superar 12 MB.", "error");
+        return;
+    }
+    window.walzStoreLogoPreviewUrl = URL.createObjectURL(file);
+    if (fileName) fileName.textContent = `${file.name} - Vista previa lista. Presiona Guardar tienda para confirmar.`;
+    renderStorePreview();
+}
+
+async function uploadStoreLogo(file) {
+    const blob = await optimizeProductImage(file);
+    const form = new FormData();
+    form.append("image", blob, "logo-tienda.webp");
+    const response = await fetch(`${API_URL}/stores/logo`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("walz_token")}` },
+        body: form
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "No se pudo subir el logo.");
+    return data.logo_url;
+}
+
+
 function renderStorePreview() {
     const container = document.getElementById("store-profile-preview");
     if (!container) return;
     const name = document.getElementById("store-name")?.value.trim() || "Nombre de tu tienda";
     const description = document.getElementById("store-description")?.value.trim() || "La descripcion de tu negocio aparecera aqui.";
-    const logoUrl = document.getElementById("store-logo-url")?.value.trim() || "";
+    const logoUrl = window.walzStoreLogoPreviewUrl || document.getElementById("store-logo-url")?.value.trim() || "";
     container.innerHTML = `
         <div class="store-preview-brand">
             ${renderProductImage(logoUrl, name, "store-preview-logo")}
@@ -4245,6 +4290,7 @@ function renderStorePreview() {
 
 
 async function showStoreProfile() {
+    hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
     const section = document.getElementById("store-profile-section");
@@ -4298,7 +4344,9 @@ async function saveStoreProfile(event) {
     const saveButton = document.getElementById("store-save-button");
     const value = id => document.getElementById(id)?.value.trim() || "";
     const name = value("store-name");
-    const logoUrl = value("store-logo-url");
+    let logoUrl = value("store-logo-url");
+    const logoFileInput = document.getElementById("store-logo-file");
+    const logoFile = logoFileInput?.files?.[0] || null;
     if (errorElement) {
         errorElement.textContent = "";
         errorElement.classList.remove("store-profile-success-message");
@@ -4313,6 +4361,11 @@ async function saveStoreProfile(event) {
     }
     if (saveButton) saveButton.disabled = true;
     try {
+        if (logoFile) {
+            if (saveButton) saveButton.textContent = "Subiendo logo...";
+            logoUrl = await uploadStoreLogo(logoFile);
+        }
+        if (saveButton) saveButton.textContent = "Guardando tienda...";
         const response = await fetch(`${API_URL}/stores/mine`, {
             method: "PUT",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
@@ -4327,6 +4380,12 @@ async function saveStoreProfile(event) {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        document.getElementById("store-logo-url").value = data.logo_url || logoUrl || "";
+        if (logoFileInput) logoFileInput.value = "";
+        const logoFileName = document.getElementById("store-logo-file-name");
+        if (logoFileName) logoFileName.textContent = "Logo guardado en WalZ";
+        if (window.walzStoreLogoPreviewUrl) URL.revokeObjectURL(window.walzStoreLogoPreviewUrl);
+        window.walzStoreLogoPreviewUrl = "";
         showMessage("Tienda guardada correctamente.", "success");
         if (errorElement) {
             errorElement.textContent = "Tienda guardada correctamente.";
@@ -4339,7 +4398,7 @@ async function saveStoreProfile(event) {
             errorElement.textContent = error.message || "No se pudo guardar la tienda.";
         }
     } finally {
-        if (saveButton) saveButton.disabled = false;
+        if (saveButton) { saveButton.disabled = false; saveButton.textContent = "Guardar tienda"; }
     }
 }
 
