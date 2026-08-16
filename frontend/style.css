@@ -3158,3 +3158,17 @@ body {
 
 /* MENSAJE VISIBLE DE PROGRAMACION */
 .delivery-plan-inline-message { min-height: 20px; margin: 0; color: #a32620 !important; font-weight: 700; }
+
+
+/* COORDINACION DE HORARIOS DE ENVIO */
+.buyer-delivery-preference { display: grid; gap: 9px; margin-top: 12px; padding: 13px; background: #eef8f6; border: 1px solid #8fc9c3; border-radius: 10px; color: #173f47; }
+.buyer-delivery-preference p { margin: 0; color: #526d71; font-size: 13px; }
+.buyer-delivery-preference > div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.buyer-delivery-preference label { display: grid; gap: 5px; color: #173f47; }
+.buyer-delivery-preference input, .buyer-delivery-preference select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9fb8b8; border-radius: 8px; background: #fff; color: #17272b; }
+.buyer-request-card { display: grid; gap: 8px; padding: 13px; background: #fff8df; border: 1px solid #e4c970; border-radius: 10px; color: #493c10; }
+.buyer-request-card h4 { margin: 0; color: #493c10; }
+.buyer-request-card > div { display: flex; justify-content: space-between; gap: 12px; }
+.delivery-decision-actions { display: flex !important; flex-wrap: wrap; justify-content: flex-start !important; gap: 9px !important; padding-top: 12px !important; }
+.delivery-decision-actions .secondary { background: #53686b; }
+@media (max-width: 620px) { .buyer-delivery-preference > div { grid-template-columns: 1fr; } }

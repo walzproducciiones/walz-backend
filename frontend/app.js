@@ -2218,6 +2218,12 @@ function renderSellerDeliveryOptions() {
                     ${deliveryEnabled ? `<label><input type="radio" data-seller-delivery="${group.sellerId}" name="delivery-method-${group.sellerId}" value="delivery" ${selected === "delivery" ? "checked" : ""} onchange="setSellerDeliveryMethod('${group.sellerId}', 'delivery')"> Envio a domicilio</label>` : ""}
                     ${pickupEnabled ? `<label><input type="radio" data-seller-delivery="${group.sellerId}" name="delivery-method-${group.sellerId}" value="pickup" ${selected === "pickup" ? "checked" : ""} onchange="setSellerDeliveryMethod('${group.sellerId}', 'pickup')"> Retiro en el local</label>` : ""}
                 </div>
+                ${deliveryEnabled ? `<div class="buyer-delivery-preference" data-delivery-preference="${group.sellerId}">
+                    <strong>Preferencia para la entrega</strong>
+                    <p>Selecciona una fecha desde manana. La tienda podra confirmarla o proponer otra.</p>
+                    <div><label>Fecha preferida<input type="date" data-requested-date="${group.sellerId}"></label>
+                    <label>Franja preferida<select data-requested-window="${group.sellerId}"><option value="">Seleccionar</option><option value="08:00 a 12:00">08:00 a 12:00</option><option value="12:00 a 16:00">12:00 a 16:00</option><option value="16:00 a 20:00">16:00 a 20:00</option><option value="Horario a coordinar">Horario a coordinar</option></select></label></div>
+                </div>` : ""}
             </section>`;
     }).join("");
     window.walzSellerDeliverySelections = previous;
@@ -2240,6 +2246,16 @@ function updateDeliveryMethod() {
     if (addressFields) addressFields.style.display = needsAddress ? "grid" : "none";
     if (pickupInformation) pickupInformation.style.display = hasPickup ? "block" : "none";
     if (deliveryHeading) deliveryHeading.textContent = needsAddress ? "Datos del comprador y domicilio" : "Datos para el retiro";
+    document.querySelectorAll("[data-delivery-preference]").forEach(section => {
+        const sellerId = section.getAttribute("data-delivery-preference");
+        const selected = document.querySelector(`input[data-seller-delivery="${sellerId}"]:checked`)?.value;
+        section.style.display = selected === "delivery" ? "grid" : "none";
+        const dateInput = section.querySelector("input[type=date]");
+        if (dateInput && !dateInput.min) {
+            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+            dateInput.min = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,"0")}-${String(tomorrow.getDate()).padStart(2,"0")}`;
+        }
+    });
     const deliveryError = document.getElementById("delivery-error");
     if (deliveryError) deliveryError.textContent = "";
 }
@@ -2258,13 +2274,19 @@ function checkout() {
     const choices = groups.map(group => ({
         sellerId: group.sellerId,
         storeName: group.store?.name || "Vendedor WalZ",
-        method: document.querySelector(`input[data-seller-delivery="${group.sellerId}"]:checked`)?.value || ""
+        method: document.querySelector(`input[data-seller-delivery="${group.sellerId}"]:checked`)?.value || "",
+        requestedDate: document.querySelector(`[data-requested-date="${group.sellerId}"]`)?.value || "",
+        requestedTimeWindow: document.querySelector(`[data-requested-window="${group.sellerId}"]`)?.value || ""
     }));
     if (choices.some(choice => !choice.method)) {
         if (deliveryError) deliveryError.textContent = "Selecciona una forma de entrega para cada tienda.";
         return;
     }
     const needsAddress = choices.some(choice => choice.method === "delivery");
+    if (choices.some(choice => choice.method === "delivery" && (!choice.requestedDate || !choice.requestedTimeWindow))) {
+        if (deliveryError) deliveryError.textContent = "Selecciona fecha y franja preferidas para cada envio.";
+        return;
+    }
     if (!deliveryName || !deliveryPhone || (needsAddress && (!deliveryAddress || !deliveryCity))) {
         if (deliveryError) deliveryError.textContent = needsAddress
             ? "Completa nombre, direccion, ciudad y telefono."
@@ -2283,7 +2305,7 @@ function checkout() {
             `Telefono: ${deliveryPhone}`,
             deliveryNotes ? `Observaciones: ${deliveryNotes}` : null
         ].filter(Boolean).join(" | ");
-        return { seller_id: choice.sellerId, store_name: choice.storeName, method: choice.method, shipping_address: shippingAddress };
+        return { seller_id: choice.sellerId, store_name: choice.storeName, method: choice.method, shipping_address: shippingAddress, requested_date: choice.method === "delivery" ? choice.requestedDate : null, requested_time_window: choice.method === "delivery" ? choice.requestedTimeWindow : null };
     });
     const uniqueMethods = new Set(deliveries.map(delivery => delivery.method));
     pendingCheckout = {
@@ -2345,6 +2367,7 @@ function renderCheckoutConfirmation() {
                 <div class="checkout-store-delivery-summary">
                     <strong>${escapeHtml(delivery.store_name)}</strong>
                     <span>${delivery.method === "pickup" ? "Retiro en el local" : "Envio a domicilio"}</span>
+                    ${delivery.method === "delivery" ? `<small>Preferencia: ${escapeHtml(formatDeliveryDateOnly(delivery.requested_date))} | ${escapeHtml(delivery.requested_time_window || "")}</small>` : ""}
                 </div>
             `).join("")}
             <p><strong>Nombre:</strong> ${escapeHtml(pendingCheckout.delivery.name)}</p>
@@ -2413,7 +2436,9 @@ async function confirmCheckout() {
                 deliveries: orderData.deliveries.map(delivery => ({
                     seller_id: delivery.seller_id,
                     method: delivery.method,
-                    shipping_address: delivery.shipping_address
+                    shipping_address: delivery.shipping_address,
+                    requested_date: delivery.requested_date,
+                    requested_time_window: delivery.requested_time_window
                 }))
             })
         });
@@ -2870,7 +2895,7 @@ function renderReceivedOrders(orders) {
                             <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
                         </div>
 
-                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : renderDeliveryPlan(order)}
+                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : renderDeliveryPlan(order, false)}
 
                         <h3 class="order-total">
                             Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
@@ -2887,6 +2912,31 @@ function renderReceivedOrders(orders) {
 
 
 
+
+// WALZ_DELIVERY_COORDINATION_V1
+function formatDeliveryDateOnly(value) {
+    const parts = String(value || "").split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value || "No informada");
+}
+
+function renderBuyerDeliveryRequest(order) {
+    if (!order?.delivery_buyer_requested_date) return "";
+    return `<section class="buyer-request-card"><h4>Horario solicitado por el comprador</h4><div><span>Fecha</span><strong>${escapeHtml(formatDeliveryDateOnly(order.delivery_buyer_requested_date))}</strong></div><div><span>Franja</span><strong>${escapeHtml(order.delivery_buyer_requested_window || "No informada")}</strong></div></section>`;
+}
+
+async function decideBuyerDeliveryPlan(orderId, action) {
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return handleExpiredSession();
+    try {
+        const res = await fetch(`${API_URL}/orders/${orderId}/delivery-plan-decision`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` }, body: JSON.stringify({ action }) });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) return handleExpiredSession();
+        if (!res.ok) throw new Error(data.detail || "No se pudo responder la propuesta.");
+        showMessage(action === "accept" ? "Horario de entrega aceptado." : "Se mantuvo tu horario solicitado.", "success");
+        renderOrderDetail(data, Array.isArray(data.items) ? data.items : []);
+    } catch (error) { showMessage(error.message, "error"); }
+}
+
 // WALZ_DELIVERY_PLAN_V1
 function getDeliveryTransportLabel(value) {
     const labels = {
@@ -2898,36 +2948,35 @@ function getDeliveryTransportLabel(value) {
     return labels[String(value || "")] || "No informado";
 }
 
-function renderDeliveryPlan(order) {
-    if (!order?.delivery_estimated_date) return "";
-    const dateParts = String(order.delivery_estimated_date).split("-");
-    const displayedDate = dateParts.length === 3
-        ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
-        : String(order.delivery_estimated_date);
-    return `<section class="delivery-plan-card">
-        <h4>Entrega programada</h4>
-        <div><span>Fecha estimada</span><strong>${escapeHtml(displayedDate)}</strong></div>
-        <div><span>Franja horaria</span><strong>${escapeHtml(order.delivery_time_window || "No informada")}</strong></div>
-        <div><span>Medio de envio</span><strong>${escapeHtml(getDeliveryTransportLabel(order.delivery_transport_type))}</strong></div>
-    </section>`;
+function renderDeliveryPlan(order, allowBuyerDecision = true) {
+    if (!order?.delivery_estimated_date) return renderBuyerDeliveryRequest(order);
+    const displayedDate = formatDeliveryDateOnly(order.delivery_estimated_date);
+    const status = String(order.delivery_plan_status || "");
+    const title = status === "seller_proposed" ? "Nueva propuesta del vendedor" : "Entrega coordinada";
+    const buyerActions = allowBuyerDecision && status === "seller_proposed" ? `<div class="delivery-decision-actions"><button type="button" onclick="decideBuyerDeliveryPlan('${escapeJs(String(order.id))}', 'accept')">Aceptar horario</button><button type="button" class="secondary" onclick="decideBuyerDeliveryPlan('${escapeJs(String(order.id))}', 'keep_requested')">Mantener mi horario solicitado</button></div>` : "";
+    return `<section class="delivery-plan-card"><h4>${title}</h4><div><span>Fecha estimada</span><strong>${escapeHtml(displayedDate)}</strong></div><div><span>Franja horaria</span><strong>${escapeHtml(order.delivery_time_window || "No informada")}</strong></div><div><span>Medio de envio</span><strong>${escapeHtml(getDeliveryTransportLabel(order.delivery_transport_type))}</strong></div>${buyerActions}</section>`;
 }
 
 function renderDeliveryPlanForm(order) {
     const orderId = escapeHtml(String(order.id || ""));
     const safeId = orderId.replace(/[^a-zA-Z0-9-]/g, "");
     const today = new Date();
+    today.setDate(today.getDate() + 1);
     const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const initialDate = order.delivery_buyer_requested_date || order.delivery_estimated_date || "";
+    const initialWindow = order.delivery_buyer_requested_window || order.delivery_time_window || "";
     return `<section class="delivery-plan-form">
-        <h4>Programar envio</h4>
-        <p>Informa estos datos antes de marcar el pedido como enviado.</p>
+        <h4>Coordinar envio</h4>
+        ${renderBuyerDeliveryRequest(order)}
+        <p>Confirma la preferencia o modifica la fecha y franja para proponer otra opcion. Tambien informa el medio de envio.</p>
         <div class="delivery-plan-fields">
-            <label>Fecha estimada<input id="delivery-date-${safeId}" type="date" min="${minDate}" value="${escapeHtml(order.delivery_estimated_date || "")}"></label>
+            <label>Fecha estimada<input id="delivery-date-${safeId}" type="date" min="${minDate}" value="${escapeHtml(initialDate)}"></label>
             <label>Franja horaria<select id="delivery-window-${safeId}">
                 <option value="">Seleccionar</option>
-                <option value="08:00 a 12:00">08:00 a 12:00</option>
-                <option value="12:00 a 16:00">12:00 a 16:00</option>
-                <option value="16:00 a 20:00">16:00 a 20:00</option>
-                <option value="Horario a coordinar">Horario a coordinar</option>
+                <option value="08:00 a 12:00" ${initialWindow === "08:00 a 12:00" ? "selected" : ""}>08:00 a 12:00</option>
+                <option value="12:00 a 16:00" ${initialWindow === "12:00 a 16:00" ? "selected" : ""}>12:00 a 16:00</option>
+                <option value="16:00 a 20:00" ${initialWindow === "16:00 a 20:00" ? "selected" : ""}>16:00 a 20:00</option>
+                <option value="Horario a coordinar" ${initialWindow === "Horario a coordinar" ? "selected" : ""}>Horario a coordinar</option>
             </select></label>
             <label>Medio de envio<select id="delivery-transport-${safeId}">
                 <option value="">Seleccionar</option>
@@ -2937,7 +2986,7 @@ function renderDeliveryPlanForm(order) {
                 <option value="otro">Otro medio</option>
             </select></label>
         </div>
-        <button type="button" onclick="saveSellerDeliveryPlan('${escapeJs(String(order.id || ""))}')">Guardar programacion</button>
+        <button type="button" onclick="saveSellerDeliveryPlan('${escapeJs(String(order.id || ""))}')">Confirmar o proponer horario</button>
         <p id="delivery-plan-message-${safeId}" class="delivery-plan-inline-message" role="alert"></p>
     </section>`;
 }
@@ -3010,7 +3059,7 @@ function renderSellerOrderActions(order) {
 
         const actionLabel = isPickup ? "Marcar listo para retirar" : "Marcar como enviado";
         return `
-            ${!isPickup ? renderDeliveryPlan(order) : ""}
+            ${!isPickup ? renderDeliveryPlan(order, false) : ""}
             <div class="seller-order-actions">
                 <button type="button" onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')">${actionLabel}</button>
                 <button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button>

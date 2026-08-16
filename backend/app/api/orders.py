@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
     confirm_pickup_handover_by_seller,
     create_order,
     create_orders_by_seller,
+    decide_delivery_plan_by_buyer,
     get_order_by_id,
     get_orders_by_buyer,
     get_orders_received_by_seller,
@@ -184,6 +185,23 @@ def save_delivery_plan(
 ):
     result, error = schedule_delivery_by_seller(
         db, order_id, current_user.id, plan
+    )
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return result
+
+
+@router.patch("/{order_id}/delivery-plan-decision", response_model=OrderResponse)
+def decide_my_delivery_plan(
+    order_id: UUID,
+    decision: DeliveryPlanDecision,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = decide_delivery_plan_by_buyer(
+        db, order_id, current_user.id, decision
     )
     if error == "not_found":
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")

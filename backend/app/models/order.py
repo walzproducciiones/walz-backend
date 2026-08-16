@@ -66,6 +66,9 @@ class Order(Base):
     pickup_seller_handed_at = Column(DateTime(timezone=True), nullable=True)
     pickup_buyer_received_at = Column(DateTime(timezone=True), nullable=True)
 
+    delivery_plan_status = Column(String(30), nullable=True)
+    delivery_buyer_requested_date = Column(Date, nullable=True)
+    delivery_buyer_requested_window = Column(String(60), nullable=True)
     delivery_transport_type = Column(String(30), nullable=True)
     delivery_estimated_date = Column(Date, nullable=True)
     delivery_time_window = Column(String(60), nullable=True)

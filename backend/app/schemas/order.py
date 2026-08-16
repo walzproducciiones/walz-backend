@@ -40,6 +40,8 @@ class SellerDeliveryChoice(BaseModel):
     seller_id: UUID
     method: Literal["delivery", "pickup"]
     shipping_address: str = Field(..., min_length=1, max_length=500)
+    requested_date: Optional[date] = None
+    requested_time_window: Optional[str] = Field(default=None, max_length=60)
 
 
 class CheckoutCreate(BaseModel):
@@ -58,6 +60,9 @@ class OrderResponse(OrderBase):
     pickup_buyer_arrived_at: Optional[datetime] = None
     pickup_seller_handed_at: Optional[datetime] = None
     pickup_buyer_received_at: Optional[datetime] = None
+    delivery_plan_status: Optional[str] = None
+    delivery_buyer_requested_date: Optional[date] = None
+    delivery_buyer_requested_window: Optional[str] = None
     delivery_transport_type: Optional[str] = None
     delivery_estimated_date: Optional[date] = None
     delivery_time_window: Optional[str] = None
@@ -80,3 +85,7 @@ class DeliveryPlanUpdate(BaseModel):
     transport_type: Literal["moto", "correo", "propio", "otro"]
     estimated_date: date
     time_window: str = Field(..., min_length=3, max_length=60)
+
+
+class DeliveryPlanDecision(BaseModel):
+    action: Literal["accept", "keep_requested"]

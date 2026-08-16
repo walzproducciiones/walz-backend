@@ -9,7 +9,7 @@ from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanUpdate, OrderCreate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, OrderCreate
 from backend.app.services.order_status_service import can_transition_order_status
 
 
@@ -227,6 +227,9 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
             "pickup_buyer_arrived_at": order.pickup_buyer_arrived_at,
             "pickup_seller_handed_at": order.pickup_seller_handed_at,
             "pickup_buyer_received_at": order.pickup_buyer_received_at,
+            "delivery_plan_status": order.delivery_plan_status,
+            "delivery_buyer_requested_date": order.delivery_buyer_requested_date,
+            "delivery_buyer_requested_window": order.delivery_buyer_requested_window,
             "delivery_transport_type": order.delivery_transport_type,
             "delivery_estimated_date": order.delivery_estimated_date,
             "delivery_time_window": order.delivery_time_window,
@@ -313,6 +316,14 @@ def create_orders_by_seller(
             if choice.method == "pickup" and not pickup_allowed:
                 db.rollback()
                 return None, "Una tienda no ofrece retiro en el local."
+            if choice.method == "delivery":
+                tomorrow_argentina = datetime.now(timezone(timedelta(hours=-3))).date() + timedelta(days=1)
+                if not choice.requested_date or not choice.requested_time_window:
+                    db.rollback()
+                    return None, "Selecciona fecha y franja horaria para cada envio."
+                if choice.requested_date < tomorrow_argentina:
+                    db.rollback()
+                    return None, "La fecha preferida debe ser desde manana en adelante."
 
         created_order_ids = []
 
@@ -324,10 +335,14 @@ def create_orders_by_seller(
                 ),
                 2,
             )
+            delivery_choice = delivery_by_seller[seller_id]
             new_order = Order(
                 buyer_id=buyer_id,
                 total_amount=seller_total,
-                shipping_address=delivery_by_seller[seller_id].shipping_address,
+                shipping_address=delivery_choice.shipping_address,
+                delivery_plan_status="requested" if delivery_choice.method == "delivery" else None,
+                delivery_buyer_requested_date=delivery_choice.requested_date if delivery_choice.method == "delivery" else None,
+                delivery_buyer_requested_window=delivery_choice.requested_time_window if delivery_choice.method == "delivery" else None,
             )
             db.add(new_order)
             db.flush()
@@ -410,6 +425,13 @@ def update_order_status_by_seller(
         ):
             db.rollback()
             return None, "Primero debes informar la fecha, la franja horaria y el medio de envio."
+        if (
+            not is_pickup
+            and new_status == OrderStatus.SHIPPED
+            and order.delivery_plan_status != "coordinated"
+        ):
+            db.rollback()
+            return None, "El comprador debe aceptar la propuesta antes de realizar el envio."
 
         if is_pickup and new_status == OrderStatus.DELIVERED:
             db.rollback()
@@ -546,6 +568,11 @@ def schedule_delivery_by_seller(
         order.delivery_estimated_date = plan.estimated_date
         order.delivery_time_window = plan.time_window.strip()
         order.delivery_scheduled_at = datetime.now(timezone.utc)
+        same_as_requested = (
+            order.delivery_buyer_requested_date == plan.estimated_date
+            and order.delivery_buyer_requested_window == plan.time_window.strip()
+        )
+        order.delivery_plan_status = "coordinated" if same_as_requested else "seller_proposed"
         db.commit()
 
         return {
@@ -555,6 +582,34 @@ def schedule_delivery_by_seller(
             "delivery_time_window": order.delivery_time_window,
             "delivery_scheduled_at": order.delivery_scheduled_at,
         }, None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def decide_delivery_plan_by_buyer(
+    db: Session, order_id: UUID, buyer_id: UUID, decision: DeliveryPlanDecision
+):
+    try:
+        order = db.query(Order).filter(
+            Order.id == order_id, Order.buyer_id == buyer_id
+        ).with_for_update().first()
+        if not order:
+            db.rollback()
+            return None, "not_found"
+        if order.delivery_plan_status != "seller_proposed":
+            db.rollback()
+            return None, "No hay una nueva propuesta pendiente de respuesta."
+        if decision.action == "accept":
+            order.delivery_plan_status = "coordinated"
+        else:
+            order.delivery_plan_status = "requested"
+            order.delivery_estimated_date = None
+            order.delivery_time_window = None
+            order.delivery_transport_type = None
+            order.delivery_scheduled_at = None
+        db.commit()
+        return get_order_by_id(db, order.id, buyer_id), None
     except SQLAlchemyError:
         db.rollback()
         raise
