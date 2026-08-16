@@ -110,6 +110,10 @@ def ensure_order_pickup_columns(engine):
         "pickup_buyer_arrived_at": "TIMESTAMP",
         "pickup_seller_handed_at": "TIMESTAMP",
         "pickup_buyer_received_at": "TIMESTAMP",
+        "delivery_transport_type": "VARCHAR(30)",
+        "delivery_estimated_date": "DATE",
+        "delivery_time_window": "VARCHAR(60)",
+        "delivery_scheduled_at": "TIMESTAMP",
     }
     with engine.begin() as connection:
         for column_name, definition in definitions.items():

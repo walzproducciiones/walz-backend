@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import CheckoutCreate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
     confirm_pickup_handover_by_seller,
@@ -16,6 +16,7 @@ from backend.app.services.order_service import (
     get_order_by_id,
     get_orders_by_buyer,
     get_orders_received_by_seller,
+    schedule_delivery_by_seller,
     update_order_status_by_seller,
     update_pickup_status_by_buyer,
 )
@@ -168,6 +169,22 @@ def confirm_pickup_handover(
     current_user: User = Depends(get_current_user),
 ):
     result, error = confirm_pickup_handover_by_seller(db, order_id, current_user.id)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return result
+
+@router.patch("/seller/{order_id}/delivery-plan")
+def save_delivery_plan(
+    order_id: UUID,
+    plan: DeliveryPlanUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = schedule_delivery_by_seller(
+        db, order_id, current_user.id, plan
+    )
     if error == "not_found":
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
     if error:

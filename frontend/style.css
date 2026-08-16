@@ -3142,3 +3142,19 @@ body {
 .order-timeline-step div { display: grid; gap: 3px; }
 .order-timeline-step strong { color: #173f47; }
 .order-timeline-step time { color: #536d72; font-size: 13px; }
+
+
+/* PROGRAMACION DE ENVIOS A DOMICILIO */
+.delivery-plan-card, .delivery-plan-form { display: grid; gap: 11px; margin-top: 16px; padding: 16px; background: #eef8f6; border: 1px solid #afd6d1; border-radius: 12px; color: #173f47; }
+.delivery-plan-card h4, .delivery-plan-form h4 { margin: 0; color: #173f47; }
+.delivery-plan-card > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 8px 0; border-bottom: 1px solid #d4e7e4; }
+.delivery-plan-card > div:last-child { border-bottom: 0; }
+.delivery-plan-card strong { color: #173f47; }
+.delivery-plan-form p { margin: 0; color: #526d71; }
+.delivery-plan-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.delivery-plan-fields label { display: grid; gap: 6px; color: #173f47; font-weight: 700; }
+.delivery-plan-fields input, .delivery-plan-fields select { width: 100%; min-width: 0; padding: 11px; border: 1px solid #9fb8b8; border-radius: 8px; background: #fff; color: #17272b; }
+@media (max-width: 760px) { .delivery-plan-fields { grid-template-columns: 1fr; } }
+
+/* MENSAJE VISIBLE DE PROGRAMACION */
+.delivery-plan-inline-message { min-height: 20px; margin: 0; color: #a32620 !important; font-weight: 700; }

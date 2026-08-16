@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,7 +9,7 @@ from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
-from backend.app.schemas.order import CheckoutCreate, OrderCreate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanUpdate, OrderCreate
 from backend.app.services.order_status_service import can_transition_order_status
 
 
@@ -227,6 +227,10 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
             "pickup_buyer_arrived_at": order.pickup_buyer_arrived_at,
             "pickup_seller_handed_at": order.pickup_seller_handed_at,
             "pickup_buyer_received_at": order.pickup_buyer_received_at,
+            "delivery_transport_type": order.delivery_transport_type,
+            "delivery_estimated_date": order.delivery_estimated_date,
+            "delivery_time_window": order.delivery_time_window,
+            "delivery_scheduled_at": order.delivery_scheduled_at,
             "seller_total": round(seller_total, 2),
             "buyer": {
                 "name": f"{order.buyer.first_name} {order.buyer.last_name}",
@@ -399,6 +403,14 @@ def update_order_status_by_seller(
         current_status = order.status
         is_pickup = "metodo: retiro en el local" in str(order.shipping_address or "").lower()
 
+        if (
+            not is_pickup
+            and new_status == OrderStatus.SHIPPED
+            and not (order.delivery_transport_type and order.delivery_estimated_date and order.delivery_time_window)
+        ):
+            db.rollback()
+            return None, "Primero debes informar la fecha, la franja horaria y el medio de envio."
+
         if is_pickup and new_status == OrderStatus.DELIVERED:
             db.rollback()
             return None, "En un retiro, el comprador tambien debe confirmar la recepcion."
@@ -486,6 +498,63 @@ def confirm_pickup_handover_by_seller(db: Session, order_id: UUID, seller_id: UU
         order.pickup_seller_handed_at = datetime.now(timezone.utc)
         db.commit()
         return {"id": str(order.id), "status": order.status.value, "pickup_status": order.pickup_status}, None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+def schedule_delivery_by_seller(
+    db: Session,
+    order_id: UUID,
+    seller_id: UUID,
+    plan: DeliveryPlanUpdate,
+):
+    try:
+        order = (
+            db.query(Order)
+            .filter(Order.id == order_id)
+            .with_for_update()
+            .first()
+        )
+        if not order:
+            db.rollback()
+            return None, "not_found"
+
+        products = db.query(Product).filter(
+            Product.id.in_([item.product_id for item in order.items])
+        ).all()
+        if not products or any(product.seller_id != seller_id for product in products):
+            db.rollback()
+            return None, "not_found"
+
+        is_pickup = "retiro en el local" in str(order.shipping_address or "").lower()
+        if is_pickup:
+            db.rollback()
+            return None, "Este pedido utiliza retiro en el local y no necesita programar un envio."
+
+        if order.status != OrderStatus.PAID:
+            db.rollback()
+            return None, "La programacion se realiza despues de confirmar el pedido y antes de enviarlo."
+
+        today_argentina = datetime.now(
+            timezone(timedelta(hours=-3))
+        ).date()
+        if plan.estimated_date < today_argentina:
+            db.rollback()
+            return None, "La fecha estimada no puede estar en el pasado."
+
+        order.delivery_transport_type = plan.transport_type
+        order.delivery_estimated_date = plan.estimated_date
+        order.delivery_time_window = plan.time_window.strip()
+        order.delivery_scheduled_at = datetime.now(timezone.utc)
+        db.commit()
+
+        return {
+            "id": str(order.id),
+            "delivery_transport_type": order.delivery_transport_type,
+            "delivery_estimated_date": order.delivery_estimated_date.isoformat(),
+            "delivery_time_window": order.delivery_time_window,
+            "delivery_scheduled_at": order.delivery_scheduled_at,
+        }, None
     except SQLAlchemyError:
         db.rollback()
         raise

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Literal, Optional
 from uuid import UUID
 
@@ -58,6 +58,10 @@ class OrderResponse(OrderBase):
     pickup_buyer_arrived_at: Optional[datetime] = None
     pickup_seller_handed_at: Optional[datetime] = None
     pickup_buyer_received_at: Optional[datetime] = None
+    delivery_transport_type: Optional[str] = None
+    delivery_estimated_date: Optional[date] = None
+    delivery_time_window: Optional[str] = None
+    delivery_scheduled_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     items: List[OrderItemResponse]
@@ -71,3 +75,8 @@ class OrderStatusUpdate(BaseModel):
 
 class PickupStatusUpdate(BaseModel):
     action: Literal["buyer_going", "buyer_arrived", "buyer_received"]
+
+class DeliveryPlanUpdate(BaseModel):
+    transport_type: Literal["moto", "correo", "propio", "otro"]
+    estimated_date: date
+    time_window: str = Field(..., min_length=3, max_length=60)

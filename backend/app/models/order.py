@@ -10,6 +10,7 @@ from sqlalchemy import (
     UUID,
     Enum,
     DateTime,
+    Date,
 )
 
 from sqlalchemy.orm import relationship
@@ -64,6 +65,11 @@ class Order(Base):
     pickup_buyer_arrived_at = Column(DateTime(timezone=True), nullable=True)
     pickup_seller_handed_at = Column(DateTime(timezone=True), nullable=True)
     pickup_buyer_received_at = Column(DateTime(timezone=True), nullable=True)
+
+    delivery_transport_type = Column(String(30), nullable=True)
+    delivery_estimated_date = Column(Date, nullable=True)
+    delivery_time_window = Column(String(60), nullable=True)
+    delivery_scheduled_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

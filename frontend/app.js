@@ -1823,7 +1823,7 @@ function renderOrderDetail(order, items) {
                 }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
-            ${isPickup ? pickupTimeline : ""}
+            ${isPickup ? pickupTimeline : renderDeliveryPlan(order)}
             ${isPickup && pickupStatus ? `<div class="pickup-progress-card"><strong>${escapeHtml(pickupLabels[pickupStatus] || pickupStatus)}</strong><div class="seller-order-actions">${pickupActions}</div></div>` : ""}
             ${canCancel ? `
                 <div class="order-cancel-actions">
@@ -2870,7 +2870,7 @@ function renderReceivedOrders(orders) {
                             <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
                         </div>
 
-                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : ""}
+                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : renderDeliveryPlan(order)}
 
                         <h3 class="order-total">
                             Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
@@ -2885,6 +2885,96 @@ function renderReceivedOrders(orders) {
 }
 
 
+
+
+// WALZ_DELIVERY_PLAN_V1
+function getDeliveryTransportLabel(value) {
+    const labels = {
+        moto: "Moto o mensajeria",
+        correo: "Correo o paqueteria",
+        propio: "Transporte propio de la tienda",
+        otro: "Otro medio de transporte"
+    };
+    return labels[String(value || "")] || "No informado";
+}
+
+function renderDeliveryPlan(order) {
+    if (!order?.delivery_estimated_date) return "";
+    const dateParts = String(order.delivery_estimated_date).split("-");
+    const displayedDate = dateParts.length === 3
+        ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
+        : String(order.delivery_estimated_date);
+    return `<section class="delivery-plan-card">
+        <h4>Entrega programada</h4>
+        <div><span>Fecha estimada</span><strong>${escapeHtml(displayedDate)}</strong></div>
+        <div><span>Franja horaria</span><strong>${escapeHtml(order.delivery_time_window || "No informada")}</strong></div>
+        <div><span>Medio de envio</span><strong>${escapeHtml(getDeliveryTransportLabel(order.delivery_transport_type))}</strong></div>
+    </section>`;
+}
+
+function renderDeliveryPlanForm(order) {
+    const orderId = escapeHtml(String(order.id || ""));
+    const safeId = orderId.replace(/[^a-zA-Z0-9-]/g, "");
+    const today = new Date();
+    const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return `<section class="delivery-plan-form">
+        <h4>Programar envio</h4>
+        <p>Informa estos datos antes de marcar el pedido como enviado.</p>
+        <div class="delivery-plan-fields">
+            <label>Fecha estimada<input id="delivery-date-${safeId}" type="date" min="${minDate}" value="${escapeHtml(order.delivery_estimated_date || "")}"></label>
+            <label>Franja horaria<select id="delivery-window-${safeId}">
+                <option value="">Seleccionar</option>
+                <option value="08:00 a 12:00">08:00 a 12:00</option>
+                <option value="12:00 a 16:00">12:00 a 16:00</option>
+                <option value="16:00 a 20:00">16:00 a 20:00</option>
+                <option value="Horario a coordinar">Horario a coordinar</option>
+            </select></label>
+            <label>Medio de envio<select id="delivery-transport-${safeId}">
+                <option value="">Seleccionar</option>
+                <option value="moto">Moto o mensajeria</option>
+                <option value="correo">Correo o paqueteria</option>
+                <option value="propio">Transporte propio</option>
+                <option value="otro">Otro medio</option>
+            </select></label>
+        </div>
+        <button type="button" onclick="saveSellerDeliveryPlan('${escapeJs(String(order.id || ""))}')">Guardar programacion</button>
+        <p id="delivery-plan-message-${safeId}" class="delivery-plan-inline-message" role="alert"></p>
+    </section>`;
+}
+
+async function saveSellerDeliveryPlan(orderId) {
+    // WALZ_DELIVERY_SAVE_FIX_V1
+    const safeId = String(orderId).replace(/[^a-zA-Z0-9-]/g, "");
+    const inlineMessage = document.getElementById(`delivery-plan-message-${safeId}`);
+    if (inlineMessage) inlineMessage.textContent = "";
+    const estimatedDate = document.getElementById(`delivery-date-${safeId}`)?.value || "";
+    const timeWindow = document.getElementById(`delivery-window-${safeId}`)?.value || "";
+    const transportType = document.getElementById(`delivery-transport-${safeId}`)?.value || "";
+    if (!estimatedDate || !timeWindow || !transportType) {
+        if (inlineMessage) inlineMessage.textContent = "Completa la fecha, la franja horaria y el medio de envio.";
+        showMessage("Completa la fecha, la franja horaria y el medio de envio.", "error");
+        return;
+    }
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return handleExpiredSession();
+    try {
+        if (inlineMessage) inlineMessage.textContent = "Guardando programacion...";
+        const res = await fetch(`${API_URL}/orders/seller/${orderId}/delivery-plan`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+            body: JSON.stringify({ transport_type: transportType, estimated_date: estimatedDate, time_window: timeWindow })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) return handleExpiredSession();
+        if (!res.ok) throw new Error(data.detail || "No se pudo guardar la programacion.");
+        showMessage("Envio programado correctamente.", "success");
+        await loadReceivedOrders();
+    } catch (error) {
+        const message = error.message || "No se pudo guardar la programacion.";
+        if (inlineMessage) inlineMessage.textContent = message;
+        showMessage(message, "error");
+    }
+}
 
 function renderSellerOrderActions(order) {
     const status = String(order.status || "pending").toLowerCase();
@@ -2914,25 +3004,16 @@ function renderSellerOrderActions(order) {
     }
 
     if (status === "paid") {
-        const actionLabel = isPickup
-            ? "Marcar listo para retirar"
-            : "Marcar como enviado";
+        if (!isPickup && !order.delivery_estimated_date) {
+            return `${renderDeliveryPlanForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
+        }
 
+        const actionLabel = isPickup ? "Marcar listo para retirar" : "Marcar como enviado";
         return `
+            ${!isPickup ? renderDeliveryPlan(order) : ""}
             <div class="seller-order-actions">
-                <button
-                    type="button"
-                    onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')"
-                >
-                    ${actionLabel}
-                </button>
-                <button
-                    type="button"
-                    class="seller-cancel-button"
-                    onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')"
-                >
-                    Cancelar venta
-                </button>
+                <button type="button" onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')">${actionLabel}</button>
+                <button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button>
             </div>
         `;
     }
@@ -4987,7 +5068,7 @@ async function syncVisibleWalzData(showConfirmation = false) {
         if (walzSectionIsVisible("orders-section")) {
             await loadMyOrders(true);
         } else if (walzSectionIsVisible("sales-orders-section")) {
-            await loadReceivedOrders(true);
+            if (!document.querySelector(".delivery-plan-form :focus")) await loadReceivedOrders(true);
         } else if (walzSectionIsVisible("my-products-section")) {
             if (!document.querySelector(".my-product-edit-form")) await loadMyProducts();
         } else if (walzSectionIsVisible("marketplace-content")) {
