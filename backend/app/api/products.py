@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
 from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter, ProductUpdate
@@ -6,6 +6,7 @@ from backend.app.services.product_service import create_product, create_products
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
 from uuid import UUID
+from backend.app.services.product_image_service import upload_product_image
 import traceback
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -24,6 +25,23 @@ def create_new_product(
     current_user: User = Depends(get_current_user)
 ):
     return create_product(db, current_user.id, product)
+
+@router.post("/images")
+async def upload_my_product_image(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    role = str(current_user.role or "").upper()
+    if role not in {"VENDEDOR", "SELLER", "ADMIN"}:
+        raise HTTPException(status_code=403, detail="Tu cuenta no esta habilitada para vender.")
+    content = await image.read()
+    try:
+        image_url = upload_product_image(current_user.id, content, image.content_type or "")
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    return {"image_url": image_url}
 
 @router.post("/bulk", response_model=list[ProductResponse])
 def create_products_in_bulk(

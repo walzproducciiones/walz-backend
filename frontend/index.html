@@ -347,6 +347,11 @@
                 id="prod-image-url"
                 placeholder="Enlace de la imagen (opcional)"
             >
+            <div class="product-image-upload-box">
+                <label for="prod-image-file"><strong>O elegi una imagen</strong><span>WalZ la reducira y convertira automaticamente.</span></label>
+                <input type="file" id="prod-image-file" accept="image/jpeg,image/png,image/webp" onchange="previewNewProductImage()">
+                <div id="prod-image-preview" class="product-upload-preview">Sin imagen seleccionada</div>
+            </div>
 
             <button
                 type="button"

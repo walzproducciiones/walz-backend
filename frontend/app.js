@@ -453,6 +453,34 @@ function handleExpiredSession() {
 // PRODUCTOS
 // =====================================================
 
+async function optimizeProductImage(file) {
+    if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Selecciona una imagen JPG, PNG o WebP.");
+    if (file.size > 12 * 1024 * 1024) throw new Error("La imagen original no puede superar 12 MB.");
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1200 / bitmap.width, 800 / bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", 0.82));
+    if (!blob) throw new Error("No se pudo preparar la imagen.");
+    return blob;
+}
+
+async function uploadNewProductImage(file) {
+    const blob = await optimizeProductImage(file); const form = new FormData();
+    form.append("image", blob, "producto.webp");
+    const response = await fetch(`${API_URL}/products/images`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("walz_token")}` }, body: form });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "No se pudo subir la imagen.");
+    return data.image_url;
+}
+
+function previewNewProductImage() {
+    const file = document.getElementById("prod-image-file")?.files?.[0]; const preview = document.getElementById("prod-image-preview");
+    if (!preview) return; if (!file) { preview.textContent = "Sin imagen seleccionada"; return; }
+    const url = URL.createObjectURL(file); preview.innerHTML = `<img src="${url}" alt="Vista previa">`;
+}
 async function handleCreateProduct() {
 
     token = localStorage.getItem("walz_token");
@@ -489,8 +517,8 @@ async function handleCreateProduct() {
     const description =
         document.getElementById("prod-description").value.trim();
 
-    const imageUrl =
-        document.getElementById("prod-image-url").value.trim();
+    let imageUrl = document.getElementById("prod-image-url").value.trim();
+    const imageFile = document.getElementById("prod-image-file")?.files?.[0] || null;
 
     if (!name || isNaN(price) || isNaN(stock)) {
 
@@ -503,6 +531,10 @@ async function handleCreateProduct() {
     }
 
     try {
+        if (imageFile) {
+            showMessage("Preparando y subiendo imagen...", "success");
+            imageUrl = await uploadNewProductImage(imageFile);
+        }
 
         const res = await fetch(
             `${API_URL}/products/`,
@@ -554,6 +586,8 @@ async function handleCreateProduct() {
             document.getElementById("prod-category").value = "";
             document.getElementById("prod-description").value = "";
             document.getElementById("prod-image-url").value = "";
+            document.getElementById("prod-image-file").value = "";
+            document.getElementById("prod-image-preview").textContent = "Sin imagen seleccionada";
 
             await loadProducts();
 
@@ -4587,6 +4621,7 @@ window.handleResetPassword = handleResetPassword;
 window.handleLogout = handleLogout;
 window.handleExpiredSession = handleExpiredSession;
 window.handleCreateProduct = handleCreateProduct;
+window.previewNewProductImage = previewNewProductImage;
 
 window.loadProducts = loadProducts;
 
