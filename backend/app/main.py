@@ -50,11 +50,18 @@ app = FastAPI(
 origins = [
     "https://walz-frontend.onrender.com",
     "https://walz-backend.onrender.com",
+    "https://walzone.com.ar",
+    "https://www.walzone.com.ar",
     "http://localhost",
     "http://localhost:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
 ]
+
+extra_frontend_origin = os.getenv("WALZ_FRONTEND_URL", "").strip().rstrip("/")
+if extra_frontend_origin and extra_frontend_origin not in origins:
+    origins.append(extra_frontend_origin)
+
 
 app.add_middleware(
     CORSMiddleware,

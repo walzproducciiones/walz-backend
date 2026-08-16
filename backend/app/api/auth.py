@@ -98,7 +98,6 @@ def login(
     user_credentials: UserLogin,
     db: Session = Depends(get_db),
 ):
-    print("🔐 LOGIN:", user_credentials.email)
 
     user = (
         db.query(User)
@@ -107,29 +106,20 @@ def login(
     )
 
     if not user:
-        print(
-            "❌ LOGIN: usuario NO encontrado:",
-            user_credentials.email,
-        )
         raise HTTPException(
             status_code=401,
             detail="Credenciales incorrectas",
         )
-
-    print("✅ LOGIN: usuario encontrado:", user.email)
 
 
     if not verify_password(
         user_credentials.password,
         user.password_hash,
     ):
-        print("❌ LOGIN: contraseña incorrecta")
         raise HTTPException(
             status_code=401,
             detail="Credenciales incorrectas",
         )
-
-    print("✅ LOGIN: contraseña correcta")
 
     user.last_login = datetime.now(timezone.utc)
     db.commit()
@@ -143,8 +133,6 @@ def login(
 
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
-
-    print("✅ LOGIN: tokens creados")
 
     return {
         "access_token": access_token,
@@ -340,16 +328,3 @@ def get_my_profile(
     current_user: User = Depends(get_current_user),
 ):
     return current_user
-
-@router.get("/debug/user-exists")
-def debug_user_exists(
-    email: str,
-    db: Session = Depends(get_db)
-):
-    user = db.query(User).filter(User.email == email).first()
-
-    return {
-        "email": email,
-        "exists": user is not None,
-        "database": "configured"
-    }
