@@ -9,9 +9,10 @@ from backend.app.database.schema_updates import (
     ensure_admin_user,
     ensure_banner_proposal_columns,
     ensure_product_promotion_columns,
+    ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, user, product, order, password_reset_token, seller_application, store
+from backend.app.models import banner, email_change_token, user, product, order, password_reset_token, seller_application, store
 
 
 # ============================================================
@@ -25,9 +26,11 @@ banner.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
 seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
+email_change_token.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
+ensure_user_terms_columns(engine)
 
 
 # ============================================================

@@ -7,16 +7,18 @@ from sqlalchemy.orm import Session
 
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserCreate, UserLogin, UserResponse
+from backend.app.schemas.user import AccountClosureRequest, EmailChangeConfirm, EmailChangeRequest, ForgotPasswordRequest, ResetPasswordRequest, UserCreate, UserLogin, UserResponse
 from backend.app.security.jwt import (
     create_access_token,
     create_refresh_token,
     decode_token,
 )
 from backend.app.security.password import verify_password
-from backend.app.services.email_service import send_password_reset_email
+from backend.app.services.email_service import send_email_change_confirmation, send_password_reset_email
 from backend.app.services.password_reset_service import create_password_reset_token, reset_password_with_token
+from backend.app.services.email_change_service import confirm_email_change, create_email_change_token
 from backend.app.services.auth_service import register_user
+from backend.app.services.account_service import close_user_account
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -115,6 +117,13 @@ def login(
         )
 
     print("✅ LOGIN: usuario encontrado:", user.email)
+
+    if not user.is_active:
+        print("LOGIN: cuenta desactivada")
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
+        )
 
     if not verify_password(
         user_credentials.password,
@@ -222,6 +231,63 @@ def require_admin_user(
 
     return current_user
 
+
+@router.post("/request-email-change")
+def request_email_change(
+    request: EmailChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    new_email = request.new_email.strip().lower()
+    if new_email == str(current_user.email).lower():
+        raise HTTPException(status_code=400, detail="El correo nuevo es igual al actual.")
+    if not user.is_active:
+        print("LOGIN: cuenta desactivada")
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
+        )
+
+    if not verify_password(request.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contrasena actual es incorrecta.")
+    if db.query(User).filter(User.email == new_email).first():
+        raise HTTPException(status_code=400, detail="Ese correo ya pertenece a otra cuenta.")
+    token = create_email_change_token(db, current_user, new_email)
+    try:
+        send_email_change_confirmation(new_email, token)
+    except Exception as error:
+        print("No se pudo enviar la confirmacion de correo:", error)
+        raise HTTPException(status_code=503, detail="No pudimos enviar la confirmacion al correo nuevo.")
+    return {"message": "Enviamos un enlace de confirmacion al correo nuevo."}
+
+@router.post("/confirm-email-change")
+def confirm_new_email(request: EmailChangeConfirm, db: Session = Depends(get_db)):
+    new_email = confirm_email_change(db, request.token)
+    if not new_email:
+        raise HTTPException(status_code=400, detail="El enlace es invalido, ya fue utilizado, vencio o el correo ya esta ocupado.")
+    return {"message": "Correo actualizado correctamente.", "email": new_email}
+
+@router.post("/close-account")
+def close_account(
+    request: AccountClosureRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if request.confirmation.strip().upper() != "CERRAR MI CUENTA":
+        raise HTTPException(status_code=400, detail="Escribe exactamente CERRAR MI CUENTA para confirmar.")
+    if not user.is_active:
+        print("LOGIN: cuenta desactivada")
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
+        )
+
+    if not verify_password(request.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contrasena actual es incorrecta.")
+    closed, error = close_user_account(db, current_user)
+    if not closed:
+        raise HTTPException(status_code=400, detail=error)
+    return {"message": "Cuenta cerrada correctamente."}
 
 @router.get("/me", response_model=UserResponse)
 def get_my_profile(

@@ -92,3 +92,17 @@ def send_password_reset_email(email_to: str, token: str):
         raise RuntimeError(f"Resend respondio {response.status_code}: {response.text}")
     print(f"Correo de recuperacion enviado mediante Resend a {email_to}")
     return True
+
+def send_email_change_confirmation(email_to: str, token: str):
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key: raise RuntimeError("RESEND_API_KEY no esta configurada.")
+    base_url = os.getenv("WALZ_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/")
+    confirmation_link = f"{base_url}/?email_change_token={token}"
+    payload = {
+        "from": _get_resend_sender(), "to": [email_to], "subject": "Confirma tu nuevo correo en WalZ One",
+        "html": f"""<h1>Confirmar correo</h1><p>Recibimos una solicitud para usar este correo en WalZ One.</p><p><a href="{confirmation_link}">Confirmar nuevo correo</a></p><p>El enlace vence en 30 minutos y sirve una sola vez.</p><p>Si no solicitaste esto, ignora el mensaje.</p>""",
+    }
+    response = requests.post("https://api.resend.com/emails", json=payload, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "WalZ-One/1.0"}, timeout=15)
+    if not 200 <= response.status_code < 300: raise RuntimeError(f"Resend respondio {response.status_code}: {response.text}")
+    print(f"Confirmacion de correo enviada mediante Resend a {email_to}")
+    return True

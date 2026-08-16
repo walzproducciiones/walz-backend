@@ -73,6 +73,11 @@
         </div>
 
 
+        <div id="confirm-email-change-form" class="auth-alternate-form" style="display:none;">
+            <h3>Confirmar nuevo correo</h3><p>Presiona el boton para completar el cambio. Tu tienda y tus datos se conservaran.</p>
+            <button type="button" id="confirm-email-change-button" onclick="confirmEmailChange()">Confirmar correo</button>
+            <p class="switch-text"><a href="#" onclick="showLogin(); return false;">Volver a iniciar sesion</a></p>
+        </div>
         <!-- RECUPERAR CONTRASENA -->
         <div id="forgot-password-form" class="auth-alternate-form" style="display:none;">
             <h3>Recuperar contrasena</h3>
@@ -124,6 +129,11 @@
                 id="reg-password"
                 placeholder="Contraseña (mín. 8 caracteres)"
             >
+
+            <label class="terms-acceptance-label">
+                <input type="checkbox" id="reg-accepted-terms">
+                <span>Lei y acepto las <a href="#" onclick="openTermsModal(); return false;">reglas, terminos y condiciones de WalZ One</a>.</span>
+            </label>
 
             <button
                 type="button"
@@ -263,6 +273,9 @@
         <span id="banner-proposals-pending-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
+    <button type="button" id="account-settings-button" class="orders-button account-settings-button" onclick="showAccountSettings()">
+        <span aria-hidden="true">&#128100;</span><span>Mi cuenta</span>
+    </button>
     <button
         type="button"
         onclick="handleLogout()"
@@ -768,6 +781,26 @@
 <!-- =====================================================
      SOLICITUD PARA VENDER
 ====================================================== -->
+<section id="account-settings-section" class="account-settings-section" style="display:none;">
+    <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
+    <h2>Mi cuenta</h2>
+    <p>El cambio conserva tu tienda, productos, pedidos y permisos.</p>
+    <div class="account-settings-card">
+        <p>Correo actual: <strong id="account-current-email">Cargando...</strong></p>
+        <label>Correo nuevo<input type="email" id="account-new-email" autocomplete="email" placeholder="nuevo@correo.com"></label>
+        <label>Contrasena actual<input type="password" id="account-current-password" autocomplete="current-password" placeholder="Confirma tu identidad"></label>
+        <button type="button" id="account-email-change-button" onclick="requestEmailChange()">Enviar confirmacion</button>
+        <p id="account-settings-message" class="delivery-error" role="alert"></p>
+        <div class="account-danger-zone">
+            <h3>Cerrar mi cuenta</h3>
+            <p>Se ocultaran tu tienda, productos y publicidad. Los pedidos historicos se conservaran. No podras cerrar si hay compras o ventas en proceso.</p>
+            <label>Contrasena actual<input type="password" id="close-account-password" autocomplete="current-password"></label>
+            <label>Escribe CERRAR MI CUENTA<input type="text" id="close-account-confirmation" autocomplete="off" placeholder="CERRAR MI CUENTA"></label>
+            <button type="button" id="close-account-button" class="close-account-button" onclick="closeMyAccount()">Cerrar mi cuenta</button>
+            <p id="close-account-message" class="delivery-error" role="alert"></p>
+        </div>
+    </div>
+</section>
 <section id="seller-application-section" class="seller-application-section" style="display:none;">
     <button type="button" onclick="showMarketplaceContent()">&larr; Volver al marketplace</button>
     <h2>Quiero vender en WalZ</h2>
@@ -980,6 +1013,25 @@
 
 <script src="./app.js"></script>
 
+<div id="terms-modal" class="terms-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+    <div class="terms-modal-card">
+        <div class="terms-modal-heading"><h2 id="terms-title">Reglas y terminos de WalZ One</h2><button type="button" onclick="closeTermsModal()" aria-label="Cerrar">Cerrar</button></div>
+        <p><strong>Version 2026-08-15-v1</strong></p>
+        <ol>
+            <li><strong>Datos verdaderos:</strong> cada persona debe registrar informacion propia y mantener seguro su acceso.</li>
+            <li><strong>Productos permitidos:</strong> no se pueden publicar productos ilegales, falsificados, peligrosos ni medicamentos sin una habilitacion especifica de WalZ.</li>
+            <li><strong>Responsabilidad del vendedor:</strong> debe informar correctamente precio, stock, descripcion, imagen, condiciones y disponibilidad.</li>
+            <li><strong>Pedidos:</strong> compradores y vendedores deben respetar los estados, cancelaciones, entregas y comunicaciones registradas en WalZ.</li>
+            <li><strong>Imagenes:</strong> cada vendedor administra sus imagenes y debe tener derecho a utilizarlas. WalZ puede optimizarlas o retirar contenido inadecuado.</li>
+            <li><strong>Publicidad:</strong> las propuestas pueden ser revisadas, aprobadas, rechazadas o pausadas por la administracion.</li>
+            <li><strong>Seguridad:</strong> las contrasenas son personales. Los enlaces de recuperacion y confirmacion no deben compartirse.</li>
+            <li><strong>Cierre de cuenta:</strong> una cuenta puede cerrarse cuando no tenga operaciones en proceso. Sus publicaciones se ocultan y los pedidos historicos se conservan.</li>
+            <li><strong>Incumplimientos:</strong> WalZ puede pausar publicaciones o cuentas que incumplan estas reglas o afecten a otros usuarios.</li>
+        </ol>
+        <p class="terms-provisional-note">Esta es una version operativa inicial. Antes del lanzamiento comercial se completara con la politica de privacidad y la revision legal correspondiente.</p>
+        <button type="button" class="terms-accept-button" onclick="acceptTermsFromModal()">Aceptar y continuar</button>
+    </div>
+</div>
 </body>
 
 </html>

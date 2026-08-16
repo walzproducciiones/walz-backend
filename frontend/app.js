@@ -68,14 +68,24 @@ function clearCartStorage() {
 // AUTENTICACIÓN
 // =====================================================
 
+function openTermsModal(){const modal=document.getElementById("terms-modal");if(modal)modal.style.display="flex"}
+function closeTermsModal(){const modal=document.getElementById("terms-modal");if(modal)modal.style.display="none"}
+function acceptTermsFromModal(){const checkbox=document.getElementById("reg-accepted-terms");if(checkbox)checkbox.checked=true;closeTermsModal()}
+
 async function handleRegister() {
     const first_name = document.getElementById("reg-firstname").value.trim();
     const last_name = document.getElementById("reg-lastname").value.trim();
     const email = document.getElementById("reg-email").value.trim();
     const password = document.getElementById("reg-password").value;
+    const acceptedTerms = Boolean(document.getElementById("reg-accepted-terms")?.checked);
 
     if (!email || !password || !first_name || !last_name) {
         showMessage("Completa todos los campos.", "error");
+        return;
+    }
+
+    if (!acceptedTerms) {
+        showMessage("Debes aceptar las reglas, terminos y condiciones.", "error");
         return;
     }
 
@@ -90,6 +100,7 @@ async function handleRegister() {
                 first_name,
                 last_name,
                 password,
+                accepted_terms: acceptedTerms,
                 role: "COMPRADOR"
             })
         });
@@ -112,6 +123,61 @@ async function handleRegister() {
     }
 }
 
+
+async function showAccountSettings() {
+    hideAllWalzWorkSections();
+    const section = document.getElementById("account-settings-section");
+    if (section) section.style.display = "block";
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) { handleExpiredSession(); return; }
+    try {
+        const response = await fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${currentToken}` } });
+        if (response.status === 401) { handleExpiredSession(); return; }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || "No se pudo cargar la cuenta.");
+        const email = document.getElementById("account-current-email"); if (email) email.textContent = data.email || "";
+    } catch (error) { showMessage(error.message, "error"); }
+}
+
+async function requestEmailChange() {
+    const newEmail = document.getElementById("account-new-email")?.value.trim() || "";
+    const currentPassword = document.getElementById("account-current-password")?.value || "";
+    const message = document.getElementById("account-settings-message");
+    const button = document.getElementById("account-email-change-button");
+    if (!newEmail || currentPassword.length < 8) { if(message) message.textContent="Completa el correo nuevo y tu contrasena actual."; return; }
+    if(button){button.disabled=true;button.textContent="Enviando..."}
+    try {
+        const response=await fetch(`${API_URL}/auth/request-email-change`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${localStorage.getItem("walz_token")}`},body:JSON.stringify({new_email:newEmail,current_password:currentPassword})});
+        const data=await response.json().catch(()=>({}));
+        if(response.status===401){handleExpiredSession();return} if(!response.ok)throw new Error(data.detail||"No se pudo solicitar el cambio.");
+        if(message){message.classList.add("account-success-message");message.textContent=data.message}
+        document.getElementById("account-current-password").value="";
+    } catch(error){if(message){message.classList.remove("account-success-message");message.textContent=error.message}}
+    finally{if(button){button.disabled=false;button.textContent="Enviar confirmacion"}}
+}
+
+function showConfirmEmailChange(){hideAuthForms();document.getElementById("confirm-email-change-form").style.display="flex"}
+
+async function confirmEmailChange(){
+    const tokenValue=new URLSearchParams(window.location.search).get("email_change_token")||"";const button=document.getElementById("confirm-email-change-button");
+    if(!tokenValue){showMessage("El enlace no es valido.","error");return} if(button){button.disabled=true;button.textContent="Confirmando..."}
+    try{const response=await fetch(`${API_URL}/auth/confirm-email-change`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:tokenValue})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||"No se pudo cambiar el correo.");window.history.replaceState({},document.title,window.location.pathname);handleLogout();showMessage("Correo actualizado. Inicia sesion con el correo nuevo.","success")}
+    catch(error){showMessage(error.message||"No se pudo cambiar el correo.","error");if(button){button.disabled=false;button.textContent="Confirmar correo"}}
+}
+
+async function closeMyAccount() {
+    const password=document.getElementById("close-account-password")?.value||"";
+    const confirmation=document.getElementById("close-account-confirmation")?.value.trim()||"";
+    const message=document.getElementById("close-account-message");const button=document.getElementById("close-account-button");
+    if(password.length<8||confirmation!=="CERRAR MI CUENTA"){if(message)message.textContent="Completa tu contrasena y escribe exactamente CERRAR MI CUENTA.";return}
+    if(!confirm("Confirmas el cierre de tu cuenta? Tus publicaciones dejaran de estar visibles."))return;
+    if(button){button.disabled=true;button.textContent="Cerrando cuenta..."}
+    try{
+        const response=await fetch(`${API_URL}/auth/close-account`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${localStorage.getItem("walz_token")}`},body:JSON.stringify({current_password:password,confirmation})});
+        const data=await response.json().catch(()=>({}));if(response.status===401){handleExpiredSession();return}if(!response.ok)throw new Error(data.detail||"No se pudo cerrar la cuenta.");
+        handleLogout();showMessage("Tu cuenta fue cerrada correctamente.","success");
+    }catch(error){if(message)message.textContent=error.message||"No se pudo cerrar la cuenta.";if(button){button.disabled=false;button.textContent="Cerrar mi cuenta"}}
+}
 
 async function handleForgotPassword() {
     const emailInput = document.getElementById("forgot-password-email");
@@ -2327,7 +2393,7 @@ function showMessage(
 // =====================================================
 
 function hideAuthForms() {
-    for (const id of ["login-form", "register-form", "forgot-password-form", "reset-password-form"]) {
+    for (const id of ["login-form", "register-form", "forgot-password-form", "reset-password-form", "confirm-email-change-form"]) {
         const element = document.getElementById(id);
         if (element) element.style.display = "none";
     }
@@ -2344,6 +2410,7 @@ function showAuth() {
     document.getElementById("auth-section").style.display = "block";
     document.getElementById("marketplace-section").style.display = "none";
     if (new URLSearchParams(window.location.search).get("reset_token")) showResetPassword();
+    else if (new URLSearchParams(window.location.search).get("email_change_token")) showConfirmEmailChange();
 }
 
 function showMarketplace() {
@@ -3822,7 +3889,7 @@ function hideAllWalzWorkSections() {
     for (const id of [
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
-        "seller-application-section", "seller-applications-admin-section"
+        "seller-application-section", "seller-applications-admin-section", "account-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }
@@ -4399,8 +4466,16 @@ function closeWalzNewsBar() {
 // =====================================================
 
 window.handleRegister = handleRegister;
+window.openTermsModal = openTermsModal;
+window.closeTermsModal = closeTermsModal;
+window.acceptTermsFromModal = acceptTermsFromModal;
 window.handleLogin = handleLogin;
 window.handleForgotPassword = handleForgotPassword;
+window.showAccountSettings = showAccountSettings;
+window.closeMyAccount = closeMyAccount;
+window.requestEmailChange = requestEmailChange;
+window.showConfirmEmailChange = showConfirmEmailChange;
+window.confirmEmailChange = confirmEmailChange;
 window.handleResetPassword = handleResetPassword;
 window.handleLogout = handleLogout;
 window.handleExpiredSession = handleExpiredSession;
@@ -4494,9 +4569,13 @@ document.addEventListener(
         updateCartUI();
         showWalzNewsBarIfAllowed();
 
-        const resetTokenFromUrl = new URLSearchParams(window.location.search).get("reset_token");
+        const resetTokenFromUrl = new URLSearchParams(window.location.search).get("reset_token" );
+        const emailChangeTokenFromUrl = new URLSearchParams(window.location.search).get("email_change_token" );
 
-        if (resetTokenFromUrl) {
+        if (emailChangeTokenFromUrl) {
+            showAuth();
+            showConfirmEmailChange();
+        } else if (resetTokenFromUrl) {
             showAuth();
             showResetPassword();
         } else if (token) {

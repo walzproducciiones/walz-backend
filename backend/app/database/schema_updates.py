@@ -68,3 +68,15 @@ def ensure_banner_proposal_columns(engine):
                 connection.execute(text(
                     f"ALTER TABLE banners ADD COLUMN {column_name} {definition}"
                 ))
+
+def ensure_user_terms_columns(engine):
+    """Add terms acceptance evidence without changing existing accounts."""
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+    existing_columns = {column["name"] for column in inspector.get_columns("users")}
+    with engine.begin() as connection:
+        if "terms_accepted_at" not in existing_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN terms_accepted_at TIMESTAMP"))
+        if "terms_version" not in existing_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN terms_version VARCHAR(40)"))

@@ -71,6 +71,16 @@ class User(Base):
         default=False
     )
 
+    terms_accepted_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    terms_version = Column(
+        String(40),
+        nullable=True
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()

@@ -20,6 +20,7 @@ class UserCreate(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=80)
     phone: Optional[str] = None
     password: str = Field(..., min_length=8)
+    accepted_terms: bool = False
 
 
 # Esquema para devolver datos al FRONTEND
@@ -47,3 +48,12 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(..., min_length=32, max_length=200)
     new_password: str = Field(..., min_length=8, max_length=128)
+class EmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    current_password: str = Field(..., min_length=8, max_length=128)
+
+class EmailChangeConfirm(BaseModel):
+    token: str = Field(..., min_length=32, max_length=200)
+class AccountClosureRequest(BaseModel):
+    current_password: str = Field(..., min_length=8, max_length=128)
+    confirmation: str = Field(..., min_length=16, max_length=40)

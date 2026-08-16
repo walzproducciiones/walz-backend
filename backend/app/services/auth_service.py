@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from backend.app.models.user import User
@@ -11,6 +13,9 @@ def register_user(
     db: Session,
     user_data: UserCreate
 ):
+    if not user_data.accepted_terms:
+        return None, "Debes aceptar las reglas, terminos y condiciones para crear la cuenta."
+
     existing_user = (
         db.query(User)
         .filter(User.email == user_data.email)
@@ -28,7 +33,9 @@ def register_user(
         last_name=user_data.last_name,
         phone=user_data.phone,
         password_hash=hashed_pw,
-        role="COMPRADOR"
+        role="COMPRADOR",
+        terms_accepted_at=datetime.now(timezone.utc),
+        terms_version="2026-08-15-v1"
     )
 
     db.add(new_user)
