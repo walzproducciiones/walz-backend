@@ -4279,11 +4279,25 @@ function renderStorePreview() {
     if (!container) return;
     const name = document.getElementById("store-name")?.value.trim() || "Nombre de tu tienda";
     const description = document.getElementById("store-description")?.value.trim() || "La descripcion de tu negocio aparecera aqui.";
+    const deliveryEnabled = document.getElementById("store-delivery-enabled")?.checked !== false;
+    const pickupEnabled = document.getElementById("store-pickup-enabled")?.checked !== false;
+    const deliveryLabels = [
+        deliveryEnabled ? "Envio a domicilio" : "",
+        pickupEnabled ? "Retiro en el local" : ""
+    ].filter(Boolean);
     const logoUrl = window.walzStoreLogoPreviewUrl || document.getElementById("store-logo-url")?.value.trim() || "";
     container.innerHTML = `
         <div class="store-preview-brand">
             ${renderProductImage(logoUrl, name, "store-preview-logo")}
-            <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(description)}</p></div>
+            <div>
+                <h3>${escapeHtml(name)}</h3>
+                <p>${escapeHtml(description)}</p>
+                <div class="store-preview-delivery">
+                    ${deliveryLabels.length
+                        ? deliveryLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")
+                        : "<strong>Selecciona una forma de entrega</strong>"}
+                </div>
+            </div>
         </div>
     `;
 }
@@ -4325,7 +4339,13 @@ async function loadStoreProfile() {
             "store-city": values.city || "",
             "store-address": values.address || ""
         };
-        for (const [id, value] of Object.entries(fields)) {
+        const deliveryInput = document.getElementById("store-delivery-enabled");
+        const pickupInput = document.getElementById("store-pickup-enabled");
+        if (deliveryInput) deliveryInput.checked = values.delivery_enabled !== false;
+        if (pickupInput) pickupInput.checked = values.pickup_enabled !== false;
+        const textFields = {
+        };
+        for (const [id, value] of Object.entries({...fields, ...textFields})) {
             const input = document.getElementById(id);
             if (input) input.value = value;
         }
@@ -4351,6 +4371,12 @@ async function saveStoreProfile(event) {
         errorElement.textContent = "";
         errorElement.classList.remove("store-profile-success-message");
     }
+    const deliveryEnabled = Boolean(document.getElementById("store-delivery-enabled")?.checked);
+    const pickupEnabled = Boolean(document.getElementById("store-pickup-enabled")?.checked);
+    if (!deliveryEnabled && !pickupEnabled) {
+        if (errorElement) errorElement.textContent = "Selecciona al menos una forma de entrega.";
+        return;
+    }
     if (name.length < 2) {
         if (errorElement) errorElement.textContent = "Completa el nombre de la tienda.";
         return;
@@ -4375,7 +4401,9 @@ async function saveStoreProfile(event) {
                 description: value("store-description") || null,
                 phone: value("store-phone") || null,
                 city: value("store-city") || null,
-                address: value("store-address") || null
+                address: value("store-address") || null,
+                delivery_enabled: deliveryEnabled,
+                pickup_enabled: pickupEnabled
             })
         });
         const data = await response.json().catch(() => ({}));

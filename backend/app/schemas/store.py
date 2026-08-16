@@ -12,6 +12,8 @@ class StoreProfileUpdate(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=40)
     city: Optional[str] = Field(default=None, max_length=120)
     address: Optional[str] = Field(default=None, max_length=250)
+    delivery_enabled: bool = True
+    pickup_enabled: bool = True
 
 
 class StoreResponse(StoreProfileUpdate):

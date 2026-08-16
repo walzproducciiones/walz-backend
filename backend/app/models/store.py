@@ -23,6 +23,8 @@ class Store(Base):
     phone = Column(String(40), nullable=True)
     city = Column(String(120), nullable=True)
     address = Column(String(250), nullable=True)
+    delivery_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
+    pickup_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     is_active = Column(Boolean, nullable=False, default=True, server_default="1")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -61,7 +61,10 @@ def update_my_store(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_store_manager),
 ):
-    return save_store_profile(db, current_user.id, data)
+    try:
+        return save_store_profile(db, current_user.id, data)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.get("/public", response_model=list[StoreResponse])

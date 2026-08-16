@@ -80,3 +80,19 @@ def ensure_user_terms_columns(engine):
             connection.execute(text("ALTER TABLE users ADD COLUMN terms_accepted_at TIMESTAMP"))
         if "terms_version" not in existing_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN terms_version VARCHAR(40)"))
+
+def ensure_store_delivery_columns(engine):
+    """Add store delivery choices without changing existing behavior."""
+    inspector = inspect(engine)
+    if "stores" not in inspector.get_table_names():
+        return
+    existing_columns = {column["name"] for column in inspector.get_columns("stores")}
+    with engine.begin() as connection:
+        if "delivery_enabled" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE stores ADD COLUMN delivery_enabled BOOLEAN NOT NULL DEFAULT TRUE"
+            ))
+        if "pickup_enabled" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE stores ADD COLUMN pickup_enabled BOOLEAN NOT NULL DEFAULT TRUE"
+            ))

@@ -916,6 +916,18 @@
                 <span>Direcci&oacute;n (opcional)</span>
                 <input id="store-address" type="text" maxlength="250" placeholder="Pod&eacute;s completarla m&aacute;s adelante">
             </label>
+            <fieldset class="store-delivery-settings store-profile-wide">
+                <div class="store-delivery-title">Formas de entrega</div>
+                <p>Eleg&iacute; al menos una opci&oacute;n. Los compradores solamente ver&aacute;n las modalidades que habilites.</p>
+                <label>
+                    <input id="store-delivery-enabled" type="checkbox" checked onchange="renderStorePreview()">
+                    <span><strong>Env&iacute;o a domicilio</strong><small>Correo, moto, transporte propio u otro medio.</small></span>
+                </label>
+                <label>
+                    <input id="store-pickup-enabled" type="checkbox" checked onchange="renderStorePreview()">
+                    <span><strong>Retiro en el local</strong><small>El comprador retira cuando el pedido est&eacute; listo.</small></span>
+                </label>
+            </fieldset>
             <button type="submit" id="store-save-button">Guardar tienda</button>
         </form>
 

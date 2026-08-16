@@ -26,6 +26,8 @@ def save_store_profile(
 ):
     store = get_store_by_owner(db, owner_id)
     values = data.model_dump()
+    if not values.get("delivery_enabled") and not values.get("pickup_enabled"):
+        raise ValueError("Selecciona al menos una forma de entrega.")
 
     for optional_field in ("logo_url", "description", "phone", "city", "address"):
         value = values.get(optional_field)

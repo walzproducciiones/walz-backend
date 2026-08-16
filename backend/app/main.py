@@ -9,6 +9,7 @@ from backend.app.database.schema_updates import (
     ensure_admin_user,
     ensure_banner_proposal_columns,
     ensure_product_promotion_columns,
+    ensure_store_delivery_columns,
     ensure_user_terms_columns,
 )
 
@@ -31,6 +32,7 @@ ensure_product_promotion_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)
+ensure_store_delivery_columns(engine)
 
 
 # ============================================================

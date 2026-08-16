@@ -3035,3 +3035,85 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* FORMAS DE ENTREGA CONFIGURABLES POR TIENDA */
+.store-delivery-settings {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 15px;
+    background: #f0f8f7;
+    border: 1px solid #c9e2df;
+    border-radius: 12px;
+}
+
+.store-delivery-settings legend {
+    padding: 0 7px;
+    color: var(--walz-petrol);
+    font-weight: 800;
+}
+
+.store-delivery-settings > p {
+    margin: 0 0 3px;
+    color: #587075;
+    font-size: 13px;
+}
+
+.store-delivery-settings label {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 11px;
+    background: #fff;
+    border: 1px solid #d9e7e6;
+    border-radius: 10px;
+}
+
+.store-delivery-settings input {
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+    accent-color: var(--walz-turquoise);
+}
+
+.store-delivery-settings label span {
+    display: grid;
+    gap: 3px;
+}
+
+.store-delivery-settings small {
+    color: #63767b;
+}
+
+.store-preview-delivery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.store-preview-delivery span {
+    padding: 6px 9px;
+    background: #dff7f5;
+    border-radius: 999px;
+    color: #17666b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.store-preview-delivery strong {
+    color: #a23a34;
+    font-size: 12px;
+}
+/* CORRECCION VISUAL DEL TITULO FORMAS DE ENTREGA */
+.store-delivery-settings {
+    padding-top: 18px;
+}
+
+.store-delivery-title {
+    margin: 0 0 2px;
+    color: var(--walz-petrol);
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
+}
