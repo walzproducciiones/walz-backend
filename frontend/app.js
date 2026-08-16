@@ -377,6 +377,7 @@ function handleLogout() {
     updateAdminBannerVisibility();
     stopAdminNotifications();
     stopSellerOrderNotifications();
+    stopWalzDeviceSync();
 
     cart = [];
 
@@ -1405,7 +1406,7 @@ function showMarketplaceContent() {
 }
 
 
-async function loadMyOrders() {
+async function loadMyOrders(silent = false) {
 
     const container =
         document.getElementById("orders-content");
@@ -1422,11 +1423,13 @@ async function loadMyOrders() {
         return;
     }
 
-    container.innerHTML = `
-        <div class="orders-state-card orders-loading">
-            Cargando pedidos...
-        </div>
-    `;
+    if (!silent) {
+        container.innerHTML = `
+            <div class="orders-state-card orders-loading">
+                Cargando pedidos...
+            </div>
+        `;
+    }
 
     try {
         const res = await fetch(`${API_URL}/orders/`, {
@@ -1538,6 +1541,60 @@ function getOrderDeliveryMethod(shippingAddress) {
 
 
 
+
+// WALZ_ORDER_TIMELINE_V1
+function parseWalzDate(value) {
+    if (!value) return null;
+    let normalized = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(normalized) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(normalized)) {
+        normalized += "Z";
+    }
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatWalzDate(value) {
+    const date = parseWalzDate(value);
+    if (!date) return "Fecha no disponible";
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    }).format(date);
+}
+
+function getOrderLatestActivity(order) {
+    const candidates = [
+        order?.pickup_buyer_received_at,
+        order?.pickup_seller_handed_at,
+        order?.pickup_buyer_arrived_at,
+        order?.pickup_buyer_going_at,
+        order?.pickup_ready_at,
+        order?.updated_at,
+        order?.created_at
+    ].map(parseWalzDate).filter(Boolean);
+    if (!candidates.length) return null;
+    return candidates.reduce((latest, current) => current > latest ? current : latest);
+}
+
+function renderOrderTimeline(order) {
+    const steps = [
+        ["Compra realizada", order?.created_at],
+        ["Listo para retirar", order?.pickup_ready_at],
+        ["Comprador aviso que va a retirar", order?.pickup_buyer_going_at],
+        ["Comprador llego al local", order?.pickup_buyer_arrived_at],
+        ["Producto entregado por el vendedor", order?.pickup_seller_handed_at],
+        ["Recepcion confirmada por el comprador", order?.pickup_buyer_received_at]
+    ].filter(([, value]) => Boolean(parseWalzDate(value)));
+    if (!steps.length) return "";
+    return `<section class="order-timeline"><h4>Cronologia</h4>${steps.map(([label, value]) => `<div class="order-timeline-step"><span></span><div><strong>${escapeHtml(label)}</strong><time>${escapeHtml(formatWalzDate(value))}</time></div></div>`).join("")}</section>`;
+}
+
 function orderMatchesWorkStatus(order, selectedStatus) {
     const status = String(order?.status || "").toLowerCase();
     if (!selectedStatus) return true;
@@ -1590,8 +1647,9 @@ function renderMyOrders(orders) {
     container.innerHTML = `
         <div class="orders-list">
             ${sortedOrders.map(order => {
-                const createdAt = order.created_at
-                    ? new Date(order.created_at).toLocaleString("es-AR")
+                const latestActivity = getOrderLatestActivity(order);
+                const activityAt = latestActivity
+                    ? formatWalzDate(latestActivity.toISOString())
                     : "Fecha no disponible";
 
                 const itemCount = Array.isArray(order.items)
@@ -1622,8 +1680,8 @@ function renderMyOrders(orders) {
 
                         <div class="order-card-summary">
                             <div>
-                                <span>Fecha</span>
-                                <strong>${escapeHtml(createdAt)}</strong>
+                                <span>Ultimo movimiento</span>
+                                <strong>${escapeHtml(activityAt)}</strong>
                             </div>
                             <div>
                                 <span>Entrega</span>
@@ -1722,9 +1780,8 @@ function renderOrderDetail(order, items) {
         return;
     }
 
-    const createdAt = order.created_at
-        ? new Date(order.created_at).toLocaleString("es-AR")
-        : "Fecha no disponible";
+    const createdAt = formatWalzDate(order.created_at);
+    const pickupTimeline = renderOrderTimeline(order);
 
     const address = order.shipping_address || "Dirección no disponible";
 
@@ -1745,7 +1802,7 @@ function renderOrderDetail(order, items) {
             <h3>Pedido #${escapeHtml(String(order.id))}</h3>
             <dl class="order-summary">
                 <div><dt>Estado</dt><dd>${escapeHtml(order.status || "Sin estado")}</dd></div>
-                <div><dt>Fecha</dt><dd>${escapeHtml(createdAt)}</dd></div>
+                <div><dt>Compra realizada</dt><dd>${escapeHtml(createdAt)}</dd></div>
                 <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
             </dl>
             <h4>Productos</h4>
@@ -1766,6 +1823,7 @@ function renderOrderDetail(order, items) {
                 }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+            ${isPickup ? pickupTimeline : ""}
             ${isPickup && pickupStatus ? `<div class="pickup-progress-card"><strong>${escapeHtml(pickupLabels[pickupStatus] || pickupStatus)}</strong><div class="seller-order-actions">${pickupActions}</div></div>` : ""}
             ${canCancel ? `
                 <div class="order-cancel-actions">
@@ -2678,7 +2736,7 @@ function showReceivedOrders() {
 }
 
 
-async function loadReceivedOrders() {
+async function loadReceivedOrders(silent = false) {
     const container =
         document.getElementById("sales-orders-content");
     const currentToken =
@@ -2697,11 +2755,13 @@ async function loadReceivedOrders() {
         return;
     }
 
-    container.innerHTML = `
-        <div class="orders-state-card orders-loading">
-            Cargando tus ventas...
-        </div>
-    `;
+    if (!silent) {
+        container.innerHTML = `
+            <div class="orders-state-card orders-loading">
+                Cargando tus ventas...
+            </div>
+        `;
+    }
 
     try {
         const res = await fetch(`${API_URL}/orders/seller/received`, {
@@ -2769,8 +2829,9 @@ function renderReceivedOrders(orders) {
         <div class="sales-orders-list">
             ${orders.map(order => {
                 const statusInfo = getOrderStatusInfo(order.status);
-                const createdAt = order.created_at
-                    ? new Date(order.created_at).toLocaleString("es-AR")
+                const latestActivity = getOrderLatestActivity(order);
+                const activityAt = latestActivity
+                    ? formatWalzDate(latestActivity.toISOString())
                     : "Fecha no disponible";
                 const items = Array.isArray(order.items) ? order.items : [];
 
@@ -2790,7 +2851,7 @@ function renderReceivedOrders(orders) {
                             <div><span>Comprador</span><strong>${escapeHtml(order.buyer?.name || "Sin nombre")}</strong></div>
                             <div><span>Email</span><strong>${escapeHtml(order.buyer?.email || "No disponible")}</strong></div>
                             <div><span>Telefono</span><strong>${escapeHtml(order.buyer?.phone || "Ver datos de entrega")}</strong></div>
-                            <div><span>Fecha</span><strong>${escapeHtml(createdAt)}</strong></div>
+                            <div><span>Ultimo movimiento</span><strong>${escapeHtml(activityAt)}</strong></div>
                         </div>
 
                         <div class="sales-order-items">
@@ -2808,6 +2869,8 @@ function renderReceivedOrders(orders) {
                             <span>Datos de entrega</span>
                             <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
                         </div>
+
+                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : ""}
 
                         <h3 class="order-total">
                             Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
@@ -3786,6 +3849,7 @@ async function refreshSellerPendingOrderCount() {
         const orders = await response.json().catch(() => ([]));
         if (response.status === 401) {
             stopSellerOrderNotifications();
+    stopWalzDeviceSync();
             handleExpiredSession();
             return;
         }
@@ -3800,6 +3864,7 @@ async function refreshSellerPendingOrderCount() {
 
 function startSellerOrderNotifications() {
     stopSellerOrderNotifications();
+    stopWalzDeviceSync();
     refreshSellerPendingOrderCount();
     window.walzSellerOrderNotificationTimer = setInterval(refreshSellerPendingOrderCount, 60000);
 }
@@ -4811,6 +4876,7 @@ window.closeCheckoutConfirmation = closeCheckoutConfirmation;
 window.showMyOrders = showMyOrders;
 window.showMarketplaceContent = showMarketplaceContent;
 window.loadMyOrders = loadMyOrders;
+window.syncVisibleWalzData = syncVisibleWalzData;
 window.applyMyOrdersFilters = applyMyOrdersFilters;
 window.clearMyOrdersFilters = clearMyOrdersFilters;
 window.openOrderDetail = openOrderDetail;
@@ -4908,6 +4974,46 @@ window.showAuth = showAuth;
 window.showMarketplace = showMarketplace;
 
 
+
+function walzSectionIsVisible(id) {
+    const section = document.getElementById(id);
+    return Boolean(section && section.style.display !== "none");
+}
+
+async function syncVisibleWalzData(showConfirmation = false) {
+    if (document.visibilityState !== "visible") return;
+    if (!localStorage.getItem("walz_token")) return;
+    try {
+        if (walzSectionIsVisible("orders-section")) {
+            await loadMyOrders(true);
+        } else if (walzSectionIsVisible("sales-orders-section")) {
+            await loadReceivedOrders(true);
+        } else if (walzSectionIsVisible("my-products-section")) {
+            if (!document.querySelector(".my-product-edit-form")) await loadMyProducts();
+        } else if (walzSectionIsVisible("marketplace-content")) {
+            await loadProducts();
+        }
+        if (showConfirmation) showMessage("Informacion actualizada.", "success");
+    } catch (error) {
+        console.error("No se pudo sincronizar WalZ:", error);
+        if (showConfirmation) showMessage("No se pudo actualizar. Verifica la conexion.", "error");
+    }
+}
+
+function stopWalzDeviceSync() {
+    if (window.walzDeviceSyncTimer) clearInterval(window.walzDeviceSyncTimer);
+    window.walzDeviceSyncTimer = null;
+}
+
+function startWalzDeviceSync() {
+    stopWalzDeviceSync();
+    window.walzDeviceSyncTimer = setInterval(() => syncVisibleWalzData(false), 20000);
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") syncVisibleWalzData(false);
+});
+window.addEventListener("focus", () => syncVisibleWalzData(false));
 // =====================================================
 // INICIO
 // =====================================================
@@ -4944,6 +5050,7 @@ document.addEventListener(
                 return;
             }
             startWalzSessionRenewal();
+            startWalzDeviceSync();
 
             showMarketplace();
             updateAdminBannerVisibility();

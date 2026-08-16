@@ -105,6 +105,8 @@ def ensure_order_pickup_columns(engine):
     existing_columns = {column["name"] for column in inspector.get_columns("orders")}
     definitions = {
         "pickup_status": "VARCHAR(30)",
+        "pickup_ready_at": "TIMESTAMP",
+        "pickup_buyer_going_at": "TIMESTAMP",
         "pickup_buyer_arrived_at": "TIMESTAMP",
         "pickup_seller_handed_at": "TIMESTAMP",
         "pickup_buyer_received_at": "TIMESTAMP",

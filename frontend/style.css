@@ -3131,3 +3131,14 @@ body {
 .pickup-progress-card { display: grid; gap: 12px; margin-top: 16px; padding: 15px; background: #e9f7f5; border: 1px solid #9bcfca; border-radius: 12px; color: #173f47; }
 .pickup-progress-card strong { color: #173f47; }
 .pickup-progress-card .seller-order-actions { margin-top: 0; }
+
+/* CRONOLOGIA Y HORARIOS DE PEDIDOS */
+.order-timeline { margin-top: 16px; padding: 16px; background: #f5fbfa; border: 1px solid #c6dfdc; border-radius: 12px; color: #173f47; }
+.order-timeline h4 { margin: 0 0 13px; color: #173f47; }
+.order-timeline-step { position: relative; display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; padding-bottom: 13px; }
+.order-timeline-step:last-child { padding-bottom: 0; }
+.order-timeline-step > span { width: 11px; height: 11px; margin-top: 4px; border: 3px solid #fff; border-radius: 50%; background: #159b92; box-shadow: 0 0 0 2px #159b92; }
+.order-timeline-step:not(:last-child)::after { content: ""; position: absolute; left: 5px; top: 18px; bottom: 2px; width: 2px; background: #9bcfca; }
+.order-timeline-step div { display: grid; gap: 3px; }
+.order-timeline-step strong { color: #173f47; }
+.order-timeline-step time { color: #536d72; font-size: 13px; }

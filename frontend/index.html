@@ -639,6 +639,7 @@
                     </select>
                 </label>
                 <button type="button" onclick="clearMyOrdersFilters()">Ver compras en curso</button>
+                <button type="button" onclick="syncVisibleWalzData(true)">Actualizar ahora</button>
             </div>
             <p id="my-orders-results-count" class="sales-orders-results-count" aria-live="polite"></p>
 
@@ -684,6 +685,7 @@
                         onchange="applyReceivedOrdersFilters()"
                     >
                         <option value="active" selected>En curso / requieren atencion</option>
+                        <option value="">Todas</option>
                         <option value="pending">Pendiente</option>
                         <option value="paid">Confirmado</option>
                         <option value="shipped">Enviado / listo para retirar</option>
@@ -696,8 +698,9 @@
                     type="button"
                     onclick="clearReceivedOrdersFilters()"
                 >
-                    Limpiar busqueda
+                    Ver ventas en curso
                 </button>
+                <button type="button" onclick="syncVisibleWalzData(true)">Actualizar ahora</button>
             </div>
 
             <p
@@ -1086,7 +1089,7 @@
         &uarr; Arriba
     </button>
 
-<script src="./app.js?v=20260816-filtros-compras-ventas-1"></script>
+<script src="./app.js?v=20260816-cronologia-1"></script>
 
 <div id="terms-modal" class="terms-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="terms-title">
     <div class="terms-modal-card">

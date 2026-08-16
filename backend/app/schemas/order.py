@@ -53,10 +53,13 @@ class OrderResponse(OrderBase):
     total_amount: float
     status: str
     pickup_status: Optional[str] = None
+    pickup_ready_at: Optional[datetime] = None
+    pickup_buyer_going_at: Optional[datetime] = None
     pickup_buyer_arrived_at: Optional[datetime] = None
     pickup_seller_handed_at: Optional[datetime] = None
     pickup_buyer_received_at: Optional[datetime] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     items: List[OrderItemResponse]
 
     class Config:

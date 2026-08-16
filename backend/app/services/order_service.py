@@ -219,8 +219,11 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
             "id": str(order.id),
             "status": order.status.value,
             "created_at": order.created_at,
+            "updated_at": order.updated_at,
             "shipping_address": order.shipping_address,
             "pickup_status": order.pickup_status,
+            "pickup_ready_at": order.pickup_ready_at,
+            "pickup_buyer_going_at": order.pickup_buyer_going_at,
             "pickup_buyer_arrived_at": order.pickup_buyer_arrived_at,
             "pickup_seller_handed_at": order.pickup_seller_handed_at,
             "pickup_buyer_received_at": order.pickup_buyer_received_at,
@@ -419,6 +422,8 @@ def update_order_status_by_seller(
         order.status = new_status
         if is_pickup and new_status == OrderStatus.SHIPPED:
             order.pickup_status = "ready"
+            if not order.pickup_ready_at:
+                order.pickup_ready_at = datetime.now(timezone.utc)
         db.commit()
 
         return {
@@ -443,6 +448,7 @@ def update_pickup_status_by_buyer(db: Session, order_id: UUID, buyer_id: UUID, a
         current = order.pickup_status
         if action == "buyer_going" and current == "ready":
             order.pickup_status = "buyer_going"
+            order.pickup_buyer_going_at = datetime.now(timezone.utc)
         elif action == "buyer_arrived" and current in {"ready", "buyer_going"}:
             order.pickup_status = "buyer_arrived"
             order.pickup_buyer_arrived_at = datetime.now(timezone.utc)

@@ -59,6 +59,8 @@ class Order(Base):
     )
 
     pickup_status = Column(String(30), nullable=True)
+    pickup_ready_at = Column(DateTime(timezone=True), nullable=True)
+    pickup_buyer_going_at = Column(DateTime(timezone=True), nullable=True)
     pickup_buyer_arrived_at = Column(DateTime(timezone=True), nullable=True)
     pickup_seller_handed_at = Column(DateTime(timezone=True), nullable=True)
     pickup_buyer_received_at = Column(DateTime(timezone=True), nullable=True)
