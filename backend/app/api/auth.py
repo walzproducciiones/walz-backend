@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.user import AccountClosureRequest, EmailChangeConfirm, EmailChangeRequest, ForgotPasswordRequest, ResetPasswordRequest, UserCreate, UserLogin, UserResponse
+from backend.app.schemas.user import AccountClosureRequest, EmailChangeConfirm, EmailChangeRequest, ForgotPasswordRequest, PasswordChangeRequest, ResetPasswordRequest, UserCreate, UserLogin, UserProfileUpdate, UserResponse
 from backend.app.security.jwt import (
     create_access_token,
     create_refresh_token,
     decode_token,
 )
-from backend.app.security.password import verify_password
+from backend.app.security.password import hash_password, verify_password
 from backend.app.services.email_service import send_email_change_confirmation, send_password_reset_email
 from backend.app.services.password_reset_service import create_password_reset_token, reset_password_with_token
 from backend.app.services.email_change_service import confirm_email_change, create_email_change_token
@@ -118,12 +118,6 @@ def login(
 
     print("✅ LOGIN: usuario encontrado:", user.email)
 
-    if not user.is_active:
-        print("LOGIN: cuenta desactivada")
-        raise HTTPException(
-            status_code=403,
-            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
-        )
 
     if not verify_password(
         user_credentials.password,
@@ -241,12 +235,6 @@ def request_email_change(
     new_email = request.new_email.strip().lower()
     if new_email == str(current_user.email).lower():
         raise HTTPException(status_code=400, detail="El correo nuevo es igual al actual.")
-    if not user.is_active:
-        print("LOGIN: cuenta desactivada")
-        raise HTTPException(
-            status_code=403,
-            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
-        )
 
     if not verify_password(request.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="La contrasena actual es incorrecta.")
@@ -275,12 +263,6 @@ def close_account(
 ):
     if request.confirmation.strip().upper() != "CERRAR MI CUENTA":
         raise HTTPException(status_code=400, detail="Escribe exactamente CERRAR MI CUENTA para confirmar.")
-    if not user.is_active:
-        print("LOGIN: cuenta desactivada")
-        raise HTTPException(
-            status_code=403,
-            detail="Esta cuenta esta cerrada. Contacta a WalZ si necesitas recuperarla.",
-        )
 
     if not verify_password(request.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="La contrasena actual es incorrecta.")
@@ -288,6 +270,34 @@ def close_account(
     if not closed:
         raise HTTPException(status_code=400, detail=error)
     return {"message": "Cuenta cerrada correctamente."}
+
+@router.patch("/profile", response_model=UserResponse)
+def update_my_profile(
+    request: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.first_name = request.first_name.strip()
+    current_user.last_name = request.last_name.strip()
+    current_user.phone = request.phone.strip() if request.phone else None
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password")
+def change_my_password(
+    request: PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(request.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contrasena actual es incorrecta.")
+    if verify_password(request.new_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contrasena nueva debe ser diferente de la actual.")
+    current_user.password_hash = hash_password(request.new_password)
+    db.commit()
+    return {"message": "Contrasena actualizada correctamente."}
 
 @router.get("/me", response_model=UserResponse)
 def get_my_profile(

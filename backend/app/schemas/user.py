@@ -57,3 +57,13 @@ class EmailChangeConfirm(BaseModel):
 class AccountClosureRequest(BaseModel):
     current_password: str = Field(..., min_length=8, max_length=128)
     confirmation: str = Field(..., min_length=16, max_length=40)
+
+class UserProfileUpdate(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=80)
+    last_name: str = Field(..., min_length=1, max_length=80)
+    phone: Optional[str] = Field(default=None, max_length=30)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=8, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)

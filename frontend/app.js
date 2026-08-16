@@ -136,9 +136,63 @@ async function showAccountSettings() {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || "No se pudo cargar la cuenta.");
         const email = document.getElementById("account-current-email"); if (email) email.textContent = data.email || "";
+        const firstName = document.getElementById("account-first-name"); if (firstName) firstName.value = data.first_name || "";
+        const lastName = document.getElementById("account-last-name"); if (lastName) lastName.value = data.last_name || "";
+        const phone = document.getElementById("account-phone"); if (phone) phone.value = data.phone || "";
     } catch (error) { showMessage(error.message, "error"); }
 }
 
+async function saveAccountProfile() {
+    const firstName = document.getElementById("account-first-name")?.value.trim() || "";
+    const lastName = document.getElementById("account-last-name")?.value.trim() || "";
+    const phone = document.getElementById("account-phone")?.value.trim() || "";
+    const message = document.getElementById("account-profile-message");
+    const button = document.getElementById("account-profile-save-button");
+    if (!firstName || !lastName) { if (message) message.textContent = "Completa tu nombre y apellido."; return; }
+    if (button) { button.disabled = true; button.textContent = "Guardando..."; }
+    try {
+        const response = await fetch(`${API_URL}/auth/profile`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("walz_token")}` },
+            body: JSON.stringify({ first_name: firstName, last_name: lastName, phone: phone || null })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) { handleExpiredSession(); return; }
+        if (!response.ok) throw new Error(data.detail || "No se pudieron guardar los datos.");
+        if (message) { message.classList.add("account-success-message"); message.textContent = "Datos personales guardados correctamente."; }
+    } catch (error) {
+        if (message) { message.classList.remove("account-success-message"); message.textContent = error.message; }
+    } finally {
+        if (button) { button.disabled = false; button.textContent = "Guardar datos personales"; }
+    }
+}
+
+async function changeAccountPassword() {
+    const currentPassword = document.getElementById("change-password-current")?.value || "";
+    const newPassword = document.getElementById("change-password-new")?.value || "";
+    const confirmation = document.getElementById("change-password-confirm")?.value || "";
+    const message = document.getElementById("change-password-message");
+    const button = document.getElementById("change-password-button");
+    if (currentPassword.length < 8 || newPassword.length < 8) { if (message) message.textContent = "Las contrasenas deben tener al menos 8 caracteres."; return; }
+    if (newPassword !== confirmation) { if (message) message.textContent = "Las contrasenas nuevas no coinciden."; return; }
+    if (button) { button.disabled = true; button.textContent = "Cambiando..."; }
+    try {
+        const response = await fetch(`${API_URL}/auth/change-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("walz_token")}` },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) { handleExpiredSession(); return; }
+        if (!response.ok) throw new Error(data.detail || "No se pudo cambiar la contrasena.");
+        for (const id of ["change-password-current", "change-password-new", "change-password-confirm"]) document.getElementById(id).value = "";
+        if (message) { message.classList.add("account-success-message"); message.textContent = data.message || "Contrasena actualizada correctamente."; }
+    } catch (error) {
+        if (message) { message.classList.remove("account-success-message"); message.textContent = error.message; }
+    } finally {
+        if (button) { button.disabled = false; button.textContent = "Cambiar contrasena"; }
+    }
+}
 async function requestEmailChange() {
     const newEmail = document.getElementById("account-new-email")?.value.trim() || "";
     const currentPassword = document.getElementById("account-current-password")?.value || "";
@@ -4473,6 +4527,8 @@ window.handleLogin = handleLogin;
 window.handleForgotPassword = handleForgotPassword;
 window.showAccountSettings = showAccountSettings;
 window.closeMyAccount = closeMyAccount;
+window.saveAccountProfile = saveAccountProfile;
+window.changeAccountPassword = changeAccountPassword;
 window.requestEmailChange = requestEmailChange;
 window.showConfirmEmailChange = showConfirmEmailChange;
 window.confirmEmailChange = confirmEmailChange;

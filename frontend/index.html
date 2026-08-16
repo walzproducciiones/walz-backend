@@ -786,11 +786,34 @@
     <h2>Mi cuenta</h2>
     <p>El cambio conserva tu tienda, productos, pedidos y permisos.</p>
     <div class="account-settings-card">
+        <div class="account-profile-block">
+            <h3>Datos personales</h3>
+            <div class="account-profile-grid">
+                <label>Nombre<input type="text" id="account-first-name" maxlength="80"></label>
+                <label>Apellido<input type="text" id="account-last-name" maxlength="80"></label>
+                <label>Telefono<input type="tel" id="account-phone" maxlength="30" placeholder="Opcional"></label>
+            </div>
+            <button type="button" id="account-profile-save-button" onclick="saveAccountProfile()">Guardar datos personales</button>
+            <p id="account-profile-message" class="delivery-error" role="alert"></p>
+        </div>
+
+        <div class="account-security-block">
+            <h3>Cambiar contrasena</h3>
+            <label>Contrasena actual<input type="password" id="change-password-current" autocomplete="current-password"></label>
+            <label>Contrasena nueva<input type="password" id="change-password-new" autocomplete="new-password" minlength="8"></label>
+            <label>Repetir contrasena nueva<input type="password" id="change-password-confirm" autocomplete="new-password" minlength="8"></label>
+            <button type="button" id="change-password-button" onclick="changeAccountPassword()">Cambiar contrasena</button>
+            <p id="change-password-message" class="delivery-error" role="alert"></p>
+        </div>
+
+        <div class="account-email-block">
+            <h3>Cambiar correo</h3>
         <p>Correo actual: <strong id="account-current-email">Cargando...</strong></p>
         <label>Correo nuevo<input type="email" id="account-new-email" autocomplete="email" placeholder="nuevo@correo.com"></label>
         <label>Contrasena actual<input type="password" id="account-current-password" autocomplete="current-password" placeholder="Confirma tu identidad"></label>
         <button type="button" id="account-email-change-button" onclick="requestEmailChange()">Enviar confirmacion</button>
         <p id="account-settings-message" class="delivery-error" role="alert"></p>
+        </div>
         <div class="account-danger-zone">
             <h3>Cerrar mi cuenta</h3>
             <p>Se ocultaran tu tienda, productos y publicidad. Los pedidos historicos se conservaran. No podras cerrar si hay compras o ventas en proceso.</p>
