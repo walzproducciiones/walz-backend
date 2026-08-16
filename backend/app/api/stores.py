@@ -7,7 +7,7 @@ from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.store import StoreProfileUpdate, StoreResponse
-from backend.app.services.store_service import get_store_by_owner, save_store_profile
+from backend.app.services.store_service import get_active_stores, get_store_by_owner, save_store_profile
 
 
 router = APIRouter(prefix="/stores", tags=["Stores"])
@@ -46,6 +46,11 @@ def update_my_store(
     current_user: User = Depends(require_store_manager),
 ):
     return save_store_profile(db, current_user.id, data)
+
+
+@router.get("/public", response_model=list[StoreResponse])
+def get_public_stores(db: Session = Depends(get_db)):
+    return get_active_stores(db)
 
 
 @router.get("/seller/{seller_id}", response_model=StoreResponse)

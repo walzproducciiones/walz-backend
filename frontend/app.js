@@ -630,16 +630,26 @@ async function loadProducts() {
 
     try {
 
-        const res = await fetch(
-            `${API_URL}/products/`
-        );
+        const [res, storesResponse] = await Promise.all([
+            fetch(`${API_URL}/products/`),
+            fetch(`${API_URL}/stores/public`)
+        ]);
 
         if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
         }
 
         const products = await res.json();
+        const stores = storesResponse.ok
+            ? await storesResponse.json()
+            : [];
 
+        window.walzStoresByOwner = Object.fromEntries(
+            (Array.isArray(stores) ? stores : []).map(store => [
+                String(store.owner_id),
+                store
+            ])
+        );
         window.walzProducts = products;
 
         syncCartWithProducts(products);
@@ -784,6 +794,34 @@ function renderProductPrice(product) {
 }
 
 
+function renderProductStoreIdentity(product) {
+    const store = window.walzStoresByOwner?.[String(product?.seller_id)];
+    const storeName = store?.name || "Vendedor WalZ";
+    const storeCity = String(store?.city || "").trim();
+    const logoUrl = getProductImageUrl(store?.logo_url);
+    const initial = storeName.trim().charAt(0).toUpperCase() || "W";
+    const logo = logoUrl
+        ? `<img src="${escapeHtml(logoUrl)}" alt="Logo de ${escapeHtml(storeName)}" loading="lazy" onerror="this.outerHTML='<span class=&quot;product-store-initial&quot;>${escapeHtml(initial)}</span>'">`
+        : `<span class="product-store-initial">${escapeHtml(initial)}</span>`;
+
+    return `
+        <button
+            type="button"
+            class="product-store-identity"
+            onclick="event.stopPropagation(); showPublicStore('${product.seller_id}')"
+            aria-label="Ver tienda ${escapeHtml(storeName)}"
+        >
+            <span class="product-store-logo">${logo}</span>
+            <span class="product-store-copy">
+                <strong>${escapeHtml(storeName)}</strong>
+                <small>${storeCity ? escapeHtml(storeCity) : "Tienda en WalZ One"}</small>
+            </span>
+            <span class="product-store-arrow" aria-hidden="true">&rsaquo;</span>
+        </button>
+    `;
+}
+
+
 function renderProducts(products) {
 
     const list =
@@ -831,6 +869,7 @@ function renderProducts(products) {
             >
 
                 ${renderProductImage(product.image_url, product.name, "product-card-image")}
+                ${renderProductStoreIdentity(product)}
 
                 <div class="product-card-content">
 
@@ -4694,6 +4733,45 @@ window.moveMarketplaceBanner = moveMarketplaceBanner;
 window.selectMarketplaceBanner = selectMarketplaceBanner;
 window.cancelPendingOrder = cancelPendingOrder;
 
+// =====================================================
+// NAVEGACION RAPIDA EN PAGINAS LARGAS
+// =====================================================
+
+function scrollPageToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function scrollCartToTop() {
+    const cartSection = document.getElementById("cart-section");
+    if (cartSection) {
+        cartSection.scrollTo({ top: 0, behavior: "smooth" });
+    }
+}
+
+function closeCartAndReturnToMarketplace() {
+    const cartSection = document.getElementById("cart-section");
+    if (cartSection) cartSection.style.display = "none";
+    document.body.classList.remove("cart-panel-open");
+    showMarketplaceContent();
+    scrollPageToTop();
+}
+
+function returnToMarketplaceTop() {
+    showMarketplaceContent();
+    scrollPageToTop();
+}
+
+function updateBackToTopButton() {
+    const button = document.getElementById("walz-back-to-top");
+    if (!button) return;
+    button.classList.toggle("visible", window.scrollY > 500);
+}
+
+window.addEventListener("scroll", updateBackToTopButton, { passive: true });
+window.scrollPageToTop = scrollPageToTop;
+window.scrollCartToTop = scrollCartToTop;
+window.closeCartAndReturnToMarketplace = closeCartAndReturnToMarketplace;
+window.returnToMarketplaceTop = returnToMarketplaceTop;
 window.showMessage = showMessage;
 
 window.showRegister = showRegister;

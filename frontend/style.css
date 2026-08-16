@@ -2363,3 +2363,628 @@ body.has-walz-news-bar .cart-button {
 .product-image-upload-box{display:grid;gap:10px;padding:14px;border:1px dashed #777;border-radius:10px;background:#292929;color:#fff}.product-image-upload-box label{display:grid;gap:3px;color:#fff}.product-image-upload-box label span{font-size:13px;color:#ddd}.product-upload-preview{display:flex;align-items:center;justify-content:center;min-height:110px;border-radius:8px;background:#eee;color:#555;overflow:hidden}.product-upload-preview img{display:block;max-width:100%;max-height:190px;object-fit:contain}
 /* FASE 5S - REEMPLAZO DE IMAGEN AL EDITAR */
 .edit-product-file-label{padding:12px;border:1px dashed #777;border-radius:9px;background:#202020}.edit-product-file-label small{display:block;margin-top:5px;color:#ddd}
+/* MEJORA FASE 5S - NAVEGACION EN CARRITO Y LISTAS LARGAS */
+.cart-bottom-navigation,
+.section-bottom-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #444;
+}
+
+.cart-bottom-navigation button,
+.section-bottom-navigation button {
+    flex: 1 1 190px;
+}
+
+.walz-back-to-top {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 2400;
+    display: none;
+    min-height: 48px;
+    padding: 11px 16px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 999px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.walz-back-to-top.visible {
+    display: block;
+}
+
+body.cart-panel-open .walz-back-to-top {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .walz-back-to-top {
+        right: 14px;
+        bottom: 76px;
+    }
+}
+/* CORRECCION FASE 5S - BOTON ARRIBA CENTRADO */
+.walz-back-to-top {
+    left: 50% !important;
+    right: auto !important;
+    bottom: 70px !important;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    font-size: 15px;
+}
+
+.walz-back-to-top:hover {
+    transform: translateX(-50%) translateY(-2px);
+}
+
+@media (max-width: 600px) {
+    .walz-back-to-top {
+        left: 50% !important;
+        right: auto !important;
+        bottom: 76px !important;
+    }
+}
+/* IDENTIDAD VISUAL WALZ ONE - PASO 1 */
+:root {
+    --walz-petrol: #123b45;
+    --walz-petrol-dark: #0b2931;
+    --walz-turquoise: #18a6a6;
+    --walz-turquoise-light: #dff7f5;
+    --walz-gold: #e7a23b;
+    --walz-surface: #f5f7f8;
+    --walz-ink: #172126;
+}
+
+body {
+    background: var(--walz-surface);
+    color: var(--walz-ink);
+}
+
+.walz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 22px;
+    margin-bottom: 20px;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, var(--walz-petrol-dark), var(--walz-petrol));
+    border-bottom: 4px solid var(--walz-turquoise);
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 10px 28px rgba(11, 41, 49, 0.2);
+}
+
+.walz-brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    flex: 0 0 auto;
+    color: #fff;
+}
+
+.walz-mark {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    color: #fff;
+    background: linear-gradient(145deg, var(--walz-turquoise), #0d7f85);
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    border-radius: 17px 17px 17px 5px;
+    box-shadow: 0 7px 18px rgba(0, 0, 0, 0.22);
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -3px;
+}
+
+.walz-brand-copy {
+    line-height: 1.05;
+}
+
+.walz-logo {
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.walz-logo strong {
+    color: #67ded7;
+    font-weight: 800;
+}
+
+.walz-subtitle {
+    margin-top: 3px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+}
+
+.walz-brand-tagline {
+    margin-top: 5px;
+    color: #bfe7e5;
+    font-size: 11px;
+}
+
+.walz-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.walz-header .orders-button,
+.walz-header .logout-btn {
+    float: none;
+    margin: 0;
+    padding: 10px 13px;
+    background: rgba(255, 255, 255, 0.11);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.walz-header .orders-button:hover,
+.walz-header .logout-btn:hover {
+    background: var(--walz-turquoise);
+    border-color: var(--walz-turquoise);
+    opacity: 1;
+}
+
+.marketplace-title {
+    margin: 18px 0 24px;
+    padding: 26px 30px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(120deg, var(--walz-petrol), #17636d);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(18, 59, 69, 0.16);
+}
+
+.marketplace-title::after {
+    content: "W";
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    color: rgba(255, 255, 255, 0.08);
+    font-size: 105px;
+    font-weight: 900;
+    transform: translateY(-51%);
+}
+
+#marketplace-section .marketplace-title h2 {
+    position: relative;
+    z-index: 1;
+    margin: 5px 0 8px;
+    padding: 0;
+    background: transparent;
+    color: #fff;
+    border-radius: 0;
+    font-size: clamp(25px, 4vw, 36px);
+}
+
+.marketplace-welcome-copy p {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: #d9eeee;
+    font-size: 16px;
+}
+
+.marketplace-welcome-kicker {
+    position: relative;
+    z-index: 1;
+    color: #79e0db;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.logo {
+    color: var(--walz-petrol);
+}
+
+input:focus,
+.product-search input:focus {
+    border-color: var(--walz-turquoise);
+    box-shadow: 0 0 0 3px rgba(24, 166, 166, 0.13);
+}
+
+.walz-news-bar {
+    background: var(--walz-petrol-dark);
+    border-top-color: var(--walz-turquoise);
+}
+
+.walz-news-bar button {
+    background: var(--walz-turquoise);
+}
+
+@media (max-width: 900px) {
+    .walz-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .walz-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .walz-header {
+        padding: 15px;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .walz-mark {
+        width: 50px;
+        height: 50px;
+        font-size: 28px;
+    }
+
+    .walz-logo {
+        font-size: 22px;
+    }
+
+    .walz-brand-tagline {
+        display: none;
+    }
+
+    .walz-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .walz-header .orders-button,
+    .walz-header .logout-btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .marketplace-title {
+        padding: 22px 18px;
+    }
+}
+/* IDENTIDAD VISUAL WALZ ONE - PASO 2: LOGO Y TARJETAS CLARAS */
+.walz-mark {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    width: 86px;
+    height: 58px;
+    padding: 6px 13px 6px 15px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #20b7b2, #0b7e86);
+    border: 2px solid rgba(255, 255, 255, 0.88);
+    border-radius: 29px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0;
+}
+
+.walz-mark-w {
+    color: #fff;
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -4px;
+}
+
+.walz-mark-one {
+    display: grid;
+    gap: 0;
+    padding-left: 7px;
+    border-left: 1px solid rgba(255, 255, 255, 0.65);
+    color: #eafffd;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 0.95;
+}
+
+.walz-mark-one i {
+    font-style: normal;
+}
+
+.my-products-filters {
+    background: #ffffff;
+    border: 1px solid #d8e5e7;
+    box-shadow: 0 5px 18px rgba(18, 59, 69, 0.07);
+}
+
+.my-products-filters label {
+    color: var(--walz-petrol);
+}
+
+.my-products-filters input,
+.my-products-filters select {
+    background: #f8fbfb;
+    border-color: #cbdadd;
+    color: var(--walz-ink);
+}
+
+.my-products-stock-summary button {
+    background: #ffffff;
+    border-color: #d7e4e6;
+    color: var(--walz-petrol);
+    box-shadow: 0 4px 14px rgba(18, 59, 69, 0.06);
+}
+
+.my-products-stock-summary button span {
+    color: #5f7378;
+}
+
+.my-product-card {
+    position: relative;
+    background: #ffffff;
+    color: var(--walz-ink);
+    border: 1px solid #d8e5e7;
+    border-left: 5px solid var(--walz-turquoise);
+    box-shadow: 0 8px 24px rgba(18, 59, 69, 0.08);
+}
+
+.my-product-card-header > div > span,
+.my-product-summary span,
+.my-product-code {
+    color: #60757a;
+}
+
+.my-product-summary div {
+    background: #edf6f6;
+    border: 1px solid #dbeaea;
+}
+
+.my-product-card > .product-image-placeholder {
+    background: #edf3f4;
+    color: #62767b;
+    border: 1px dashed #bfd0d3;
+}
+
+.my-product-state.active {
+    background: #dff7ed;
+    color: #11613f;
+}
+
+.my-product-state.paused {
+    background: #fff2cd;
+    color: #785b0c;
+}
+
+.my-product-stock-state.low {
+    background: #fff2cd;
+    color: #785b0c;
+}
+
+.my-product-stock-state.out {
+    background: #fde5e5;
+    color: #8d2929;
+}
+
+.my-product-actions button:first-child {
+    background: var(--walz-petrol);
+}
+
+.my-product-actions button:first-child:hover {
+    background: var(--walz-turquoise);
+}
+
+@media (max-width: 600px) {
+    .walz-mark {
+        width: 78px;
+        height: 52px;
+        border-radius: 26px;
+    }
+
+    .walz-mark-w {
+        font-size: 30px;
+    }
+}
+/* IDENTIDAD VISUAL WALZ ONE - PASO 3 */
+body {
+    background:
+        radial-gradient(circle at 8% 12%, rgba(24, 166, 166, 0.11), transparent 28%),
+        radial-gradient(circle at 92% 24%, rgba(231, 162, 59, 0.09), transparent 25%),
+        linear-gradient(180deg, #f3f8f7 0%, #edf4f3 55%, #f7f5ef 100%);
+    background-attachment: fixed;
+}
+
+.container {
+    max-width: 1260px;
+}
+
+.walz-header .orders-button,
+.walz-header .logout-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    border-bottom-width: 3px;
+    white-space: nowrap;
+}
+
+.walz-header .orders-button > span:first-child,
+.walz-header .logout-btn > span:first-child {
+    font-size: 16px;
+}
+
+.walz-header .sales-orders-button {
+    border-bottom-color: #70c8df;
+}
+
+.walz-header .my-products-button {
+    border-bottom-color: #67ded7;
+}
+
+.walz-header .seller-application-button,
+.walz-header .seller-applications-admin-button {
+    border-bottom-color: #edbd67;
+}
+
+.walz-header .store-profile-button {
+    border-bottom-color: #efa7b8;
+}
+
+.walz-header .banner-admin-button {
+    border-bottom-color: #c2a8ed;
+}
+
+.walz-header .account-settings-button {
+    border-bottom-color: #a8c2ed;
+}
+
+.walz-header .logout-btn {
+    border-bottom-color: #ef9e9e;
+}
+
+.product-item {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: #d8e7e7;
+    box-shadow: 0 8px 24px rgba(18, 59, 69, 0.08);
+}
+
+.product-item:nth-child(3n + 2) {
+    background: #f4fbf9;
+}
+
+.product-item:nth-child(3n) {
+    background: #fffaf1;
+}
+
+.product-item::before {
+    background: #e3f4f2;
+    color: #17666b;
+}
+
+.product-item:nth-child(3n)::before {
+    background: #f8e8c8;
+    color: #7b5814;
+}
+
+.my-product-card:nth-child(even) {
+    background: #f2faf8;
+}
+
+.my-product-card:nth-child(3n) {
+    background: #fffaf1;
+    border-left-color: var(--walz-gold);
+}
+
+.my-product-summary div:nth-child(2) {
+    background: #f7f5eb;
+    border-color: #e9e2c9;
+}
+
+.my-products-stock-summary button:nth-child(2) {
+    background: #eefaf5;
+}
+
+.my-products-stock-summary button:nth-child(3) {
+    background: #fff9eb;
+}
+
+.my-products-stock-summary button:nth-child(4) {
+    background: #fff5dc;
+}
+
+.my-products-stock-summary button:nth-child(5) {
+    background: #fff0f0;
+}
+
+.bulk-products-panel {
+    background: linear-gradient(135deg, #ffffff, #edf8f6);
+    border-color: #cfe2e2;
+    box-shadow: 0 6px 20px rgba(18, 59, 69, 0.06);
+}
+
+#my-products-section > h2,
+#orders-section > h2,
+#sales-orders-section > h2 {
+    color: var(--walz-petrol);
+}
+
+@media (max-width: 600px) {
+    .walz-header .orders-button,
+    .walz-header .logout-btn {
+        white-space: normal;
+    }
+}
+/* IDENTIDAD VISUAL WALZ ONE - PASO 4: TIENDAS EN PRODUCTOS */
+.product-store-identity {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    margin: 10px 0 12px;
+    padding: 8px 10px;
+    background: rgba(223, 247, 245, 0.8);
+    border: 1px solid #c8e6e3;
+    border-radius: 12px;
+    color: var(--walz-petrol);
+    text-align: left;
+}
+
+.product-store-identity:hover {
+    background: #d5f2ef;
+    border-color: var(--walz-turquoise);
+    opacity: 1;
+}
+
+.product-store-logo {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    overflow: hidden;
+    background: var(--walz-petrol);
+    border-radius: 50%;
+}
+
+.product-store-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-store-initial {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 900;
+}
+
+.product-store-copy {
+    display: grid;
+    min-width: 0;
+}
+
+.product-store-copy strong,
+.product-store-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-store-copy strong {
+    font-size: 13px;
+}
+
+.product-store-copy small {
+    margin-top: 2px;
+    color: #5b7277;
+    font-size: 11px;
+}
+
+.product-store-arrow {
+    color: var(--walz-turquoise);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.product-actions .product-store-link {
+    display: none;
+}

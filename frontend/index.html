@@ -183,9 +183,16 @@
 
 <header class="walz-header">
 
-    <div class="walz-brand">
-        <div class="walz-logo">WALZ</div>
-        <div class="walz-subtitle">One Marketplace</div>
+    <div class="walz-brand" aria-label="WalZ One Marketplace">
+        <div class="walz-mark" aria-hidden="true">
+            <span class="walz-mark-w">W</span>
+            <span class="walz-mark-one"><i>O</i><i>N</i><i>E</i></span>
+        </div>
+        <div class="walz-brand-copy">
+            <div class="walz-logo"><span>WalZ</span> <strong>One</strong></div>
+            <div class="walz-subtitle">Marketplace</div>
+            <div class="walz-brand-tagline">Tus tiendas, en un solo lugar</div>
+        </div>
     </div>
 
     <div class="walz-actions">
@@ -237,7 +244,7 @@
         onclick="showSellerApplication()"
         style="display:none;"
     >
-        <span>Quiero vender</span>
+        <span aria-hidden="true">&#128640;</span><span>Quiero vender</span>
     </button>
 
     <button
@@ -247,7 +254,7 @@
         onclick="showSellerApplicationsAdmin()"
         style="display:none;"
     >
-        <span>Solicitudes</span>
+        <span aria-hidden="true">&#128221;</span><span>Solicitudes</span>
         <span id="seller-applications-pending-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
@@ -269,7 +276,7 @@
         onclick="showBannerAdmin()"
         style="display:none;"
     >
-        <span>Publicidad</span>
+        <span aria-hidden="true">&#128226;</span><span>Publicidad</span>
         <span id="banner-proposals-pending-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
@@ -294,9 +301,10 @@
 
 <div class="marketplace-title">
 
-    <div>
-        <h2>Bienvenido a WalZ One</h2>
-        <p>Descubrí productos y comprá de forma simple.</p>
+        <div class="marketplace-welcome-copy">
+        <span class="marketplace-welcome-kicker">WalZ One Marketplace</span>
+        <h2>Todo lo que buscas, cerca de vos</h2>
+        <p>Descubri productos y tiendas. Compra de forma simple y directa.</p>
     </div>
 
 </div>
@@ -608,6 +616,14 @@
             >
                 💳 Finalizar compra
             </button>
+            <div class="cart-bottom-navigation">
+                <button type="button" onclick="scrollCartToTop()">
+                    &uarr; Volver arriba
+                </button>
+                <button type="button" onclick="closeCartAndReturnToMarketplace()">
+                    &larr; Volver al marketplace
+                </button>
+            </div>
 
         </div>
 
@@ -777,6 +793,14 @@
 
             <div id="my-products-content">
                 Cargando productos...
+            </div>
+            <div class="section-bottom-navigation">
+                <button type="button" onclick="scrollPageToTop()">
+                    &uarr; Volver arriba
+                </button>
+                <button type="button" onclick="returnToMarketplaceTop()">
+                    &larr; Volver al marketplace
+                </button>
             </div>
         </section>
 
@@ -1038,6 +1062,17 @@
 <!-- =====================================================
      JAVASCRIPT
 ====================================================== -->
+
+<button
+        type="button"
+        id="walz-back-to-top"
+        class="walz-back-to-top"
+        onclick="scrollPageToTop()"
+        aria-label="Volver arriba"
+        title="Volver arriba"
+    >
+        &uarr; Arriba
+    </button>
 
 <script src="./app.js"></script>
 

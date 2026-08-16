@@ -6,6 +6,15 @@ from backend.app.models.store import Store
 from backend.app.schemas.store import StoreProfileUpdate
 
 
+def get_active_stores(db: Session):
+    return (
+        db.query(Store)
+        .filter(Store.is_active == True)
+        .order_by(Store.name.asc())
+        .all()
+    )
+
+
 def get_store_by_owner(db: Session, owner_id: UUID):
     return db.query(Store).filter(Store.owner_id == owner_id).first()
 
