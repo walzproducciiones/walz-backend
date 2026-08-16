@@ -1446,8 +1446,8 @@ async function loadMyOrders() {
         }
 
         const orders = await res.json();
-
-        renderMyOrders(orders);
+        window.walzMyOrders = Array.isArray(orders) ? orders : [];
+        applyMyOrdersFilters();
 
     } catch (ordersError) {
         console.error("Error cargando pedidos:", ordersError);
@@ -1537,6 +1537,28 @@ function getOrderDeliveryMethod(shippingAddress) {
 }
 
 
+
+function orderMatchesWorkStatus(order, selectedStatus) {
+    const status = String(order?.status || "").toLowerCase();
+    if (!selectedStatus) return true;
+    if (selectedStatus === "active") return ["pending", "paid", "shipped"].includes(status);
+    return status === selectedStatus;
+}
+
+function applyMyOrdersFilters() {
+    const allOrders = Array.isArray(window.walzMyOrders) ? window.walzMyOrders : [];
+    const selectedStatus = String(document.getElementById("my-orders-status-filter")?.value ?? "active").toLowerCase();
+    const filteredOrders = allOrders.filter(order => orderMatchesWorkStatus(order, selectedStatus));
+    const counter = document.getElementById("my-orders-results-count");
+    if (counter) counter.textContent = `${filteredOrders.length} de ${allOrders.length} compra${allOrders.length === 1 ? "" : "s"}`;
+    renderMyOrders(filteredOrders);
+}
+
+function clearMyOrdersFilters() {
+    const filter = document.getElementById("my-orders-status-filter");
+    if (filter) filter.value = "active";
+    applyMyOrdersFilters();
+}
 function renderMyOrders(orders) {
 
     const container =
@@ -1549,7 +1571,7 @@ function renderMyOrders(orders) {
     if (!Array.isArray(orders) || orders.length === 0) {
         container.innerHTML = `
             <div class="orders-state-card orders-empty">
-                <h3>Todavia no realizaste pedidos</h3>
+                <h3>Todavia no realizaste compras</h3>
                 <p>Cuando completes una compra aparecera en esta seccion.</p>
                 <button type="button" onclick="showMarketplaceContent()">
                     Explorar productos
@@ -1685,7 +1707,7 @@ async function openOrderDetail(orderId) {
                 Reintentar
             </button>
             <button type="button" onclick="loadMyOrders()">
-                Volver a mis pedidos
+                Volver a mis compras
             </button>
         `;
     }
@@ -1707,10 +1729,17 @@ function renderOrderDetail(order, items) {
     const address = order.shipping_address || "Dirección no disponible";
 
     const canCancel = String(order.status || '').toLowerCase() === 'pending';
+    const isPickup = String(order.shipping_address || '').toLowerCase().includes('retiro en el local');
+    const pickupStatus = String(order.pickup_status || '');
+    const pickupLabels = { ready: 'Listo para retirar', buyer_going: 'El comprador va a retirar', buyer_arrived: 'El comprador esta en el local', seller_handed: 'Entregado por el vendedor; falta confirmar recepcion', completed: 'Retirado y recibido' };
+    let pickupActions = '';
+    if (isPickup && pickupStatus === 'ready') pickupActions = `<button type="button" onclick="updateBuyerPickupStatus('${escapeJs(String(order.id))}', 'buyer_going')">Voy a retirar</button>`;
+    if (isPickup && ['ready', 'buyer_going'].includes(pickupStatus)) pickupActions += `<button type="button" onclick="updateBuyerPickupStatus('${escapeJs(String(order.id))}', 'buyer_arrived')">Ya estoy en el local</button>`;
+    if (isPickup && pickupStatus === 'seller_handed') pickupActions = `<button type="button" onclick="updateBuyerPickupStatus('${escapeJs(String(order.id))}', 'buyer_received')">Producto retirado y recibido</button>`;
 
     container.innerHTML = `
         <button type="button" onclick="loadMyOrders()">
-            ← Volver a mis pedidos
+            ← Volver a mis compras
         </button>
         <article class="order-detail-card">
             <h3>Pedido #${escapeHtml(String(order.id))}</h3>
@@ -1737,6 +1766,7 @@ function renderOrderDetail(order, items) {
                 }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+            ${isPickup && pickupStatus ? `<div class="pickup-progress-card"><strong>${escapeHtml(pickupLabels[pickupStatus] || pickupStatus)}</strong><div class="seller-order-actions">${pickupActions}</div></div>` : ""}
             ${canCancel ? `
                 <div class="order-cancel-actions">
                     <button
@@ -1753,6 +1783,35 @@ function renderOrderDetail(order, items) {
     `;
 }
 
+
+async function updateBuyerPickupStatus(orderId, action) {
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return handleExpiredSession();
+    const labels = { buyer_going: "confirmar que vas a retirar", buyer_arrived: "avisar que ya estas en el local", buyer_received: "confirmar que recibiste el producto" };
+    if (!window.confirm(`Confirmas que queres ${labels[action]}?`)) return;
+    try {
+        const res = await fetch(`${API_URL}/orders/${orderId}/pickup`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` }, body: JSON.stringify({ action }) });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) return handleExpiredSession();
+        if (!res.ok) throw new Error(data.detail || "No se pudo actualizar el retiro.");
+        showMessage("Confirmacion registrada correctamente.", "success");
+        renderOrderDetail(data, Array.isArray(data.items) ? data.items : []);
+    } catch (error) { showMessage(error.message, "error"); }
+}
+
+async function confirmSellerPickupHandover(orderId) {
+    const currentToken = localStorage.getItem("walz_token");
+    if (!currentToken) return handleExpiredSession();
+    if (!window.confirm("Confirmas que entregaste el producto al comprador presente?")) return;
+    try {
+        const res = await fetch(`${API_URL}/orders/seller/${orderId}/pickup-handover`, { method: "PATCH", headers: { Authorization: `Bearer ${currentToken}` } });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) return handleExpiredSession();
+        if (!res.ok) throw new Error(data.detail || "No se pudo confirmar la entrega.");
+        showMessage("Entrega registrada. Falta la confirmacion del comprador.", "success");
+        await loadReceivedOrders();
+    } catch (error) { showMessage(error.message, "error"); }
+}
 
 async function cancelPendingOrder(orderId) {
     const token = localStorage.getItem("walz_token");
@@ -1812,7 +1871,7 @@ function renderOrderNotFound() {
     container.innerHTML = `
         <p class="orders-empty">El pedido solicitado no existe o ya no está disponible.</p>
         <button type="button" onclick="loadMyOrders()">
-            Volver a mis pedidos
+            Volver a mis compras
         </button>
     `;
 }
@@ -2640,7 +2699,7 @@ async function loadReceivedOrders() {
 
     container.innerHTML = `
         <div class="orders-state-card orders-loading">
-            Cargando pedidos recibidos...
+            Cargando tus ventas...
         </div>
     `;
 
@@ -2670,7 +2729,7 @@ async function loadReceivedOrders() {
         console.error("Error cargando pedidos recibidos:", error);
         container.innerHTML = `
             <div class="orders-state-card orders-error">
-                <h3>No pudimos cargar los pedidos recibidos</h3>
+                <h3>No pudimos cargar tus ventas</h3>
                 <p>${escapeHtml(error.message || "Error desconocido")}</p>
             </div>
         `;
@@ -2695,11 +2754,11 @@ function renderReceivedOrders(orders) {
             <div class="orders-state-card orders-empty">
                 <h3>${hasReceivedOrders
                     ? "No encontramos ventas con esos filtros"
-                    : "Todavia no recibiste pedidos"
+                    : "Todavia no realizaste ventas"
                 }</h3>
                 <p>${hasReceivedOrders
                     ? "Proba otra palabra o selecciona otro estado."
-                    : "Cuando alguien compre uno de tus productos aparecera aqui."
+                    : "Cuando alguien compre uno de tus productos, la venta aparecera aqui."
                 }</p>
             </div>
         `;
@@ -2816,16 +2875,12 @@ function renderSellerOrderActions(order) {
     }
 
     if (status === "shipped") {
-        return `
-            <div class="seller-order-actions">
-                <button
-                    type="button"
-                    onclick="updateSellerOrderStatus('${orderId}', 'delivered', 'Marcar como entregado')"
-                >
-                    Marcar como entregado
-                </button>
-            </div>
-        `;
+        if (isPickup) {
+            const pickupStatus = String(order.pickup_status || "ready");
+            const labels = { ready: "Esperando al comprador", buyer_going: "El comprador va a retirar", buyer_arrived: "El comprador esta en el local", seller_handed: "Producto entregado; falta confirmacion del comprador", completed: "Retiro completado" };
+            return `<div class="pickup-progress-card"><strong>${escapeHtml(labels[pickupStatus] || pickupStatus)}</strong>${pickupStatus === "buyer_arrived" ? `<div class="seller-order-actions"><button type="button" onclick="confirmSellerPickupHandover('${orderId}')">Entregado al comprador</button></div>` : ""}</div>`;
+        }
+        return `<div class="seller-order-actions"><button type="button" onclick="updateSellerOrderStatus('${orderId}', 'delivered', 'Marcar como entregado')">Marcar como entregado</button></div>`;
     }
 
     return "";
@@ -2911,7 +2966,7 @@ function applyReceivedOrdersFilters() {
     const filteredOrders = allOrders.filter(order => {
         const status = String(order.status || "").toLowerCase();
 
-        if (selectedStatus && status !== selectedStatus) {
+        if (!orderMatchesWorkStatus(order, selectedStatus)) {
             return false;
         }
 
@@ -2960,7 +3015,7 @@ function clearReceivedOrdersFilters() {
     }
 
     if (statusFilter) {
-        statusFilter.value = "";
+        statusFilter.value = "active";
     }
 
     applyReceivedOrdersFilters();
@@ -4756,6 +4811,8 @@ window.closeCheckoutConfirmation = closeCheckoutConfirmation;
 window.showMyOrders = showMyOrders;
 window.showMarketplaceContent = showMarketplaceContent;
 window.loadMyOrders = loadMyOrders;
+window.applyMyOrdersFilters = applyMyOrdersFilters;
+window.clearMyOrdersFilters = clearMyOrdersFilters;
 window.openOrderDetail = openOrderDetail;
 window.showReceivedOrders = showReceivedOrders;
 window.loadReceivedOrders = loadReceivedOrders;
@@ -4799,6 +4856,8 @@ window.closeWalzNewsBar = closeWalzNewsBar;
 window.moveMarketplaceBanner = moveMarketplaceBanner;
 window.selectMarketplaceBanner = selectMarketplaceBanner;
 window.cancelPendingOrder = cancelPendingOrder;
+window.updateBuyerPickupStatus = updateBuyerPickupStatus;
+window.confirmSellerPickupHandover = confirmSellerPickupHandover;
 
 // =====================================================
 // NAVEGACION RAPIDA EN PAGINAS LARGAS

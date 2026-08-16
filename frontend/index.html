@@ -213,7 +213,7 @@
         onclick="showMyOrders()"
     >
         📦
-        <span>Mis pedidos</span>
+        <span>Mis compras</span>
     </button>
 
     <button
@@ -223,7 +223,7 @@
         onclick="showReceivedOrders()"
     >
         <span aria-hidden="true">&#128230;</span>
-        <span>Pedidos recibidos</span>
+        <span>Mis ventas</span>
         <span id="seller-pending-orders-badge" class="admin-pending-badge" style="display:none;">0</span>
     </button>
 
@@ -623,7 +623,24 @@
                 ← Volver al marketplace
             </button>
 
-            <h2>📦 Mis pedidos</h2>
+            <h2>&#128717; Mis compras</h2>
+
+            <div class="sales-orders-filters my-orders-filters">
+                <label>
+                    <span>Mostrar compras</span>
+                    <select id="my-orders-status-filter" onchange="applyMyOrdersFilters()">
+                        <option value="active" selected>En curso</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="paid">Confirmadas</option>
+                        <option value="shipped">Enviadas / listas para retirar</option>
+                        <option value="delivered">Entregadas</option>
+                        <option value="cancelled">Canceladas</option>
+                        <option value="">Todas</option>
+                    </select>
+                </label>
+                <button type="button" onclick="clearMyOrdersFilters()">Ver compras en curso</button>
+            </div>
+            <p id="my-orders-results-count" class="sales-orders-results-count" aria-live="polite"></p>
 
             <div id="orders-content">
                 Cargando pedidos...
@@ -644,9 +661,9 @@
                 &larr; Volver al marketplace
             </button>
 
-            <h2>&#128230; Pedidos recibidos</h2>
+            <h2>&#128230; Mis ventas</h2>
             <p class="sales-orders-intro">
-                Aqui aparecen solamente los productos vendidos por esta cuenta.
+                Aqui aparecen las compras realizadas a los productos de esta cuenta.
             </p>
 
             <div class="sales-orders-filters">
@@ -666,7 +683,7 @@
                         id="sales-orders-status-filter"
                         onchange="applyReceivedOrdersFilters()"
                     >
-                        <option value="">Todos</option>
+                        <option value="active" selected>En curso / requieren atencion</option>
                         <option value="pending">Pendiente</option>
                         <option value="paid">Confirmado</option>
                         <option value="shipped">Enviado / listo para retirar</option>
@@ -1069,7 +1086,7 @@
         &uarr; Arriba
     </button>
 
-<script src="./app.js"></script>
+<script src="./app.js?v=20260816-filtros-compras-ventas-1"></script>
 
 <div id="terms-modal" class="terms-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="terms-title">
     <div class="terms-modal-card">

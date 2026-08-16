@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -219,6 +220,10 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
             "status": order.status.value,
             "created_at": order.created_at,
             "shipping_address": order.shipping_address,
+            "pickup_status": order.pickup_status,
+            "pickup_buyer_arrived_at": order.pickup_buyer_arrived_at,
+            "pickup_seller_handed_at": order.pickup_seller_handed_at,
+            "pickup_buyer_received_at": order.pickup_buyer_received_at,
             "seller_total": round(seller_total, 2),
             "buyer": {
                 "name": f"{order.buyer.first_name} {order.buyer.last_name}",
@@ -389,6 +394,11 @@ def update_order_status_by_seller(
             return None, "not_found"
 
         current_status = order.status
+        is_pickup = "metodo: retiro en el local" in str(order.shipping_address or "").lower()
+
+        if is_pickup and new_status == OrderStatus.DELIVERED:
+            db.rollback()
+            return None, "En un retiro, el comprador tambien debe confirmar la recepcion."
 
         if not can_transition_order_status(current_status, new_status):
             db.rollback()
@@ -407,6 +417,8 @@ def update_order_status_by_seller(
                     product.stock = max(product.stock or 0, 0) + item.quantity
 
         order.status = new_status
+        if is_pickup and new_status == OrderStatus.SHIPPED:
+            order.pickup_status = "ready"
         db.commit()
 
         return {
@@ -414,6 +426,60 @@ def update_order_status_by_seller(
             "status": order.status.value,
         }, None
 
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def update_pickup_status_by_buyer(db: Session, order_id: UUID, buyer_id: UUID, action: str):
+    try:
+        order = db.query(Order).filter(Order.id == order_id, Order.buyer_id == buyer_id).with_for_update().first()
+        if not order:
+            db.rollback()
+            return None, "not_found"
+        if "metodo: retiro en el local" not in str(order.shipping_address or "").lower():
+            db.rollback()
+            return None, "Este pedido no es para retiro en el local."
+        current = order.pickup_status
+        if action == "buyer_going" and current == "ready":
+            order.pickup_status = "buyer_going"
+        elif action == "buyer_arrived" and current in {"ready", "buyer_going"}:
+            order.pickup_status = "buyer_arrived"
+            order.pickup_buyer_arrived_at = datetime.now(timezone.utc)
+        elif action == "buyer_received" and current == "seller_handed":
+            order.pickup_status = "completed"
+            order.pickup_buyer_received_at = datetime.now(timezone.utc)
+            order.status = OrderStatus.DELIVERED
+        else:
+            db.rollback()
+            return None, "Esa confirmacion no corresponde al momento actual del retiro."
+        db.commit()
+        return get_order_by_id(db, order.id, buyer_id), None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def confirm_pickup_handover_by_seller(db: Session, order_id: UUID, seller_id: UUID):
+    try:
+        order = db.query(Order).filter(Order.id == order_id).with_for_update().first()
+        if not order:
+            db.rollback()
+            return None, "not_found"
+        products = db.query(Product).filter(Product.id.in_([item.product_id for item in order.items])).all()
+        if not products or any(product.seller_id != seller_id for product in products):
+            db.rollback()
+            return None, "not_found"
+        if "metodo: retiro en el local" not in str(order.shipping_address or "").lower():
+            db.rollback()
+            return None, "Este pedido no es para retiro en el local."
+        if order.pickup_status != "buyer_arrived":
+            db.rollback()
+            return None, "El comprador debe indicar que ya esta en el local."
+        order.pickup_status = "seller_handed"
+        order.pickup_seller_handed_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"id": str(order.id), "status": order.status.value, "pickup_status": order.pickup_status}, None
     except SQLAlchemyError:
         db.rollback()
         raise

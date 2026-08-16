@@ -7,15 +7,17 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import CheckoutCreate, OrderCreate, OrderResponse, OrderStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
+    confirm_pickup_handover_by_seller,
     create_order,
     create_orders_by_seller,
     get_order_by_id,
     get_orders_by_buyer,
     get_orders_received_by_seller,
     update_order_status_by_seller,
+    update_pickup_status_by_buyer,
 )
 
 
@@ -141,4 +143,33 @@ def update_received_order_status(
     if error:
         raise HTTPException(status_code=400, detail=error)
 
+    return result
+
+
+@router.patch("/{order_id}/pickup", response_model=OrderResponse)
+def update_my_pickup(
+    order_id: UUID,
+    update: PickupStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = update_pickup_status_by_buyer(db, order_id, current_user.id, update.action)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return result
+
+
+@router.patch("/seller/{order_id}/pickup-handover")
+def confirm_pickup_handover(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = confirm_pickup_handover_by_seller(db, order_id, current_user.id)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if error:
+        raise HTTPException(status_code=400, detail=error)
     return result

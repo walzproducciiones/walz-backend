@@ -58,6 +58,11 @@ class Order(Base):
         nullable=True
     )
 
+    pickup_status = Column(String(30), nullable=True)
+    pickup_buyer_arrived_at = Column(DateTime(timezone=True), nullable=True)
+    pickup_seller_handed_at = Column(DateTime(timezone=True), nullable=True)
+    pickup_buyer_received_at = Column(DateTime(timezone=True), nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()

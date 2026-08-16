@@ -52,6 +52,10 @@ class OrderResponse(OrderBase):
     buyer_id: UUID
     total_amount: float
     status: str
+    pickup_status: Optional[str] = None
+    pickup_buyer_arrived_at: Optional[datetime] = None
+    pickup_seller_handed_at: Optional[datetime] = None
+    pickup_buyer_received_at: Optional[datetime] = None
     created_at: datetime
     items: List[OrderItemResponse]
 
@@ -60,3 +64,7 @@ class OrderResponse(OrderBase):
 
 class OrderStatusUpdate(BaseModel):
     status: str = Field(..., min_length=1, max_length=30)
+
+
+class PickupStatusUpdate(BaseModel):
+    action: Literal["buyer_going", "buyer_arrived", "buyer_received"]

@@ -96,3 +96,22 @@ def ensure_store_delivery_columns(engine):
             connection.execute(text(
                 "ALTER TABLE stores ADD COLUMN pickup_enabled BOOLEAN NOT NULL DEFAULT TRUE"
             ))
+
+def ensure_order_pickup_columns(engine):
+    """Add safe pickup confirmations without modifying existing orders."""
+    inspector = inspect(engine)
+    if "orders" not in inspector.get_table_names():
+        return
+    existing_columns = {column["name"] for column in inspector.get_columns("orders")}
+    definitions = {
+        "pickup_status": "VARCHAR(30)",
+        "pickup_buyer_arrived_at": "TIMESTAMP",
+        "pickup_seller_handed_at": "TIMESTAMP",
+        "pickup_buyer_received_at": "TIMESTAMP",
+    }
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    f"ALTER TABLE orders ADD COLUMN {column_name} {definition}"
+                ))

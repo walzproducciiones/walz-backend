@@ -3127,3 +3127,7 @@ body {
 .checkout-store-delivery-summary { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; padding: 10px; background: #edf8f6; border-radius: 9px; color: #173f47; }
 .checkout-store-delivery-summary span { font-weight: 700; }
 @media(max-width:600px){.checkout-store-delivery-summary,.seller-delivery-heading{flex-direction:column;}}
+/* FLUJO SEGURO DE RETIRO EN EL LOCAL */
+.pickup-progress-card { display: grid; gap: 12px; margin-top: 16px; padding: 15px; background: #e9f7f5; border: 1px solid #9bcfca; border-radius: 12px; color: #173f47; }
+.pickup-progress-card strong { color: #173f47; }
+.pickup-progress-card .seller-order-actions { margin-top: 0; }
