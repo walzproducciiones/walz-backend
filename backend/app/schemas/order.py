@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -34,6 +34,17 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate] = Field(min_length=1, max_length=100)
+
+
+class SellerDeliveryChoice(BaseModel):
+    seller_id: UUID
+    method: Literal["delivery", "pickup"]
+    shipping_address: str = Field(..., min_length=1, max_length=500)
+
+
+class CheckoutCreate(BaseModel):
+    items: List[OrderItemCreate] = Field(min_length=1, max_length=100)
+    deliveries: List[SellerDeliveryChoice] = Field(min_length=1, max_length=100)
 
 
 class OrderResponse(OrderBase):

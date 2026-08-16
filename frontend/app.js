@@ -1954,6 +1954,7 @@ function renderCart() {
         totalElement.textContent =
             `Total: $${total.toFixed(2)}`;
     }
+    renderSellerDeliveryOptions();
 }
 
 
@@ -2059,145 +2060,123 @@ function removeFromCart(index) {
 // CHECKOUT
 // =====================================================
 
-function checkout() {
-
-    if (cart.length === 0) {
-        showMessage("El carrito esta vacio.", "error");
-        return;
-    }
-
-    const token = localStorage.getItem("walz_token");
-
-    if (!token) {
-        showMessage("Debes iniciar sesion para comprar.", "error");
-        return;
-    }
-
-    const deliveryName =
-        document.getElementById("delivery-name")?.value.trim() || "";
-
-    const deliveryMethod =
-        document.querySelector(
-            'input[name="delivery-method"]:checked'
-        )?.value || "delivery";
-
-    const deliveryAddress =
-        document.getElementById("delivery-address")?.value.trim() || "";
-
-    const deliveryCity =
-        document.getElementById("delivery-city")?.value.trim() || "";
-
-    const deliveryPhone =
-        document.getElementById("delivery-phone")?.value.trim() || "";
-
-    const deliveryNotes =
-        document.getElementById("delivery-notes")?.value.trim() || "";
-
-    const deliveryError =
-        document.getElementById("delivery-error");
-
-    if (
-        !deliveryName ||
-        !deliveryPhone ||
-        (
-            deliveryMethod === "delivery" &&
-            (!deliveryAddress || !deliveryCity)
-        )
-    ) {
-        if (deliveryError) {
-            deliveryError.textContent =
-                deliveryMethod === "pickup"
-                    ? "Completa nombre y telefono."
-                    : "Completa nombre, direccion, ciudad y telefono.";
+function getCheckoutSellerGroups() {
+    const productsById = new Map((window.walzProducts || []).map(product => [String(product.id), product]));
+    const groups = new Map();
+    for (const item of cart) {
+        const product = productsById.get(String(item.id));
+        if (!product) continue;
+        const sellerId = String(product.seller_id);
+        if (!groups.has(sellerId)) {
+            const store = window.walzStoresByOwner?.[sellerId] || null;
+            groups.set(sellerId, { sellerId, store, items: [] });
         }
-        return;
+        groups.get(sellerId).items.push(item);
     }
-
-    if (deliveryError) {
-        deliveryError.textContent = "";
-    }
-
-    const shippingAddress = [
-        deliveryMethod === "pickup"
-            ? "Metodo: Retiro en el local"
-            : "Metodo: Envio a domicilio",
-        `Destinatario: ${deliveryName}`,
-        deliveryMethod === "delivery"
-            ? `Direccion: ${deliveryAddress}`
-            : "Direccion del local: A confirmar",
-        deliveryMethod === "delivery"
-            ? `Ciudad: ${deliveryCity}`
-            : null,
-        `Telefono: ${deliveryPhone}`,
-        deliveryNotes
-            ? `Observaciones: ${deliveryNotes}`
-            : null
-    ]
-        .filter(Boolean)
-        .join(" | ");
-
-    pendingCheckout = {
-        items: cart.map(item => ({
-            product_id: item.id,
-            quantity: item.qty
-        })),
-        shipping_address: shippingAddress,
-        delivery: {
-            method: deliveryMethod,
-            name: deliveryName,
-            address: deliveryAddress,
-            city: deliveryCity,
-            phone: deliveryPhone,
-            notes: deliveryNotes
-        },
-        cart: cart.map(item => ({ ...item }))
-    };
-
-    renderCheckoutConfirmation();
+    return Array.from(groups.values());
 }
 
+function renderSellerDeliveryOptions() {
+    const container = document.getElementById("seller-delivery-methods");
+    if (!container) return;
+    const previous = window.walzSellerDeliverySelections || {};
+    const groups = getCheckoutSellerGroups();
+    container.innerHTML = groups.map(group => {
+        const store = group.store;
+        const deliveryEnabled = store?.delivery_enabled !== false;
+        const pickupEnabled = store?.pickup_enabled !== false;
+        let selected = previous[group.sellerId];
+        if (selected === "delivery" && !deliveryEnabled) selected = "";
+        if (selected === "pickup" && !pickupEnabled) selected = "";
+        if (!selected) selected = deliveryEnabled ? "delivery" : "pickup";
+        previous[group.sellerId] = selected;
+        const storeName = store?.name || "Vendedor WalZ";
+        return `
+            <section class="seller-delivery-card">
+                <div class="seller-delivery-heading">
+                    <strong>${escapeHtml(storeName)}</strong>
+                    <span>${group.items.length} producto${group.items.length === 1 ? "" : "s"}</span>
+                </div>
+                <div class="delivery-method-options">
+                    ${deliveryEnabled ? `<label><input type="radio" data-seller-delivery="${group.sellerId}" name="delivery-method-${group.sellerId}" value="delivery" ${selected === "delivery" ? "checked" : ""} onchange="setSellerDeliveryMethod('${group.sellerId}', 'delivery')"> Envio a domicilio</label>` : ""}
+                    ${pickupEnabled ? `<label><input type="radio" data-seller-delivery="${group.sellerId}" name="delivery-method-${group.sellerId}" value="pickup" ${selected === "pickup" ? "checked" : ""} onchange="setSellerDeliveryMethod('${group.sellerId}', 'pickup')"> Retiro en el local</label>` : ""}
+                </div>
+            </section>`;
+    }).join("");
+    window.walzSellerDeliverySelections = previous;
+    updateDeliveryMethod();
+}
+
+function setSellerDeliveryMethod(sellerId, method) {
+    window.walzSellerDeliverySelections = window.walzSellerDeliverySelections || {};
+    window.walzSellerDeliverySelections[String(sellerId)] = method;
+    updateDeliveryMethod();
+}
 
 function updateDeliveryMethod() {
-
-    const method =
-        document.querySelector(
-            'input[name="delivery-method"]:checked'
-        )?.value || "delivery";
-
-    const addressFields =
-        document.getElementById("delivery-address-fields");
-
-    const pickupInformation =
-        document.getElementById("pickup-information");
-
-    const deliveryHeading =
-        document.querySelector(".delivery-form > h3:nth-of-type(2)");
-
-    if (addressFields) {
-        addressFields.style.display =
-            method === "pickup" ? "none" : "grid";
-    }
-
-    if (pickupInformation) {
-        pickupInformation.style.display =
-            method === "pickup" ? "block" : "none";
-    }
-
-    if (deliveryHeading) {
-        deliveryHeading.textContent =
-            method === "pickup"
-                ? "Datos para el retiro"
-                : "Datos de entrega";
-    }
-
-    const deliveryError =
-        document.getElementById("delivery-error");
-
-    if (deliveryError) {
-        deliveryError.textContent = "";
-    }
+    const methods = Array.from(document.querySelectorAll('input[data-seller-delivery]:checked')).map(input => input.value);
+    const needsAddress = methods.includes("delivery");
+    const hasPickup = methods.includes("pickup");
+    const addressFields = document.getElementById("delivery-address-fields");
+    const pickupInformation = document.getElementById("pickup-information");
+    const deliveryHeading = document.querySelector(".delivery-form > h3:nth-of-type(2)");
+    if (addressFields) addressFields.style.display = needsAddress ? "grid" : "none";
+    if (pickupInformation) pickupInformation.style.display = hasPickup ? "block" : "none";
+    if (deliveryHeading) deliveryHeading.textContent = needsAddress ? "Datos del comprador y domicilio" : "Datos para el retiro";
+    const deliveryError = document.getElementById("delivery-error");
+    if (deliveryError) deliveryError.textContent = "";
 }
 
+function checkout() {
+    if (cart.length === 0) { showMessage("El carrito esta vacio.", "error"); return; }
+    if (!localStorage.getItem("walz_token")) { showMessage("Debes iniciar sesion para comprar.", "error"); return; }
+
+    const groups = getCheckoutSellerGroups();
+    const deliveryName = document.getElementById("delivery-name")?.value.trim() || "";
+    const deliveryAddress = document.getElementById("delivery-address")?.value.trim() || "";
+    const deliveryCity = document.getElementById("delivery-city")?.value.trim() || "";
+    const deliveryPhone = document.getElementById("delivery-phone")?.value.trim() || "";
+    const deliveryNotes = document.getElementById("delivery-notes")?.value.trim() || "";
+    const deliveryError = document.getElementById("delivery-error");
+    const choices = groups.map(group => ({
+        sellerId: group.sellerId,
+        storeName: group.store?.name || "Vendedor WalZ",
+        method: document.querySelector(`input[data-seller-delivery="${group.sellerId}"]:checked`)?.value || ""
+    }));
+    if (choices.some(choice => !choice.method)) {
+        if (deliveryError) deliveryError.textContent = "Selecciona una forma de entrega para cada tienda.";
+        return;
+    }
+    const needsAddress = choices.some(choice => choice.method === "delivery");
+    if (!deliveryName || !deliveryPhone || (needsAddress && (!deliveryAddress || !deliveryCity))) {
+        if (deliveryError) deliveryError.textContent = needsAddress
+            ? "Completa nombre, direccion, ciudad y telefono."
+            : "Completa nombre y telefono.";
+        return;
+    }
+    if (deliveryError) deliveryError.textContent = "";
+
+    const deliveries = choices.map(choice => {
+        const shippingAddress = [
+            choice.method === "pickup" ? "Metodo: Retiro en el local" : "Metodo: Envio a domicilio",
+            `Tienda: ${choice.storeName}`,
+            `Destinatario: ${deliveryName}`,
+            choice.method === "delivery" ? `Direccion: ${deliveryAddress}` : "Direccion del local: A confirmar",
+            choice.method === "delivery" ? `Ciudad: ${deliveryCity}` : null,
+            `Telefono: ${deliveryPhone}`,
+            deliveryNotes ? `Observaciones: ${deliveryNotes}` : null
+        ].filter(Boolean).join(" | ");
+        return { seller_id: choice.sellerId, store_name: choice.storeName, method: choice.method, shipping_address: shippingAddress };
+    });
+    const uniqueMethods = new Set(deliveries.map(delivery => delivery.method));
+    pendingCheckout = {
+        items: cart.map(item => ({ product_id: item.id, quantity: item.qty })),
+        deliveries,
+        delivery: { method: uniqueMethods.size > 1 ? "mixed" : deliveries[0]?.method || "delivery", name: deliveryName, address: deliveryAddress, city: deliveryCity, phone: deliveryPhone, notes: deliveryNotes },
+        cart: cart.map(item => ({ ...item }))
+    };
+    renderCheckoutConfirmation();
+}
 
 function renderCheckoutConfirmation() {
 
@@ -2244,22 +2223,17 @@ function renderCheckoutConfirmation() {
         <h3>Total: $${total.toFixed(2)}</h3>
 
         <div class="checkout-confirmation-delivery">
-            <h3>Datos de entrega</h3>
-            <p><strong>Metodo:</strong> ${pendingCheckout.delivery.method === "pickup"
-                ? "Retiro en el local"
-                : "Envio a domicilio"
-            }</p>
+            <h3>Entrega por tienda</h3>
+            ${pendingCheckout.deliveries.map(delivery => `
+                <div class="checkout-store-delivery-summary">
+                    <strong>${escapeHtml(delivery.store_name)}</strong>
+                    <span>${delivery.method === "pickup" ? "Retiro en el local" : "Envio a domicilio"}</span>
+                </div>
+            `).join("")}
             <p><strong>Nombre:</strong> ${escapeHtml(pendingCheckout.delivery.name)}</p>
-            ${pendingCheckout.delivery.method === "delivery"
-                ? `<p><strong>Direccion:</strong> ${escapeHtml(pendingCheckout.delivery.address)}</p>
-                   <p><strong>Ciudad:</strong> ${escapeHtml(pendingCheckout.delivery.city)}</p>`
-                : `<p><strong>Direccion y horario del local:</strong> A confirmar</p>`
-            }
+            ${pendingCheckout.delivery.address ? `<p><strong>Direccion:</strong> ${escapeHtml(pendingCheckout.delivery.address)} - ${escapeHtml(pendingCheckout.delivery.city)}</p>` : ""}
             <p><strong>Telefono:</strong> ${escapeHtml(pendingCheckout.delivery.phone)}</p>
-            ${pendingCheckout.delivery.notes
-                ? `<p><strong>Observaciones:</strong> ${escapeHtml(pendingCheckout.delivery.notes)}</p>`
-                : ""
-            }
+            ${pendingCheckout.delivery.notes ? `<p><strong>Observaciones:</strong> ${escapeHtml(pendingCheckout.delivery.notes)}</p>` : ""}
         </div>
     `;
 
@@ -2319,7 +2293,11 @@ async function confirmCheckout() {
             },
             body: JSON.stringify({
                 items: orderData.items,
-                shipping_address: orderData.shipping_address
+                deliveries: orderData.deliveries.map(delivery => ({
+                    seller_id: delivery.seller_id,
+                    method: delivery.method,
+                    shipping_address: delivery.shipping_address
+                }))
             })
         });
 
@@ -2423,9 +2401,11 @@ function renderOrderSuccess(orders, delivery) {
     const createdOrders = Array.isArray(orders)
         ? orders
         : [orders];
-    const method = delivery?.method === "pickup"
-        ? "Retiro en el local"
-        : "Envio a domicilio";
+    const method = delivery?.method === "mixed"
+        ? "Modalidad elegida para cada tienda"
+        : delivery?.method === "pickup"
+            ? "Retiro en el local"
+            : "Envio a domicilio";
     const multipleOrders = createdOrders.length > 1;
     const grandTotal = createdOrders.reduce(
         (total, order) => total + Number(order.total_amount || 0),

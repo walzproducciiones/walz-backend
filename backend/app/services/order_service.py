@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
+from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
-from backend.app.schemas.order import OrderCreate
+from backend.app.schemas.order import CheckoutCreate, OrderCreate
 from backend.app.services.order_status_service import can_transition_order_status
 
 
@@ -232,7 +233,7 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
 def create_orders_by_seller(
     db: Session,
     buyer_id: UUID,
-    order_data: OrderCreate,
+    order_data: CheckoutCreate,
 ):
     quantities_by_product = defaultdict(int)
 
@@ -275,9 +276,35 @@ def create_orders_by_seller(
                 "price_at_purchase": price,
             })
 
+        delivery_by_seller = {}
+        for choice in order_data.deliveries:
+            if choice.seller_id in delivery_by_seller:
+                db.rollback()
+                return None, "Hay una modalidad de entrega repetida para una tienda."
+            delivery_by_seller[choice.seller_id] = choice
+
+        seller_ids = list(items_by_seller.keys())
+        stores = db.query(Store).filter(Store.owner_id.in_(seller_ids)).all()
+        stores_by_owner = {store.owner_id: store for store in stores}
+
+        for seller_id in seller_ids:
+            choice = delivery_by_seller.get(seller_id)
+            if not choice:
+                db.rollback()
+                return None, "Selecciona una forma de entrega para cada tienda."
+            store = stores_by_owner.get(seller_id)
+            delivery_allowed = True if not store else bool(store.delivery_enabled)
+            pickup_allowed = True if not store else bool(store.pickup_enabled)
+            if choice.method == "delivery" and not delivery_allowed:
+                db.rollback()
+                return None, "Una tienda no ofrece envio a domicilio."
+            if choice.method == "pickup" and not pickup_allowed:
+                db.rollback()
+                return None, "Una tienda no ofrece retiro en el local."
+
         created_order_ids = []
 
-        for seller_items in items_by_seller.values():
+        for seller_id, seller_items in items_by_seller.items():
             seller_total = round(
                 sum(
                     item["price_at_purchase"] * item["quantity"]
@@ -288,7 +315,7 @@ def create_orders_by_seller(
             new_order = Order(
                 buyer_id=buyer_id,
                 total_amount=seller_total,
-                shipping_address=order_data.shipping_address,
+                shipping_address=delivery_by_seller[seller_id].shipping_address,
             )
             db.add(new_order)
             db.flush()

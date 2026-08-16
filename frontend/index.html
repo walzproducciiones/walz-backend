@@ -519,30 +519,9 @@
             </div>
 
             <div class="delivery-form">
-                <h3>Metodo de entrega</h3>
+                <h3>Forma de entrega por tienda</h3>
 
-                <div class="delivery-method-options">
-                    <label>
-                        <input
-                            type="radio"
-                            name="delivery-method"
-                            value="delivery"
-                            checked
-                            onchange="updateDeliveryMethod()"
-                        >
-                        Envio a domicilio
-                    </label>
-
-                    <label>
-                        <input
-                            type="radio"
-                            name="delivery-method"
-                            value="pickup"
-                            onchange="updateDeliveryMethod()"
-                        >
-                        Retiro en el local
-                    </label>
-                </div>
+                <div id="seller-delivery-methods" class="seller-delivery-methods"></div>
 
                 <p
                     id="pickup-information"

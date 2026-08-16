@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, OrderCreate, OrderResponse, OrderStatusUpdate
 from backend.app.services.order_service import (
     cancel_order_by_buyer,
     create_order,
@@ -103,7 +103,7 @@ def get_received_orders(
 
 @router.post("/checkout", response_model=List[OrderResponse])
 def create_checkout_orders(
-    order: OrderCreate,
+    order: CheckoutCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

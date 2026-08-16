@@ -3117,3 +3117,13 @@ body {
     font-weight: 800;
     line-height: 1.25;
 }
+/* CHECKOUT CON ENTREGA POR CADA TIENDA */
+.seller-delivery-methods { display: grid; gap: 12px; margin-bottom: 18px; }
+.seller-delivery-card { padding: 13px; background: #28383b; border: 1px solid #446166; border-radius: 12px; }
+.seller-delivery-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.seller-delivery-heading strong { color: #fff; }
+.seller-delivery-heading span { color: #b8d5d7; font-size: 12px; }
+.seller-delivery-card .delivery-method-options { margin: 0; }
+.checkout-store-delivery-summary { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; padding: 10px; background: #edf8f6; border-radius: 9px; color: #173f47; }
+.checkout-store-delivery-summary span { font-weight: 700; }
+@media(max-width:600px){.checkout-store-delivery-summary,.seller-delivery-heading{flex-direction:column;}}
