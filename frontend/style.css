@@ -2349,3 +2349,13 @@ body.has-walz-news-bar .cart-button {
 .terms-acceptance-label{display:flex;align-items:flex-start;gap:10px;margin:4px 0 14px;font-size:14px;line-height:1.4}.terms-acceptance-label input{width:auto;margin:3px 0 0;flex:0 0 auto}.terms-acceptance-label a{color:#174d2d;font-weight:700}.terms-modal{position:fixed;inset:0;z-index:5000;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72)}.terms-modal-card{width:min(760px,100%);max-height:88vh;overflow:auto;padding:24px;border-radius:16px;background:#fff;color:#222;box-shadow:0 18px 60px rgba(0,0,0,.4)}.terms-modal-heading{display:flex;justify-content:space-between;gap:16px;align-items:center}.terms-modal-heading h2{margin:0}.terms-modal-card li{margin-bottom:10px;line-height:1.45}.terms-provisional-note{padding:12px;border-radius:8px;background:#fff6d8}.terms-accept-button{width:100%;background:#176b3a}@media(max-width:600px){.terms-modal{padding:10px}.terms-modal-card{padding:18px}.terms-modal-heading{align-items:flex-start}}
 /* FASE 5R - PERFIL Y SEGURIDAD DE CUENTA */
 .account-profile-block,.account-security-block,.account-email-block{margin-bottom:20px;padding:18px;border:1px solid #3f3f3f;border-radius:12px;background:#292929;color:#fff}.account-profile-block h3,.account-security-block h3,.account-email-block h3{margin-top:0;color:#fff}.account-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.account-profile-block label,.account-security-block label,.account-email-block label{color:#fff}.account-profile-block input,.account-security-block input,.account-email-block input{color:#fff;background:#171717;border:1px solid #666}.account-profile-block button,.account-security-block button,.account-email-block button{margin-top:10px}.account-success-message{color:#9be5ad!important}.account-danger-zone{margin-top:28px}@media(max-width:650px){.account-profile-grid{grid-template-columns:1fr}}
+/* CORRECCION CONTRASTE GLOBAL 5R */
+.orders-state-card,
+.orders-state-card h3,
+.orders-state-card p {
+    color: #f7f7f7;
+}
+
+.orders-state-card button {
+    color: #ffffff;
+}

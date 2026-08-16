@@ -316,6 +316,8 @@ async function handleLogin() {
                 "walz_token",
                 token
             );
+            localStorage.setItem("walz_refresh_token", data.refresh_token || "");
+            startWalzSessionRenewal();
 
             currentUserId = data.user.id;
             localStorage.setItem("walz_user_id", currentUserId);
@@ -364,6 +366,8 @@ function handleLogout() {
     token = null;
 
     localStorage.removeItem("walz_token");
+    localStorage.removeItem("walz_refresh_token");
+    stopWalzSessionRenewal();
 
     currentUserId = null;
 
@@ -384,6 +388,53 @@ function handleLogout() {
         "Sesión cerrada.",
         "success"
     );
+}
+
+
+let walzSessionRefreshPromise = null;
+
+async function refreshWalzSession() {
+    const refreshToken = localStorage.getItem("walz_refresh_token");
+    if (!refreshToken) return false;
+    if (walzSessionRefreshPromise) return walzSessionRefreshPromise;
+
+    walzSessionRefreshPromise = (async () => {
+        try {
+            const response = await fetch(`${API_URL}/auth/refresh`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.access_token || !data.refresh_token) return false;
+            token = data.access_token;
+            localStorage.setItem("walz_token", data.access_token);
+            localStorage.setItem("walz_refresh_token", data.refresh_token);
+            return true;
+        } catch (error) {
+            console.error("No se pudo renovar la sesion:", error);
+            return false;
+        } finally {
+            walzSessionRefreshPromise = null;
+        }
+    })();
+    return walzSessionRefreshPromise;
+}
+
+function stopWalzSessionRenewal() {
+    if (window.walzSessionRenewalTimer) {
+        clearInterval(window.walzSessionRenewalTimer);
+        window.walzSessionRenewalTimer = null;
+    }
+}
+
+function startWalzSessionRenewal() {
+    stopWalzSessionRenewal();
+    if (!localStorage.getItem("walz_refresh_token")) return;
+    window.walzSessionRenewalTimer = setInterval(async () => {
+        const renewed = await refreshWalzSession();
+        if (!renewed) handleExpiredSession();
+    }, 20 * 60 * 1000);
 }
 
 
@@ -4611,7 +4662,7 @@ window.showMarketplace = showMarketplace;
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    async () => {
 
         console.log(
             "✅ WalZ app.js cargado correctamente"
@@ -4635,6 +4686,12 @@ document.addEventListener(
             showAuth();
             showResetPassword();
         } else if (token) {
+            const renewed = await refreshWalzSession();
+            if (!renewed) {
+                handleExpiredSession();
+                return;
+            }
+            startWalzSessionRenewal();
 
             showMarketplace();
             updateAdminBannerVisibility();

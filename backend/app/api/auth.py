@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.user import AccountClosureRequest, EmailChangeConfirm, EmailChangeRequest, ForgotPasswordRequest, PasswordChangeRequest, ResetPasswordRequest, UserCreate, UserLogin, UserProfileUpdate, UserResponse
+from backend.app.schemas.user import AccountClosureRequest, EmailChangeConfirm, EmailChangeRequest, ForgotPasswordRequest, PasswordChangeRequest, RefreshTokenRequest, ResetPasswordRequest, UserCreate, UserLogin, UserProfileUpdate, UserResponse
 from backend.app.security.jwt import (
     create_access_token,
     create_refresh_token,
@@ -155,6 +155,36 @@ def login(
 
 
 # ============================================================
+# SESSION RENEWAL
+# ============================================================
+
+@router.post("/refresh")
+def refresh_session(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
+    payload = decode_token(request.refresh_token)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="La sesion ya no puede renovarse.")
+
+    try:
+        user_id = UUID(payload.get("sub", ""))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="La sesion ya no puede renovarse.")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="La cuenta no esta disponible.")
+
+    token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
+    return {
+        "access_token": create_access_token(token_data),
+        "refresh_token": create_refresh_token(token_data),
+        "token_type": "bearer",
+    }
+
+
+# ============================================================
 # AUTHORIZATION
 # ============================================================
 
@@ -173,6 +203,12 @@ def get_current_user(
         raise HTTPException(
             status_code=401,
             detail="Invalid token",
+        )
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token type",
         )
 
     subject = payload.get("sub")
