@@ -3486,6 +3486,14 @@ function renderMyProductEditor(product) {
                     value="${escapeHtml(product.image_url || "")}"
                     placeholder="https://..."
                 >
+            </label>            <label class="my-product-description-field edit-product-file-label">
+                <span>Reemplazar con una imagen de tu dispositivo</span>
+                <input
+                    id="edit-product-image-file-${escapeHtml(String(product.id))}"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                >
+                <small>Si no elegis un archivo, se conservara el enlace actual.</small>
             </label>
             <div class="my-product-editor-actions">
                 <button
@@ -3513,7 +3521,8 @@ async function saveMyProductChanges(productId) {
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
     const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
-    const imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
+    let imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
+    const replacementImage = document.getElementById(`edit-product-image-file-${productId}`)?.files?.[0] || null;
 
     if (!name) {
         showMessage("El nombre del producto es obligatorio.", "error");
@@ -3547,6 +3556,10 @@ async function saveMyProductChanges(productId) {
     }
 
     try {
+        if (replacementImage) {
+            showMessage("Preparando y subiendo la nueva imagen...", "success");
+            imageUrl = await uploadNewProductImage(replacementImage);
+        }
         const res = await fetch(`${API_URL}/products/${productId}`, {
             method: "PATCH",
             headers: {
