@@ -9,7 +9,7 @@ from backend.app.models.order import Order, OrderItem, OrderStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, OrderCreate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderCreate
 from backend.app.services.order_status_service import can_transition_order_status
 
 
@@ -234,6 +234,13 @@ def get_orders_received_by_seller(db: Session, seller_id: UUID):
             "delivery_estimated_date": order.delivery_estimated_date,
             "delivery_time_window": order.delivery_time_window,
             "delivery_scheduled_at": order.delivery_scheduled_at,
+            "courier_name": order.courier_name,
+            "courier_phone": order.courier_phone,
+            "courier_photo_url": order.courier_photo_url,
+            "courier_vehicle": order.courier_vehicle,
+            "carrier_company": order.carrier_company,
+            "delivery_tracking_code": order.delivery_tracking_code,
+            "courier_assigned_at": order.courier_assigned_at,
             "seller_total": round(seller_total, 2),
             "buyer": {
                 "name": f"{order.buyer.first_name} {order.buyer.last_name}",
@@ -433,6 +440,15 @@ def update_order_status_by_seller(
             db.rollback()
             return None, "El comprador debe aceptar la propuesta antes de realizar el envio."
 
+        if not is_pickup and new_status == OrderStatus.SHIPPED:
+            if order.delivery_transport_type == "correo":
+                responsible_complete = bool(order.carrier_company and order.delivery_tracking_code)
+            else:
+                responsible_complete = bool(order.courier_name and order.courier_phone and order.courier_photo_url and order.courier_vehicle)
+            if not responsible_complete:
+                db.rollback()
+                return None, "Completa la identificacion del responsable del envio antes de despacharlo."
+
         if is_pickup and new_status == OrderStatus.DELIVERED:
             db.rollback()
             return None, "En un retiro, el comprador tambien debe confirmar la recepcion."
@@ -610,6 +626,65 @@ def decide_delivery_plan_by_buyer(
             order.delivery_scheduled_at = None
         db.commit()
         return get_order_by_id(db, order.id, buyer_id), None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def seller_owns_order(db: Session, order_id: UUID, seller_id: UUID) -> bool:
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        return False
+    products = db.query(Product).filter(
+        Product.id.in_([item.product_id for item in order.items])
+    ).all()
+    return bool(products) and all(product.seller_id == seller_id for product in products)
+
+
+def assign_delivery_responsible_by_seller(
+    db: Session, order_id: UUID, seller_id: UUID, data: DeliveryResponsibleUpdate
+):
+    try:
+        order = db.query(Order).filter(Order.id == order_id).with_for_update().first()
+        if not order or not seller_owns_order(db, order_id, seller_id):
+            db.rollback()
+            return None, "not_found"
+        if order.status != OrderStatus.PAID or order.delivery_plan_status != "coordinated":
+            db.rollback()
+            return None, "Primero debe quedar coordinada la fecha de entrega."
+        if "retiro en el local" in str(order.shipping_address or "").lower():
+            db.rollback()
+            return None, "Este pedido se retira en el local."
+
+        if order.delivery_transport_type == "correo":
+            company = str(data.carrier_company or "").strip()
+            tracking = str(data.tracking_code or "").strip()
+            if not company or not tracking:
+                db.rollback()
+                return None, "Informa la empresa y el codigo de seguimiento."
+            order.carrier_company = company
+            order.delivery_tracking_code = tracking
+            order.courier_name = None
+            order.courier_phone = None
+            order.courier_photo_url = None
+            order.courier_vehicle = None
+        else:
+            name = str(data.courier_name or "").strip()
+            phone = str(data.courier_phone or "").strip()
+            photo = str(data.courier_photo_url or "").strip()
+            vehicle = str(data.courier_vehicle or "").strip()
+            if not name or not phone or not photo or not vehicle:
+                db.rollback()
+                return None, "Completa nombre, telefono, vehiculo y foto del responsable."
+            order.courier_name = name
+            order.courier_phone = phone
+            order.courier_photo_url = photo
+            order.courier_vehicle = vehicle
+            order.carrier_company = None
+            order.delivery_tracking_code = None
+        order.courier_assigned_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"id": str(order.id), "assigned": True}, None
     except SQLAlchemyError:
         db.rollback()
         raise

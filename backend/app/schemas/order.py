@@ -1,4 +1,4 @@
-from datetime import date, datetime
+﻿from datetime import date, datetime
 from typing import List, Literal, Optional
 from uuid import UUID
 
@@ -52,6 +52,9 @@ class CheckoutCreate(BaseModel):
 class OrderResponse(OrderBase):
     id: UUID
     buyer_id: UUID
+    seller_id: Optional[UUID] = None
+    seller_display_name: Optional[str] = None
+    seller_account_email: Optional[str] = None
     total_amount: float
     status: str
     pickup_status: Optional[str] = None
@@ -67,6 +70,13 @@ class OrderResponse(OrderBase):
     delivery_estimated_date: Optional[date] = None
     delivery_time_window: Optional[str] = None
     delivery_scheduled_at: Optional[datetime] = None
+    courier_name: Optional[str] = None
+    courier_phone: Optional[str] = None
+    courier_photo_url: Optional[str] = None
+    courier_vehicle: Optional[str] = None
+    carrier_company: Optional[str] = None
+    delivery_tracking_code: Optional[str] = None
+    courier_assigned_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     items: List[OrderItemResponse]
@@ -89,3 +99,13 @@ class DeliveryPlanUpdate(BaseModel):
 
 class DeliveryPlanDecision(BaseModel):
     action: Literal["accept", "keep_requested"]
+
+
+class DeliveryResponsibleUpdate(BaseModel):
+    courier_name: Optional[str] = Field(default=None, max_length=120)
+    courier_phone: Optional[str] = Field(default=None, max_length=40)
+    courier_photo_url: Optional[str] = Field(default=None, max_length=500)
+    courier_vehicle: Optional[str] = Field(default=None, max_length=120)
+    carrier_company: Optional[str] = Field(default=None, max_length=120)
+    tracking_code: Optional[str] = Field(default=None, max_length=120)
+

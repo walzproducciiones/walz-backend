@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 import enum
 
 from sqlalchemy import (
@@ -73,6 +73,13 @@ class Order(Base):
     delivery_estimated_date = Column(Date, nullable=True)
     delivery_time_window = Column(String(60), nullable=True)
     delivery_scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    courier_name = Column(String(120), nullable=True)
+    courier_phone = Column(String(40), nullable=True)
+    courier_photo_url = Column(String(500), nullable=True)
+    courier_vehicle = Column(String(120), nullable=True)
+    carrier_company = Column(String(120), nullable=True)
+    delivery_tracking_code = Column(String(120), nullable=True)
+    courier_assigned_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),
@@ -94,6 +101,32 @@ class Order(Base):
         back_populates="order",
         cascade="all, delete-orphan"
     )
+
+    def _seller_account(self):
+        for item in self.items or []:
+            product = getattr(item, "product", None)
+            seller = getattr(product, "seller", None) if product else None
+            if seller:
+                return seller
+        return None
+
+    @property
+    def seller_id(self):
+        seller = self._seller_account()
+        return getattr(seller, "id", None)
+
+    @property
+    def seller_display_name(self):
+        seller = self._seller_account()
+        if not seller:
+            return None
+        full_name = f"{getattr(seller, 'first_name', '')} {getattr(seller, 'last_name', '')}".strip()
+        return full_name or getattr(seller, "email", None)
+
+    @property
+    def seller_account_email(self):
+        seller = self._seller_account()
+        return getattr(seller, "email", None) if seller else None
 
 
 class OrderItem(Base):

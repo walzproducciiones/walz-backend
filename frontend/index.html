@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -38,12 +38,14 @@
             <input
                 type="email"
                 id="login-email"
+                autocomplete="email"
                 placeholder="Correo electrónico"
             >
 
             <input
                 type="password"
                 id="login-password"
+                autocomplete="current-password"
                 placeholder="Contraseña"
             >
 
@@ -183,16 +185,9 @@
 
 <header class="walz-header">
 
-    <div class="walz-brand" aria-label="WalZ One Marketplace">
-        <div class="walz-mark" aria-hidden="true">
-            <span class="walz-mark-w">W</span>
-            <span class="walz-mark-one"><i>O</i><i>N</i><i>E</i></span>
-        </div>
-        <div class="walz-brand-copy">
-            <div class="walz-logo"><span>WalZ</span> <strong>One</strong></div>
-            <div class="walz-subtitle">Marketplace</div>
-            <div class="walz-brand-tagline">Tus tiendas, en un solo lugar</div>
-        </div>
+    <div class="walz-brand" aria-label="Walz One Marketplace">
+        <img class="walz-brand-image" src="./assets/walz-one-logo-header.png" alt="Walz One">
+        <span class="walz-brand-marketplace">Marketplace</span>
     </div>
 
     <div class="walz-actions">
@@ -960,7 +955,11 @@
             <textarea id="banner-proposal-subtitle" maxlength="500" placeholder="Cont&aacute; brevemente qu&eacute; ofrec&eacute;s"></textarea>
         </label>
         <label>
-            <span>Enlace p&uacute;blico de la imagen</span>
+            <span>Elegir imagen del banner</span>
+            <input id="banner-proposal-image-file" type="file" accept="image/jpeg,image/png,image/webp">
+        </label>
+        <label>
+            <span>O usar un enlace p&uacute;blico</span>
             <input id="banner-proposal-image" type="url" placeholder="https://...">
         </label>
         <button type="button" onclick="submitBannerProposal()">Enviar para revisi&oacute;n</button>
@@ -991,7 +990,11 @@
             <textarea id="banner-subtitle" maxlength="500" placeholder="Descripcion breve"></textarea>
         </label>
         <label>
-            <span>Enlace de la imagen</span>
+            <span>Elegir imagen del banner</span>
+            <input id="banner-image-file" type="file" accept="image/jpeg,image/png,image/webp">
+        </label>
+        <label>
+            <span>O usar un enlace p&uacute;blico</span>
             <input id="banner-image-url" type="url" placeholder="https://...">
         </label>
         <label>
@@ -1089,7 +1092,7 @@
         &uarr; Arriba
     </button>
 
-<script src="./app.js?v=20260816-envios-paso2"></script>
+<script src="./app.js?v=20260816-responsable-envio-1"></script>
 
 <div id="terms-modal" class="terms-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="terms-title">
     <div class="terms-modal-card">
@@ -1113,3 +1116,6 @@
 </body>
 
 </html>
+
+
+

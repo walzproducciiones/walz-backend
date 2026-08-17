@@ -1,4 +1,4 @@
-* {
+﻿* {
     box-sizing: border-box;
 }
 
@@ -3172,3 +3172,94 @@ body {
 .delivery-decision-actions { display: flex !important; flex-wrap: wrap; justify-content: flex-start !important; gap: 9px !important; padding-top: 12px !important; }
 .delivery-decision-actions .secondary { background: #53686b; }
 @media (max-width: 620px) { .buyer-delivery-preference > div { grid-template-columns: 1fr; } }
+
+
+/* IDENTIFICACION DEL RESPONSABLE DEL ENVIO */
+.delivery-responsible-form, .delivery-responsible-card, .delivery-waiting-card { margin-top: 14px; padding: 15px; border: 1px solid #b8d5d2; border-radius: 12px; background: #f4fbfa; color: #173f47; }
+.delivery-responsible-form { display: grid; gap: 11px; }
+.delivery-responsible-form h4, .delivery-responsible-card h4 { margin: 0; color: #173f47; }
+.delivery-responsible-form p { margin: 0; }
+.delivery-responsible-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.delivery-responsible-fields label { display: grid; gap: 5px; font-weight: 700; }
+.delivery-responsible-fields input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9fb8b8; border-radius: 8px; background: #fff; color: #17272b; }
+.delivery-responsible-card { display: flex; align-items: center; gap: 14px; }
+.delivery-responsible-card > img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 10px #0002; }
+.delivery-responsible-data { display: grid; gap: 4px; }
+.delivery-responsible-card > div:not(.delivery-responsible-data) { display: flex; justify-content: space-between; width: 100%; gap: 12px; }
+.delivery-waiting-card { background: #fff8df; border-color: #e4c970; font-weight: 800; }
+@media (max-width: 620px) { .delivery-responsible-fields { grid-template-columns: 1fr; } .delivery-responsible-card { align-items: flex-start; } }
+
+/* WALZ_OFFICIAL_LOGO_V1 */
+.walz-header {
+    background: linear-gradient(135deg, #f7f6f3, #eef8f7);
+    border: 1px solid rgba(13, 76, 95, 0.14);
+    border-bottom: 4px solid var(--walz-turquoise);
+}
+
+.walz-brand {
+    min-width: 280px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    color: var(--walz-petrol-dark);
+}
+
+.walz-brand-image {
+    display: block;
+    width: clamp(235px, 25vw, 365px);
+    height: auto;
+    max-height: 105px;
+    object-fit: contain;
+    object-position: left center;
+    border-radius: 12px;
+}
+
+.walz-brand-marketplace {
+    margin-left: 12px;
+    color: #17636d;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+}
+
+.walz-header .orders-button,
+.walz-header .logout-btn,
+.walz-header .cart-button {
+    background: #ffffff;
+    border: 1px solid rgba(13, 76, 95, 0.24);
+    color: #103f50;
+    box-shadow: 0 4px 11px rgba(15, 64, 78, 0.08);
+}
+
+.walz-header .orders-button:hover,
+.walz-header .logout-btn:hover,
+.walz-header .cart-button:hover {
+    background: var(--walz-turquoise);
+    border-color: var(--walz-turquoise);
+    color: #ffffff;
+}
+
+@media (max-width: 760px) {
+    .walz-brand { min-width: 0; width: 100%; align-items: center; }
+    .walz-brand-image { width: min(100%, 330px); max-height: 90px; object-position: center; }
+    .walz-brand-marketplace { margin-left: 0; }
+}
+
+/* WALZ_LIGHT_BANNERS_V1 */
+.marketplace-banner-card {
+    background: #eef5f4;
+}
+
+.marketplace-banner-image {
+    opacity: 1;
+}
+
+.marketplace-banner-copy {
+    background: linear-gradient(90deg, rgba(8, 48, 64, 0.30) 0%, rgba(8, 48, 64, 0.10) 48%, rgba(8, 48, 64, 0) 78%);
+}
+
+.marketplace-banner-copy h2,
+.marketplace-banner-copy p {
+    text-shadow: 0 2px 7px rgba(0, 24, 34, 0.72);
+}

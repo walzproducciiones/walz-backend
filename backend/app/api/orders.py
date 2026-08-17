@@ -1,14 +1,16 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
+from backend.app.services.product_image_service import upload_delivery_person_photo
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
+    assign_delivery_responsible_by_seller,
     cancel_order_by_buyer,
     confirm_pickup_handover_by_seller,
     create_order,
@@ -18,6 +20,7 @@ from backend.app.services.order_service import (
     get_orders_by_buyer,
     get_orders_received_by_seller,
     schedule_delivery_by_seller,
+    seller_owns_order,
     update_order_status_by_seller,
     update_pickup_status_by_buyer,
 )
@@ -202,6 +205,44 @@ def decide_my_delivery_plan(
 ):
     result, error = decide_delivery_plan_by_buyer(
         db, order_id, current_user.id, decision
+    )
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return result
+
+
+@router.post("/seller/{order_id}/delivery-person-photo")
+async def upload_delivery_person_image(
+    order_id: UUID,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not seller_owns_order(db, order_id, current_user.id):
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    content = await image.read()
+    try:
+        url = upload_delivery_person_photo(
+            current_user.id, order_id, content, image.content_type or ""
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    return {"photo_url": url}
+
+
+@router.patch("/seller/{order_id}/delivery-responsible")
+def save_delivery_responsible(
+    order_id: UUID,
+    data: DeliveryResponsibleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result, error = assign_delivery_responsible_by_seller(
+        db, order_id, current_user.id, data
     )
     if error == "not_found":
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")

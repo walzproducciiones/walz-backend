@@ -1,4 +1,4 @@
-const API_URL = window.location.origin;
+﻿const API_URL = window.location.origin;
 
 let token = localStorage.getItem("walz_token");
 let currentUserId = localStorage.getItem("walz_user_id");
@@ -335,7 +335,16 @@ async function handleLogin() {
 
             await loadProducts();
 
-            updateCartUI();
+            // WALZ_LOGIN_KEYBOARD_V1
+        for (const fieldId of ["login-email", "login-password"]) {
+            document.getElementById(fieldId)?.addEventListener("keydown", event => {
+                if (event.key !== "Enter" || event.repeat) return;
+                event.preventDefault();
+                handleLogin();
+            });
+        }
+
+        updateCartUI();
         showWalzNewsBarIfAllowed();
 
         } else {
@@ -1684,6 +1693,10 @@ function renderMyOrders(orders) {
                                 <strong>${escapeHtml(activityAt)}</strong>
                             </div>
                             <div>
+                                <span>Vendedor</span>
+                                <strong>${escapeHtml(order.seller_display_name || order.seller_account_email || "Sin identificar")}</strong>
+                            </div>
+                            <div>
                                 <span>Entrega</span>
                                 <strong>${escapeHtml(deliveryMethod)}</strong>
                             </div>
@@ -1803,6 +1816,8 @@ function renderOrderDetail(order, items) {
             <dl class="order-summary">
                 <div><dt>Estado</dt><dd>${escapeHtml(order.status || "Sin estado")}</dd></div>
                 <div><dt>Compra realizada</dt><dd>${escapeHtml(createdAt)}</dd></div>
+                <div><dt>Vendido por</dt><dd>${escapeHtml(order.seller_display_name || "Vendedor sin nombre")}</dd></div>
+                <div><dt>Cuenta vendedora</dt><dd>${escapeHtml(order.seller_account_email || "No disponible")}</dd></div>
                 <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
             </dl>
             <h4>Productos</h4>
@@ -1823,7 +1838,7 @@ function renderOrderDetail(order, items) {
                 }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
-            ${isPickup ? pickupTimeline : renderDeliveryPlan(order)}
+            ${isPickup ? pickupTimeline : renderDeliveryPlan(order) + renderDeliveryResponsible(order)}
             ${isPickup && pickupStatus ? `<div class="pickup-progress-card"><strong>${escapeHtml(pickupLabels[pickupStatus] || pickupStatus)}</strong><div class="seller-order-actions">${pickupActions}</div></div>` : ""}
             ${canCancel ? `
                 <div class="order-cancel-actions">
@@ -2482,6 +2497,15 @@ async function confirmCheckout() {
         cart = [];
         clearCartStorage();
         renderCart();
+        // WALZ_LOGIN_KEYBOARD_V1
+        for (const fieldId of ["login-email", "login-password"]) {
+            document.getElementById(fieldId)?.addEventListener("keydown", event => {
+                if (event.key !== "Enter" || event.repeat) return;
+                event.preventDefault();
+                handleLogin();
+            });
+        }
+
         updateCartUI();
         showWalzNewsBarIfAllowed();
 
@@ -2895,7 +2919,7 @@ function renderReceivedOrders(orders) {
                             <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
                         </div>
 
-                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : renderDeliveryPlan(order, false)}
+                        ${String(order.shipping_address || "").toLowerCase().includes("retiro en el local") ? renderOrderTimeline(order) : renderDeliveryPlan(order, false) + renderDeliveryResponsible(order)}
 
                         <h3 class="order-total">
                             Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
@@ -3025,6 +3049,66 @@ async function saveSellerDeliveryPlan(orderId) {
     }
 }
 
+
+// WALZ_DELIVERY_RESPONSIBLE_V1
+function deliveryResponsibleIsComplete(order) {
+    if (String(order?.delivery_transport_type) === "correo") return Boolean(order?.carrier_company && order?.delivery_tracking_code);
+    return Boolean(order?.courier_name && order?.courier_phone && order?.courier_photo_url && order?.courier_vehicle);
+}
+
+function renderDeliveryResponsible(order) {
+    if (!deliveryResponsibleIsComplete(order)) return "";
+    if (String(order.delivery_transport_type) === "correo") {
+        return `<section class="delivery-responsible-card"><h4>Responsable del envio</h4><div><span>Empresa</span><strong>${escapeHtml(order.carrier_company)}</strong></div><div><span>Codigo de seguimiento</span><strong>${escapeHtml(order.delivery_tracking_code)}</strong></div></section>`;
+    }
+    return `<section class="delivery-responsible-card"><img src="${escapeHtml(order.courier_photo_url)}" alt="Foto del responsable del envio"><div class="delivery-responsible-data"><h4>Responsable del envio</h4><strong>${escapeHtml(order.courier_name)}</strong><span>Telefono: ${escapeHtml(order.courier_phone)}</span><span>Vehiculo: ${escapeHtml(order.courier_vehicle)}</span></div></section>`;
+}
+
+function renderDeliveryResponsibleForm(order) {
+    const safeId = String(order.id || "").replace(/[^a-zA-Z0-9-]/g, "");
+    if (String(order.delivery_transport_type) === "correo") {
+        return `<section class="delivery-responsible-form"><h4>Identificar correo o paqueteria</h4><div class="delivery-responsible-fields"><label>Empresa<input id="carrier-company-${safeId}" maxlength="120"></label><label>Codigo de seguimiento<input id="tracking-code-${safeId}" maxlength="120"></label></div><button type="button" onclick="saveDeliveryResponsible('${escapeJs(String(order.id))}')">Guardar responsable</button><p id="responsible-message-${safeId}" class="delivery-plan-inline-message"></p></section>`;
+    }
+    return `<section class="delivery-responsible-form"><h4>Identificar a quien realizara la entrega</h4><p>El comprador vera estos datos para reconocer a la persona.</p><div class="delivery-responsible-fields"><label>Nombre completo<input id="courier-name-${safeId}" maxlength="120"></label><label>Telefono<input id="courier-phone-${safeId}" maxlength="40"></label><label>Vehiculo y datos visibles<input id="courier-vehicle-${safeId}" maxlength="120" placeholder="Ej.: Moto roja, patente ABC123"></label><label>Foto del responsable<input id="courier-photo-${safeId}" type="file" accept="image/jpeg,image/png,image/webp"></label></div><button type="button" onclick="saveDeliveryResponsible('${escapeJs(String(order.id))}')">Guardar responsable</button><p id="responsible-message-${safeId}" class="delivery-plan-inline-message"></p></section>`;
+}
+
+async function uploadDeliveryPersonPhoto(orderId, file) {
+    const blob = await optimizeProductImage(file);
+    const form = new FormData(); form.append("image", blob, "responsable.webp");
+    const res = await fetch(`${API_URL}/orders/seller/${orderId}/delivery-person-photo`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("walz_token")}` }, body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "No se pudo subir la foto.");
+    return data.photo_url;
+}
+
+async function saveDeliveryResponsible(orderId) {
+    const safeId = String(orderId).replace(/[^a-zA-Z0-9-]/g, "");
+    const order = (window.walzReceivedOrders || []).find(item => String(item.id) === String(orderId));
+    const message = document.getElementById(`responsible-message-${safeId}`);
+    if (!order) return;
+    try {
+        if (message) message.textContent = "Guardando responsable...";
+        let payload;
+        if (String(order.delivery_transport_type) === "correo") {
+            payload = { carrier_company: document.getElementById(`carrier-company-${safeId}`)?.value.trim() || "", tracking_code: document.getElementById(`tracking-code-${safeId}`)?.value.trim() || "" };
+        } else {
+            const courierName = document.getElementById(`courier-name-${safeId}`)?.value.trim() || "";
+            const courierPhone = document.getElementById(`courier-phone-${safeId}`)?.value.trim() || "";
+            const courierVehicle = document.getElementById(`courier-vehicle-${safeId}`)?.value.trim() || "";
+            const file = document.getElementById(`courier-photo-${safeId}`)?.files?.[0];
+            if (!courierName || !courierPhone || !courierVehicle) throw new Error("Completa nombre, telefono y vehiculo.");
+            if (!file) throw new Error("Selecciona una foto del responsable.");
+            const photoUrl = await uploadDeliveryPersonPhoto(orderId, file);
+            payload = { courier_name: courierName, courier_phone: courierPhone, courier_vehicle: courierVehicle, courier_photo_url: photoUrl };
+        }
+        const res = await fetch(`${API_URL}/orders/seller/${orderId}/delivery-responsible`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("walz_token")}` }, body: JSON.stringify(payload) });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) return handleExpiredSession();
+        if (!res.ok) throw new Error(data.detail || "No se pudo guardar el responsable.");
+        showMessage("Responsable del envio guardado.", "success"); await loadReceivedOrders();
+    } catch (error) { if (message) message.textContent = error.message; showMessage(error.message, "error"); }
+}
+
 function renderSellerOrderActions(order) {
     const status = String(order.status || "pending").toLowerCase();
     const orderId = escapeJs(String(order.id || ""));
@@ -3053,18 +3137,11 @@ function renderSellerOrderActions(order) {
     }
 
     if (status === "paid") {
-        if (!isPickup && !order.delivery_estimated_date) {
-            return `${renderDeliveryPlanForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
-        }
-
+        if (!isPickup && !order.delivery_estimated_date) return `${renderDeliveryPlanForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
+        if (!isPickup && String(order.delivery_plan_status) === "seller_proposed") return `${renderDeliveryPlan(order, false)}<div class="delivery-waiting-card">Esperando la respuesta del comprador.</div>`;
+        if (!isPickup && String(order.delivery_plan_status) === "coordinated" && !deliveryResponsibleIsComplete(order)) return `${renderDeliveryPlan(order, false)}${renderDeliveryResponsibleForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
         const actionLabel = isPickup ? "Marcar listo para retirar" : "Marcar como enviado";
-        return `
-            ${!isPickup ? renderDeliveryPlan(order, false) : ""}
-            <div class="seller-order-actions">
-                <button type="button" onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')">${actionLabel}</button>
-                <button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button>
-            </div>
-        `;
+        return `${!isPickup ? renderDeliveryPlan(order, false) + renderDeliveryResponsible(order) : ""}<div class="seller-order-actions"><button type="button" onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')">${actionLabel}</button><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
     }
 
     if (status === "shipped") {
@@ -4718,19 +4795,36 @@ async function loadBannerProposalProducts() {
 }
 
 
+async function uploadBannerImage(file) {
+    const blob = await optimizeProductImage(file);
+    const form = new FormData();
+    form.append("image", blob, "banner.webp");
+    const response = await fetch(`${API_URL}/banners/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("walz_token")}` },
+        body: form
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "No se pudo subir el banner.");
+    return data.image_url;
+}
+
+
 async function submitBannerProposal() {
     const currentToken = localStorage.getItem("walz_token");
     const errorElement = document.getElementById("banner-proposal-error");
     const productId = document.getElementById("banner-proposal-product")?.value || "";
     const title = document.getElementById("banner-proposal-title")?.value.trim() || "";
     const subtitle = document.getElementById("banner-proposal-subtitle")?.value.trim() || "";
-    const imageUrl = document.getElementById("banner-proposal-image")?.value.trim() || "";
+    let imageUrl = document.getElementById("banner-proposal-image")?.value.trim() || "";
+    const imageFile = document.getElementById("banner-proposal-image-file")?.files?.[0];
     if (errorElement) errorElement.textContent = "";
-    if (!productId || !title || !getProductImageUrl(imageUrl)) {
-        if (errorElement) errorElement.textContent = "Selecciona el producto, completa el titulo y usa un enlace de imagen valido.";
+    if (!productId || !title || (!imageFile && !getProductImageUrl(imageUrl))) {
+        if (errorElement) errorElement.textContent = "Selecciona el producto, completa el titulo y elige una imagen.";
         return;
     }
     try {
+        if (imageFile) imageUrl = await uploadBannerImage(imageFile);
         const response = await fetch(`${API_URL}/banners/proposals`, {
             method: "POST",
             headers: {
@@ -4751,6 +4845,8 @@ async function submitBannerProposal() {
             const input = document.getElementById(id);
             if (input) input.value = "";
         }
+        const proposalFile = document.getElementById("banner-proposal-image-file");
+        if (proposalFile) proposalFile.value = "";
         const select = document.getElementById("banner-proposal-product");
         if (select) select.value = "";
         await loadMyBannerProposals();
@@ -4820,19 +4916,21 @@ async function createAdminBanner() {
     const errorElement = document.getElementById("banner-admin-error");
     const title = document.getElementById("banner-title")?.value.trim() || "";
     const subtitle = document.getElementById("banner-subtitle")?.value.trim() || "";
-    const imageUrl = document.getElementById("banner-image-url")?.value.trim() || "";
+    let imageUrl = document.getElementById("banner-image-url")?.value.trim() || "";
+    const imageFile = document.getElementById("banner-image-file")?.files?.[0];
     const linkUrl = document.getElementById("banner-link-url")?.value.trim() || "";
     const buttonText = document.getElementById("banner-button-text")?.value.trim() || "";
     const displayOrder = Number(document.getElementById("banner-display-order")?.value || 0);
     const isActive = Boolean(document.getElementById("banner-is-active")?.checked);
 
     if (errorElement) errorElement.textContent = "";
-    if (!title || !getProductImageUrl(imageUrl)) {
-        if (errorElement) errorElement.textContent = "Completa el titulo y un enlace de imagen valido.";
+    if (!title || (!imageFile && !getProductImageUrl(imageUrl))) {
+        if (errorElement) errorElement.textContent = "Completa el titulo y elige una imagen.";
         return;
     }
 
     try {
+        if (imageFile) imageUrl = await uploadBannerImage(imageFile);
         const response = await fetch(`${API_URL}/banners/`, {
             method: "POST",
             headers: {
@@ -4859,6 +4957,8 @@ async function createAdminBanner() {
             const input = document.getElementById(id);
             if (input) input.value = "";
         }
+        const bannerFile = document.getElementById("banner-image-file");
+        if (bannerFile) bannerFile.value = "";
         await loadAdminBanners();
         await loadActiveBanners();
         await refreshAdminPendingCounts();
@@ -4921,6 +5021,8 @@ async function reviewBannerProposal(bannerId, status) {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
         showMessage(status === "approved" ? "Publicidad aprobada y publicada." : "Publicidad rechazada.", "success");
+        const bannerFile = document.getElementById("banner-image-file");
+        if (bannerFile) bannerFile.value = "";
         await loadAdminBanners();
         await loadActiveBanners();
         await refreshAdminPendingCounts();
@@ -4944,6 +5046,8 @@ async function toggleAdminBanner(bannerId, shouldActivate) {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
         showMessage(shouldActivate ? "Banner activado." : "Banner pausado.", "success");
+        const bannerFile = document.getElementById("banner-image-file");
+        if (bannerFile) bannerFile.value = "";
         await loadAdminBanners();
         await loadActiveBanners();
         await refreshAdminPendingCounts();
@@ -5110,6 +5214,13 @@ function walzSectionIsVisible(id) {
     return Boolean(section && section.style.display !== "none");
 }
 
+function deliveryResponsibleFormHasDraft() {
+    return Array.from(document.querySelectorAll(".delivery-responsible-form input")).some(input => {
+        if (input.type === "file") return Boolean(input.files?.length);
+        return Boolean(String(input.value || "").trim());
+    });
+}
+
 async function syncVisibleWalzData(showConfirmation = false) {
     if (document.visibilityState !== "visible") return;
     if (!localStorage.getItem("walz_token")) return;
@@ -5117,7 +5228,7 @@ async function syncVisibleWalzData(showConfirmation = false) {
         if (walzSectionIsVisible("orders-section")) {
             await loadMyOrders(true);
         } else if (walzSectionIsVisible("sales-orders-section")) {
-            if (!document.querySelector(".delivery-plan-form :focus")) await loadReceivedOrders(true);
+            if (!document.querySelector(".delivery-plan-form :focus, .delivery-responsible-form :focus") && !deliveryResponsibleFormHasDraft()) await loadReceivedOrders(true);
         } else if (walzSectionIsVisible("my-products-section")) {
             if (!document.querySelector(".my-product-edit-form")) await loadMyProducts();
         } else if (walzSectionIsVisible("marketplace-content")) {
@@ -5161,6 +5272,15 @@ document.addEventListener(
             token ? "EXISTE" : "NO EXISTE"
         );
 
+        // WALZ_LOGIN_KEYBOARD_V1
+        for (const fieldId of ["login-email", "login-password"]) {
+            document.getElementById(fieldId)?.addEventListener("keydown", event => {
+                if (event.key !== "Enter" || event.repeat) return;
+                event.preventDefault();
+                handleLogin();
+            });
+        }
+
         updateCartUI();
         showWalzNewsBarIfAllowed();
 
@@ -5195,3 +5315,7 @@ document.addEventListener(
         }
     }
 );
+
+
+
+

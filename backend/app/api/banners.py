@@ -1,6 +1,6 @@
-from uuid import UUID
+﻿from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.app.api.auth import get_current_user, require_admin_user
@@ -13,6 +13,8 @@ from backend.app.schemas.banner import (
     BannerReviewUpdate,
     BannerUpdate,
 )
+from backend.app.services.product_image_service import upload_banner_image
+
 from backend.app.services.banner_service import (
     create_banner,
     create_banner_proposal,
@@ -46,6 +48,21 @@ def list_all_banners(
     admin: User = Depends(require_admin_user),
 ):
     return get_all_banners(db)
+
+
+@router.post("/images")
+async def upload_new_banner_image(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        content = await image.read()
+        image_url = upload_banner_image(current_user.id, content, image.content_type or "")
+        return {"image_url": image_url}
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
 
 
 @router.post("/proposals", response_model=BannerResponse, status_code=201)

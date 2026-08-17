@@ -117,6 +117,13 @@ def ensure_order_pickup_columns(engine):
         "delivery_estimated_date": "DATE",
         "delivery_time_window": "VARCHAR(60)",
         "delivery_scheduled_at": "TIMESTAMP",
+        "courier_name": "VARCHAR(120)",
+        "courier_phone": "VARCHAR(40)",
+        "courier_photo_url": "VARCHAR(500)",
+        "courier_vehicle": "VARCHAR(120)",
+        "carrier_company": "VARCHAR(120)",
+        "delivery_tracking_code": "VARCHAR(120)",
+        "courier_assigned_at": "TIMESTAMP",
     }
     with engine.begin() as connection:
         for column_name, definition in definitions.items():
