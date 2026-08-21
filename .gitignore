@@ -6,3 +6,4 @@ __pycache__/
 *.pre-*
 *.fase*-backup
 walz_local.db
+cuentas_prueba_walz.local.txt
