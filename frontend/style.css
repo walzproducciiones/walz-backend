@@ -1,4 +1,4 @@
-﻿* {
+* {
     box-sizing: border-box;
 }
 
@@ -3262,4 +3262,22 @@ body {
 .marketplace-banner-copy h2,
 .marketplace-banner-copy p {
     text-shadow: 0 2px 7px rgba(0, 24, 34, 0.72);
+}
+
+/* WALZ_LOGO_FINAL_CENTERED_V2 */
+.walz-brand {
+    align-items: center;
+}
+
+.walz-brand-image {
+    width: clamp(270px, 29vw, 420px);
+    max-height: 120px;
+    object-position: center;
+}
+
+@media (max-width: 760px) {
+    .walz-brand-image {
+        width: min(100%, 360px);
+        max-height: 100px;
+    }
 }
