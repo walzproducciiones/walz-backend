@@ -4017,6 +4017,9 @@ function updateAdminBannerVisibility() {
     const applicationButton = document.getElementById("seller-application-button");
     if (applicationButton) applicationButton.style.display = isBuyer ? "inline-flex" : "none";
 
+    const productCreateSection = document.getElementById("seller-product-create-section");
+    if (productCreateSection) productCreateSection.style.display = canSell ? "block" : "none";
+
     for (const id of ["store-profile-button", "sales-orders-button", "my-products-button"]) {
         const sellerButton = document.getElementById(id);
         if (sellerButton) sellerButton.style.display = canSell ? "inline-flex" : "none";
