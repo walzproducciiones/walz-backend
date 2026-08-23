@@ -7,7 +7,7 @@ from backend.app.api.auth import get_current_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.store import StoreProfileUpdate, StoreResponse
-from backend.app.services.store_service import get_active_stores, get_store_by_owner, save_store_profile
+from backend.app.services.store_service import get_active_stores, get_store_by_owner, get_store_by_slug, save_store_profile
 from backend.app.services.product_image_service import upload_store_logo
 
 
@@ -70,6 +70,14 @@ def update_my_store(
 @router.get("/public", response_model=list[StoreResponse])
 def get_public_stores(db: Session = Depends(get_db)):
     return get_active_stores(db)
+
+
+@router.get("/slug/{slug}", response_model=StoreResponse)
+def get_public_store_by_slug(slug: str, db: Session = Depends(get_db)):
+    store = get_store_by_slug(db, str(slug or "").strip().lower())
+    if not store or not store.is_active:
+        raise HTTPException(status_code=404, detail="Tienda no encontrada.")
+    return store
 
 
 @router.get("/seller/{seller_id}", response_model=StoreResponse)

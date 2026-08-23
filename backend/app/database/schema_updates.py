@@ -81,6 +81,17 @@ def ensure_user_terms_columns(engine):
         if "terms_version" not in existing_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN terms_version VARCHAR(40)"))
 
+def ensure_store_slug_column(engine):
+    """Add public store slug without deleting or modifying existing store data."""
+    inspector = inspect(engine)
+    if "stores" not in inspector.get_table_names():
+        return
+    existing_columns = {column["name"] for column in inspector.get_columns("stores")}
+    with engine.begin() as connection:
+        if "slug" not in existing_columns:
+            connection.execute(text("ALTER TABLE stores ADD COLUMN slug VARCHAR(180)"))
+        connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_stores_slug ON stores (slug)"))
+
 def ensure_store_delivery_columns(engine):
     """Add store delivery choices without changing existing behavior."""
     inspector = inspect(engine)

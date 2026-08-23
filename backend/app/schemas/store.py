@@ -17,6 +17,7 @@ class StoreProfileUpdate(BaseModel):
 
 
 class StoreResponse(StoreProfileUpdate):
+    slug: Optional[str] = Field(default=None, max_length=180)
     id: UUID
     owner_id: UUID
     is_active: bool

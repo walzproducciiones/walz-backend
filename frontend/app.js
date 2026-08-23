@@ -1098,6 +1098,10 @@ function openProductDetail(productId) {
         return;
     }
 
+    if (modal.parentElement?.id === "marketplace-content") {
+        document.body.appendChild(modal);
+    }
+
     const imageContainer = document.getElementById("detail-product-image-container");
     if (imageContainer) {
         imageContainer.innerHTML = renderProductImage(product.image_url, product.name, "detail-product-image");
@@ -1378,6 +1382,12 @@ function showMyOrders() {
 
 
 function showMarketplaceContent() {
+    const directStorePath = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
+    if (["farmacia-federico", "mayludstore"].includes(directStorePath)) {
+        hideAllWalzWorkSections();
+        document.getElementById("public-store-section")?.style.setProperty("display", "block");
+        return;
+    }
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -4477,6 +4487,11 @@ async function showPublicStore(sellerId) {
     const container = document.getElementById("public-store-content");
     if (!section || !container) return;
 
+    const directStorePath = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
+    const directStoreEntry = ["farmacia-federico", "mayludstore"].includes(directStorePath);
+    const backButton = section.querySelector("button");
+    if (backButton) backButton.style.display = directStoreEntry ? "none" : "";
+
     document.getElementById("marketplace-content")?.style.setProperty("display", "none");
     document.getElementById("orders-section")?.style.setProperty("display", "none");
     document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
@@ -4500,6 +4515,8 @@ async function showPublicStore(sellerId) {
         const storeProducts = (Array.isArray(products) ? products : []).filter(
             product => String(product.seller_id) === String(sellerId) && product.is_active
         );
+        window.walzProducts = storeProducts;
+        window.walzStoresByOwner = { [String(sellerId)]: store };
         container.innerHTML = `
             <header class="public-store-header">
                 ${renderProductImage(store.logo_url, store.name, "public-store-logo")}
@@ -5296,6 +5313,24 @@ document.addEventListener(
         } else if (resetTokenFromUrl) {
             showAuth();
             showResetPassword();
+        } else if (["farmacia-federico", "mayludstore"].includes(
+            window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase()
+        )) {
+            const directStoreSlug = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
+            showMarketplace();
+            try {
+                const directStoreResponse = await fetch(API_URL + "/stores/slug/" + encodeURIComponent(directStoreSlug));
+                const directStore = await directStoreResponse.json().catch(() => ({}));
+                if (!directStoreResponse.ok || !directStore.owner_id) {
+                    throw new Error(directStore.detail || "Tienda no encontrada.");
+                }
+                await showPublicStore(directStore.owner_id);
+            } catch (error) {
+                const section = document.getElementById("public-store-section");
+                const container = document.getElementById("public-store-content");
+                if (section) section.style.display = "block";
+                if (container) container.innerHTML = `<div class="orders-state-card orders-error"><h3>No pudimos abrir la tienda</h3><p>${escapeHtml(error.message || "Intenta nuevamente.")}</p></div>`;
+            }
         } else if (token) {
             const renewed = await refreshWalzSession();
             if (!renewed) {

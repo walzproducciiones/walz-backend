@@ -18,6 +18,7 @@ class Store(Base):
         index=True,
     )
     name = Column(String(160), nullable=False)
+    slug = Column(String(180), nullable=True, unique=True, index=True)
     logo_url = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
     phone = Column(String(40), nullable=True)

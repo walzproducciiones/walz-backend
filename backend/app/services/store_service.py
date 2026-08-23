@@ -1,3 +1,5 @@
+import re
+import unicodedata
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -5,6 +7,25 @@ from sqlalchemy.orm import Session
 from backend.app.models.store import Store
 from backend.app.schemas.store import StoreProfileUpdate
 
+
+def normalize_store_slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_value).strip("-")
+    return slug[:180] or "tienda"
+
+def get_store_by_slug(db: Session, slug: str):
+    return db.query(Store).filter(Store.slug == slug).first()
+
+def build_unique_store_slug(db: Session, name: str, owner_id: UUID) -> str:
+    base = normalize_store_slug(name)
+    candidate = base
+    counter = 2
+    while db.query(Store).filter(Store.slug == candidate, Store.owner_id != owner_id).first():
+        suffix = f"-{counter}"
+        candidate = f"{base[:180 - len(suffix)]}{suffix}"
+        counter += 1
+    return candidate
 
 def get_active_stores(db: Session):
     return (
@@ -36,9 +57,12 @@ def save_store_profile(
     values["name"] = values["name"].strip()
 
     if store:
+        if not store.slug:
+            store.slug = build_unique_store_slug(db, values["name"], owner_id)
         for field, value in values.items():
             setattr(store, field, value)
     else:
+        values["slug"] = build_unique_store_slug(db, values["name"], owner_id)
         store = Store(owner_id=owner_id, **values)
         db.add(store)
 

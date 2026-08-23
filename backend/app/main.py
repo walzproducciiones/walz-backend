@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os
 
 from backend.app.api import auth, banners, products, orders, payments, seller_applications, stores
@@ -11,6 +12,7 @@ from backend.app.database.schema_updates import (
     ensure_order_pickup_columns,
     ensure_product_promotion_columns,
     ensure_store_delivery_columns,
+    ensure_store_slug_column,
     ensure_user_terms_columns,
 )
 
@@ -34,6 +36,7 @@ ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)
 ensure_store_delivery_columns(engine)
+ensure_store_slug_column(engine)
 ensure_order_pickup_columns(engine)
 
 
@@ -104,6 +107,12 @@ def health_check():
 # ============================================================
 # FRONTEND
 # ============================================================
+
+@app.get("/farmacia-federico", include_in_schema=False)
+@app.get("/mayludstore", include_in_schema=False)
+def direct_store_entry():
+    return FileResponse("frontend/index.html")
+
 
 app.mount(
     "/",
