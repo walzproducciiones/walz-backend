@@ -3281,3 +3281,202 @@ body {
         max-height: 100px;
     }
 }
+
+/* WALZ ONE - LOGIN RENOVADO */
+#auth-section {
+    position: relative;
+    width: min(92%, 470px);
+    max-width: 470px;
+    margin: 46px auto;
+    padding: 32px 34px 30px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(17, 17, 17, 0.08);
+    border-radius: 24px;
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.10),
+        0 4px 18px rgba(0, 0, 0, 0.04);
+}
+
+.auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 28px;
+    text-align: center;
+}
+
+.auth-brand-image {
+    display: block;
+    width: min(250px, 78%);
+    max-height: 92px;
+    object-fit: contain;
+    margin: 0 auto 12px;
+}
+
+.auth-brand p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#login-form {
+    gap: 0;
+}
+
+.auth-login-heading {
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.auth-login-heading > span {
+    display: inline-block;
+    margin-bottom: 5px;
+    color: #777;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+#login-form .auth-login-heading h3 {
+    margin: 0 0 7px;
+    color: #111;
+    font-size: 27px;
+    line-height: 1.15;
+    text-align: left;
+}
+
+.auth-login-heading p {
+    margin: 0;
+    color: #6a6a6a;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.auth-field {
+    display: block;
+    margin-bottom: 16px;
+}
+
+.auth-field > span {
+    display: block;
+    margin-bottom: 7px;
+    color: #2c2c2c;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.auth-field input {
+    width: 100%;
+    margin: 0;
+    padding: 13px 14px;
+    border: 1px solid #d5d7dc;
+    border-radius: 11px;
+    background: #fff;
+    color: #111;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition:
+        border-color .18s ease,
+        box-shadow .18s ease,
+        background .18s ease;
+}
+
+.auth-field input::placeholder {
+    color: #9a9da3;
+}
+
+.auth-field input:focus {
+    border-color: #111;
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+    background: #fff;
+}
+
+.auth-primary-button {
+    width: 100%;
+    margin-top: 4px;
+    padding: 13px 18px;
+    border-radius: 11px;
+    background: #111;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.auth-primary-button:hover {
+    opacity: 1;
+    background: #292929;
+    transform: translateY(-1px);
+}
+
+#login-form .auth-recovery-link {
+    margin: 16px 0 0;
+    text-align: center;
+}
+
+#login-form .auth-recovery-link a {
+    color: #4f4f4f;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#login-form .auth-recovery-link a:hover {
+    color: #111;
+    text-decoration: underline;
+}
+
+.auth-register-callout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 22px;
+    padding: 15px 14px;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    background: #f7f7f7;
+    color: #555;
+    font-size: 13px;
+    text-align: center;
+}
+
+.auth-register-callout a {
+    color: #111;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.auth-register-callout a:hover {
+    text-decoration: underline;
+}
+
+#auth-section .message-box:empty {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    #auth-section {
+        width: calc(100% - 28px);
+        margin: 18px auto;
+        padding: 26px 22px 24px;
+        border-radius: 20px;
+        box-sizing: border-box;
+    }
+
+    .auth-brand {
+        margin-bottom: 24px;
+    }
+
+    .auth-brand-image {
+        width: min(225px, 80%);
+        max-height: 82px;
+    }
+
+    #login-form .auth-login-heading h3 {
+        font-size: 24px;
+    }
+}
+

@@ -27,50 +27,66 @@
 
     <div id="auth-section">
 
-        <h1 class="logo">WalZ One</h1>
+        <div class="auth-brand">
+            <img
+                src="./assets/walz-one-logo-header.png"
+                alt="WalZ One"
+                class="auth-brand-image"
+            >
+            <p>Vender es conversar, comprar es simple.</p>
+        </div>
 
         <!-- LOGIN -->
 
         <div id="login-form">
 
-            <h3>Iniciar Sesión</h3>
+            <div class="auth-login-heading">
+                <span>Bienvenido</span>
+                <h3>Inici&aacute; sesi&oacute;n</h3>
+                <p>Ingres&aacute; a tu cuenta para continuar en WalZ One.</p>
+            </div>
 
-            <input
-                type="email"
-                id="login-email"
-                autocomplete="email"
-                placeholder="Correo electrónico"
-            >
+            <label class="auth-field">
+                <span>Correo electr&oacute;nico</span>
+                <input
+                    type="email"
+                    id="login-email"
+                    autocomplete="email"
+                    placeholder="tu@email.com"
+                >
+            </label>
 
-            <input
-                type="password"
-                id="login-password"
-                autocomplete="current-password"
-                placeholder="Contraseña"
-            >
+            <label class="auth-field">
+                <span>Contrase&ntilde;a</span>
+                <input
+                    type="password"
+                    id="login-password"
+                    autocomplete="current-password"
+                    placeholder="Ingres&aacute; tu contrase&ntilde;a"
+                >
+            </label>
 
             <button
                 type="button"
+                class="auth-primary-button"
                 onclick="handleLogin()"
             >
                 Ingresar
             </button>
 
             <p class="switch-text auth-recovery-link">
-                <a href="#" onclick="showForgotPassword(); return false;">Olvide mi contrasena</a>
+                <a href="#" onclick="showForgotPassword(); return false;">Olvid&eacute; mi contrase&ntilde;a</a>
             </p>
-            <p class="switch-text">
 
-                ¿No tienes cuenta?
-
+            <div class="auth-register-callout">
+                <span>&iquest;Todav&iacute;a no ten&eacute;s cuenta?</span>
                 <a
                     href="#"
                     onclick="showRegister(); return false;"
                 >
                     Crear cuenta
                 </a>
-
-            </p>
+            </div>
 
         </div>
 
