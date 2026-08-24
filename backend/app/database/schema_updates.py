@@ -25,6 +25,26 @@ def ensure_product_promotion_columns(engine):
                 "ADD COLUMN offer_active BOOLEAN NOT NULL DEFAULT FALSE"
             ))
 
+def ensure_product_deletion_column(engine):
+    """Add logical product deletion without removing historical data."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "is_deleted" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products "
+                "ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+
+
 def ensure_admin_user(engine, admin_email):
     """Promote only the configured owner account to administrator."""
     normalized_email = str(admin_email or "").strip().lower()

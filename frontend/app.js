@@ -599,7 +599,7 @@ async function handleCreateProduct() {
             document.getElementById("prod-image-file").value = "";
             document.getElementById("prod-image-preview").textContent = "Sin imagen seleccionada";
 
-            await loadProducts();
+            await Promise.all([loadMyProducts(), loadProducts()]);
 
         } else {
 
@@ -3694,7 +3694,7 @@ function renderMyProducts(products) {
         container.innerHTML = `
             <div class="orders-state-card my-products-empty">
                 <h3>${hasProducts ? "No encontramos productos" : "Todavia no publicaste productos"}</h3>
-                <p>${hasProducts ? "Proba otra busqueda." : "Publica tu primer producto desde el marketplace."}</p>
+                <p>${hasProducts ? "Proba otra busqueda." : "Publica tu primer producto con el formulario de arriba."}</p>
             </div>
         `;
         return;
@@ -3742,6 +3742,13 @@ function renderMyProducts(products) {
                                    onclick="toggleMyProductStatus('${escapeJs(String(product.id))}', ${product.is_active ? "false" : "true"})"
                                >
                                    ${product.is_active ? "Pausar producto" : "Reactivar producto"}
+                               </button>
+                               <button
+                                   type="button"
+                                   class="delete-product-button"
+                                   onclick="deleteMyProduct('${escapeJs(String(product.id))}')"
+                               >
+                                   Eliminar producto
                                </button>
                            </div>`
                     }
@@ -4005,6 +4012,67 @@ async function toggleMyProductStatus(productId, shouldActivate) {
     } catch (error) {
         console.error("Error cambiando estado del producto:", error);
         showMessage(error.message || "No se pudo cambiar el estado del producto.", "error");
+    }
+}
+
+
+// =====================================================
+// ELIMINAR PRODUCTO
+// =====================================================
+
+async function deleteMyProduct(productId) {
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+        handleLogout();
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Eliminar este producto? Dejara de mostrarse en tu catalogo y en WalZ One. Las ventas anteriores se conservaran."
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/products/${productId}`, {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+            showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
+            handleLogout();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        window.walzMyProducts = (window.walzMyProducts || []).filter(
+            product => String(product.id) !== String(productId)
+        );
+
+        if (String(window.walzEditingProductId || "") === String(productId)) {
+            window.walzEditingProductId = null;
+        }
+
+        showMessage("Producto eliminado correctamente.", "success");
+        applyMyProductsFilters();
+        await loadProducts();
+
+    } catch (error) {
+        console.error("Error eliminando producto:", error);
+        showMessage(
+            error.message || "No se pudo eliminar el producto.",
+            "error"
+        );
     }
 }
 
@@ -5151,6 +5219,7 @@ window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
 window.toggleMyProductStatus = toggleMyProductStatus;
+window.deleteMyProduct = deleteMyProduct;
 window.refreshAdminPendingCounts = refreshAdminPendingCounts;
 window.refreshSellerPendingOrderCount = refreshSellerPendingOrderCount;
 window.showSellerApplication = showSellerApplication;
@@ -5353,7 +5422,3 @@ document.addEventListener(
         }
     }
 );
-
-
-
-

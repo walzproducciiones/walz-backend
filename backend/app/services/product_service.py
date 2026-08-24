@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from backend.app.models.product import Product
+from backend.app.models.banner import Banner
 from backend.app.schemas.product import ProductCreate, ProductFilter, ProductUpdate
 from uuid import UUID
 
@@ -66,7 +67,10 @@ def create_products_bulk(db: Session, seller_id: UUID, products_data: list[Produ
 
 
 def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductFilter = None):
-    query = db.query(Product).filter(Product.is_active == True)
+    query = db.query(Product).filter(
+        Product.is_active == True,
+        Product.is_deleted == False,
+    )
     
     if filters:
         if filters.name:
@@ -81,10 +85,24 @@ def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductF
     return query.offset(skip).limit(limit).all()
 
 def get_product(db: Session, product_id: UUID):
-    return db.query(Product).filter(Product.id == product_id).first()
+    return (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.is_deleted == False,
+        )
+        .first()
+    )
 
 def get_products_by_seller(db: Session, seller_id: UUID):
-    return db.query(Product).filter(Product.seller_id == seller_id).all()
+    return (
+        db.query(Product)
+        .filter(
+            Product.seller_id == seller_id,
+            Product.is_deleted == False,
+        )
+        .all()
+    )
 
 def update_product_by_seller(
     db: Session,
@@ -97,6 +115,7 @@ def update_product_by_seller(
         .filter(
             Product.id == product_id,
             Product.seller_id == seller_id,
+            Product.is_deleted == False,
         )
         .first()
     )
@@ -121,6 +140,39 @@ def update_product_by_seller(
             setattr(product, field, value)
         elif value is not None:
             setattr(product, field, value)
+
+    db.commit()
+    db.refresh(product)
+    return product
+
+def soft_delete_product_by_seller(
+    db: Session,
+    product_id: UUID,
+    seller_id: UUID,
+):
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.seller_id == seller_id,
+            Product.is_deleted == False,
+        )
+        .first()
+    )
+
+    if not product:
+        return None
+
+    product.is_deleted = True
+    product.is_active = False
+    product.offer_active = False
+
+    db.query(Banner).filter(
+        Banner.product_id == product.id
+    ).update(
+        {Banner.is_active: False},
+        synchronize_session=False,
+    )
 
     db.commit()
     db.refresh(product)

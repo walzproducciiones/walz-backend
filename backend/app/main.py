@@ -11,6 +11,7 @@ from backend.app.database.schema_updates import (
     ensure_banner_proposal_columns,
     ensure_order_pickup_columns,
     ensure_product_promotion_columns,
+    ensure_product_deletion_column,
     ensure_store_delivery_columns,
     ensure_store_slug_column,
     ensure_user_terms_columns,
@@ -32,6 +33,7 @@ seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
 email_change_token.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
+ensure_product_deletion_column(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)

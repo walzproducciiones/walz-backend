@@ -27,7 +27,7 @@
 
     <div id="auth-section">
 
-        <h1 class="logo">WALZ</h1>
+        <h1 class="logo">WalZ One</h1>
 
         <!-- LOGIN -->
 
@@ -304,69 +304,6 @@
 </div>
 
         <div id="marketplace-content">
-
-        <!-- =================================================
-             CREAR PRODUCTO
-        ================================================== -->
-
-        <div id="seller-product-create-section" style="display: none;">
-        <h3>Crear Producto</h3>
-
-        <div class="product-form">
-
-            <input
-                type="text"
-                id="prod-name"
-                placeholder="Nombre del producto"
-            >
-
-            <input
-                type="number"
-                id="prod-price"
-                placeholder="Precio"
-            >
-
-            <input
-                type="number"
-                id="prod-stock"
-                placeholder="Stock"
-            >
-
-            <input
-                type="text"
-                id="prod-category"
-                maxlength="100"
-                placeholder="Categoria"
-            >
-
-            <textarea
-                id="prod-description"
-                maxlength="1000"
-                placeholder="Descripcion del producto"
-            ></textarea>
-
-            <input
-                type="url"
-                id="prod-image-url"
-                placeholder="Enlace de la imagen (opcional)"
-            >
-            <div class="product-image-upload-box">
-                <label for="prod-image-file"><strong>O elegi una imagen</strong><span>WalZ la reducira y convertira automaticamente.</span></label>
-                <input type="file" id="prod-image-file" accept="image/jpeg,image/png,image/webp" onchange="previewNewProductImage()">
-                <div id="prod-image-preview" class="product-upload-preview">Sin imagen seleccionada</div>
-            </div>
-
-            <button
-                type="button"
-                onclick="handleCreateProduct()"
-            >
-                Publicar Producto
-            </button>
-
-        </div>
-
-
-        </div>
 
         <!-- =================================================
              PRODUCTOS
@@ -729,6 +666,69 @@
             <button type="button" class="banner-proposal-open" onclick="showBannerProposal()">
                 Proponer publicidad de un producto
             </button>
+
+            <!-- =================================================
+             CREAR PRODUCTO
+        ================================================== -->
+
+        <div id="seller-product-create-section" style="display: none;">
+        <h3>Crear Producto</h3>
+
+        <div class="product-form">
+
+            <input
+                type="text"
+                id="prod-name"
+                placeholder="Nombre del producto"
+            >
+
+            <input
+                type="number"
+                id="prod-price"
+                placeholder="Precio"
+            >
+
+            <input
+                type="number"
+                id="prod-stock"
+                placeholder="Stock"
+            >
+
+            <input
+                type="text"
+                id="prod-category"
+                maxlength="100"
+                placeholder="Categoria"
+            >
+
+            <textarea
+                id="prod-description"
+                maxlength="1000"
+                placeholder="Descripcion del producto"
+            ></textarea>
+
+            <input
+                type="url"
+                id="prod-image-url"
+                placeholder="Enlace de la imagen (opcional)"
+            >
+            <div class="product-image-upload-box">
+                <label for="prod-image-file"><strong>O elegi una imagen</strong><span>WalZ la reducira y convertira automaticamente.</span></label>
+                <input type="file" id="prod-image-file" accept="image/jpeg,image/png,image/webp" onchange="previewNewProductImage()">
+                <div id="prod-image-preview" class="product-upload-preview">Sin imagen seleccionada</div>
+            </div>
+
+            <button
+                type="button"
+                onclick="handleCreateProduct()"
+            >
+                Publicar Producto
+            </button>
+
+        </div>
+
+
+        </div>
 
             <div id="my-products-stock-summary" class="my-products-stock-summary"></div>
 

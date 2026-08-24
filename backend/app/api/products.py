@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
 from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter, ProductUpdate
-from backend.app.services.product_service import create_product, create_products_bulk, get_products, get_products_by_seller, update_product_by_seller
+from backend.app.services.product_service import create_product, create_products_bulk, get_products, get_products_by_seller, update_product_by_seller, soft_delete_product_by_seller
 from backend.app.api.auth import get_current_user
 from backend.app.models.user import User
 from uuid import UUID
@@ -122,3 +122,26 @@ def update_my_product(
         )
 
     return updated_product
+
+@router.delete("/{product_id}")
+def delete_my_product(
+    product_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    deleted_product = soft_delete_product_by_seller(
+        db,
+        product_id,
+        current_user.id,
+    )
+
+    if not deleted_product:
+        raise HTTPException(
+            status_code=404,
+            detail="Producto no encontrado.",
+        )
+
+    return {
+        "ok": True,
+        "product_id": str(product_id),
+    }
