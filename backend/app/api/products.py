@@ -24,7 +24,10 @@ def create_new_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_product(db, current_user.id, product)
+    try:
+        return create_product(db, current_user.id, product)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 @router.post("/images")
 async def upload_my_product_image(

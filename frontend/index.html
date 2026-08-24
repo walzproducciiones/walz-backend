@@ -688,6 +688,32 @@
                 placeholder="Precio"
             >
 
+            <select id="prod-commercial-type">
+                <option value="">Sin propuesta comercial</option>
+                <option value="OFERTA">Oferta</option>
+                <option value="PROMOCION">Promocion</option>
+                <option value="NOVEDAD">Novedad</option>
+                <option value="COMBO">Combo</option>
+                <option value="2X1">2x1</option>
+                <option value="LIQUIDACION">Liquidacion</option>
+                <option value="BENEFICIO">Beneficio especial</option>
+            </select>
+
+            <input
+                type="text"
+                id="prod-commercial-text"
+                maxlength="200"
+                placeholder="Texto comercial breve (opcional)"
+            >
+
+            <input
+                type="number"
+                id="prod-offer-price"
+                min="0.01"
+                step="0.01"
+                placeholder="Precio promocional/oferta (opcional)"
+            >
+
             <input
                 type="number"
                 id="prod-stock"

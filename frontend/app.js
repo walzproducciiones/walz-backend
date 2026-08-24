@@ -516,6 +516,25 @@ async function handleCreateProduct() {
             document.getElementById("prod-price").value
         );
 
+    let commercialType =
+        document.getElementById("prod-commercial-type")?.value.trim() || "";
+
+    const commercialText =
+        document.getElementById("prod-commercial-text")?.value.trim() || "";
+
+    const offerPriceText =
+        document.getElementById("prod-offer-price")?.value.trim() || "";
+
+    const offerPrice =
+        offerPriceText ? Number(offerPriceText) : null;
+
+    if (offerPrice !== null && !commercialType) {
+        commercialType = "OFERTA";
+    }
+
+    const commercialActive = Boolean(commercialType);
+    const offerActive = offerPrice !== null;
+
     const stock =
         parseInt(
             document.getElementById("prod-stock").value
@@ -540,6 +559,30 @@ async function handleCreateProduct() {
         return;
     }
 
+    if (offerActive && (!Number.isFinite(offerPrice) || offerPrice <= 0)) {
+        showMessage(
+            "Ingresa un precio promocional valido.",
+            "error"
+        );
+        return;
+    }
+
+    if (offerActive && offerPrice >= price) {
+        showMessage(
+            "El precio promocional debe ser menor que el precio normal.",
+            "error"
+        );
+        return;
+    }
+
+    if (commercialActive && commercialType === "OFERTA" && offerPrice === null) {
+        showMessage(
+            "Una oferta activa necesita un precio promocional.",
+            "error"
+        );
+        return;
+    }
+
     try {
         if (imageFile) {
             showMessage("Preparando y subiendo imagen...", "success");
@@ -559,6 +602,11 @@ async function handleCreateProduct() {
                 body: JSON.stringify({
                     name,
                     price,
+                    offer_price: offerPrice,
+                    offer_active: offerActive,
+                    commercial_type: commercialType || null,
+                    commercial_text: commercialText || null,
+                    commercial_active: commercialActive,
                     stock,
                     category: category || null,
                     description: description || null,
@@ -588,6 +636,10 @@ async function handleCreateProduct() {
             document.getElementById(
                 "prod-price"
             ).value = "";
+
+            document.getElementById("prod-commercial-type").value = "";
+            document.getElementById("prod-commercial-text").value = "";
+            document.getElementById("prod-offer-price").value = "";
 
             document.getElementById(
                 "prod-stock"
@@ -788,19 +840,59 @@ function getProductEffectivePrice(product) {
         : Number(product.price || 0);
 }
 
+function getProductCommercialLabel(product) {
+    const type = String(product?.commercial_type || "").trim().toUpperCase();
+
+    const labels = {
+        OFERTA: "Oferta",
+        PROMOCION: "Promocion",
+        NOVEDAD: "Novedad",
+        COMBO: "Combo",
+        "2X1": "2x1",
+        LIQUIDACION: "Liquidacion",
+        BENEFICIO: "Beneficio especial"
+    };
+
+    if (product?.commercial_active && labels[type]) {
+        return labels[type];
+    }
+
+    if (hasActiveProductOffer(product)) {
+        return "Oferta";
+    }
+
+    return "";
+}
+
 function renderProductPrice(product) {
     const normalPrice = Number(product?.price || 0);
     const effectivePrice = getProductEffectivePrice(product);
+    const commercialLabel = getProductCommercialLabel(product);
+    const commercialText = product?.commercial_active
+        ? String(product?.commercial_text || "").trim()
+        : "";
+
+    const commercialInfo = commercialLabel
+        ? `
+            <span class="product-offer-badge">${escapeHtml(commercialLabel)}</span>
+            ${commercialText
+                ? `<span class="product-commercial-text">${escapeHtml(commercialText)}</span>`
+                : ""}
+        `
+        : "";
 
     if (hasActiveProductOffer(product)) {
         return `
             <span class="product-normal-price">$${normalPrice.toFixed(2)}</span>
             <span class="product-offer-price">$${effectivePrice.toFixed(2)}</span>
-            <span class="product-offer-badge">Oferta</span>
+            ${commercialInfo}
         `;
     }
 
-    return `<span class="product-current-price">$${normalPrice.toFixed(2)}</span>`;
+    return `
+        <span class="product-current-price">$${normalPrice.toFixed(2)}</span>
+        ${commercialInfo}
+    `;
 }
 
 
@@ -3795,7 +3887,30 @@ function renderMyProductEditor(product) {
                 >
             </label>
             <label>
-                <span>Precio de oferta</span>
+                <span>Propuesta comercial</span>
+                <select id="edit-product-commercial-type-${escapeHtml(String(product.id))}">
+                    <option value="">Sin propuesta comercial</option>
+                    <option value="OFERTA" ${(product.commercial_type === "OFERTA" || (!product.commercial_type && product.offer_active)) ? "selected" : ""}>Oferta</option>
+                    <option value="PROMOCION" ${product.commercial_type === "PROMOCION" ? "selected" : ""}>Promocion</option>
+                    <option value="NOVEDAD" ${product.commercial_type === "NOVEDAD" ? "selected" : ""}>Novedad</option>
+                    <option value="COMBO" ${product.commercial_type === "COMBO" ? "selected" : ""}>Combo</option>
+                    <option value="2X1" ${product.commercial_type === "2X1" ? "selected" : ""}>2x1</option>
+                    <option value="LIQUIDACION" ${product.commercial_type === "LIQUIDACION" ? "selected" : ""}>Liquidacion</option>
+                    <option value="BENEFICIO" ${product.commercial_type === "BENEFICIO" ? "selected" : ""}>Beneficio especial</option>
+                </select>
+            </label>
+            <label>
+                <span>Texto comercial breve</span>
+                <input
+                    id="edit-product-commercial-text-${escapeHtml(String(product.id))}"
+                    type="text"
+                    maxlength="200"
+                    value="${escapeHtml(product.commercial_text || "")}"
+                    placeholder="Ej.: Solo esta semana"
+                >
+            </label>
+            <label>
+                <span>Precio promocional</span>
                 <input
                     id="edit-product-offer-price-${escapeHtml(String(product.id))}"
                     type="number"
@@ -3807,11 +3922,11 @@ function renderMyProductEditor(product) {
             </label>
             <label class="my-product-offer-toggle">
                 <input
-                    id="edit-product-offer-active-${escapeHtml(String(product.id))}"
+                    id="edit-product-commercial-active-${escapeHtml(String(product.id))}"
                     type="checkbox"
-                    ${product.offer_active ? "checked" : ""}
+                    ${(product.commercial_active || product.offer_active) ? "checked" : ""}
                 >
-                <span>Oferta activa</span>
+                <span>Propuesta comercial activa</span>
             </label>
             <label>
                 <span>Stock</span>
@@ -3876,9 +3991,17 @@ async function saveMyProductChanges(productId) {
     const currentToken = localStorage.getItem("walz_token");
     const name = document.getElementById(`edit-product-name-${productId}`)?.value.trim() || "";
     const price = Number(document.getElementById(`edit-product-price-${productId}`)?.value);
+    let commercialType = document.getElementById(`edit-product-commercial-type-${productId}`)?.value.trim() || "";
+    const commercialText = document.getElementById(`edit-product-commercial-text-${productId}`)?.value.trim() || "";
     const offerPriceText = document.getElementById(`edit-product-offer-price-${productId}`)?.value.trim() || "";
     const offerPrice = offerPriceText ? Number(offerPriceText) : null;
-    const offerActive = Boolean(document.getElementById(`edit-product-offer-active-${productId}`)?.checked);
+    const commercialActive = Boolean(document.getElementById(`edit-product-commercial-active-${productId}`)?.checked);
+
+    if (offerPrice !== null && !commercialType) {
+        commercialType = "OFERTA";
+    }
+
+    const offerActive = commercialActive && offerPrice !== null;
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
     const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
@@ -3900,13 +4023,23 @@ async function saveMyProductChanges(productId) {
         return;
     }
 
-    if (offerActive && (!Number.isFinite(offerPrice) || offerPrice <= 0)) {
-        showMessage("Ingresa un precio de oferta valido antes de activarla.", "error");
+    if (offerPrice !== null && (!Number.isFinite(offerPrice) || offerPrice <= 0)) {
+        showMessage("Ingresa un precio promocional valido.", "error");
         return;
     }
 
-    if (offerActive && offerPrice >= price) {
-        showMessage("El precio de oferta debe ser menor que el precio normal.", "error");
+    if (offerPrice !== null && offerPrice >= price) {
+        showMessage("El precio promocional debe ser menor que el precio normal.", "error");
+        return;
+    }
+
+    if (commercialActive && !commercialType) {
+        showMessage("Selecciona un tipo de propuesta comercial.", "error");
+        return;
+    }
+
+    if (commercialActive && commercialType === "OFERTA" && offerPrice === null) {
+        showMessage("Una oferta activa necesita un precio promocional.", "error");
         return;
     }
 
@@ -3927,7 +4060,19 @@ async function saveMyProductChanges(productId) {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ name, price, offer_price: offerPrice, offer_active: offerActive, stock, category: category || null, description: description || null, image_url: imageUrl })
+            body: JSON.stringify({
+                name,
+                price,
+                offer_price: offerPrice,
+                offer_active: offerActive,
+                commercial_type: commercialType || null,
+                commercial_text: commercialText || null,
+                commercial_active: commercialActive,
+                stock,
+                category: category || null,
+                description: description || null,
+                image_url: imageUrl
+            })
         });
         const data = await res.json().catch(() => ({}));
 

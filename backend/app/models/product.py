@@ -60,6 +60,28 @@ class Product(Base):
         server_default="false"
     )
 
+    commercial_type = Column(
+        String(50),
+        nullable=True
+    )
+
+    commercial_text = Column(
+        String(200),
+        nullable=True
+    )
+
+    commercial_active = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
+    )
+
+    commercial_started_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     stock = Column(
         Integer,
         default=0

@@ -25,6 +25,33 @@ def ensure_product_promotion_columns(engine):
                 "ADD COLUMN offer_active BOOLEAN NOT NULL DEFAULT FALSE"
             ))
 
+        if "commercial_type" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN commercial_type VARCHAR(50)"
+            ))
+
+        if "commercial_text" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN commercial_text VARCHAR(200)"
+            ))
+
+        if "commercial_active" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products "
+                "ADD COLUMN commercial_active BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+
+        if "commercial_started_at" not in existing_columns:
+            timestamp_type = (
+                "TIMESTAMP WITH TIME ZONE"
+                if engine.dialect.name == "postgresql"
+                else "DATETIME"
+            )
+            connection.execute(text(
+                "ALTER TABLE products "
+                f"ADD COLUMN commercial_started_at {timestamp_type}"
+            ))
+
 def ensure_product_deletion_column(engine):
     """Add logical product deletion without removing historical data."""
     inspector = inspect(engine)
