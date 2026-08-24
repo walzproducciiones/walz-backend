@@ -392,12 +392,12 @@ function handleLogout() {
 
     updateCartUI();
 
+    const loginPasswordInput = document.getElementById("login-password");
+    if (loginPasswordInput) loginPasswordInput.value = "";
+
     showAuth();
 
-    showMessage(
-        "Sesión cerrada.",
-        "success"
-    );
+
 }
 
 
