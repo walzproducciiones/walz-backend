@@ -3480,3 +3480,88 @@ body {
     }
 }
 
+
+/* =====================================================
+   WALZ ONE - RUBROS MULTIRRUBRO
+   ===================================================== */
+
+.store-business-categories {
+    margin: 0;
+    padding: 16px;
+    border: 1px solid #4f6266;
+    border-radius: 12px;
+    background: #202b2e;
+}
+
+.store-business-categories > p {
+    margin: 6px 0 14px;
+    color: #d7e0e2;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.store-business-categories-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.store-business-categories-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #52666a;
+    border-radius: 9px;
+    background: #172124;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.store-business-categories-options input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    accent-color: #18a6a6;
+}
+
+.store-business-custom {
+    display: grid;
+    gap: 7px;
+    margin-top: 14px;
+}
+
+.store-business-custom input {
+    margin: 0;
+}
+
+.store-business-custom small {
+    color: #b9c8ca;
+}
+
+.store-preview-categories,
+.public-store-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.store-preview-categories span,
+.public-store-categories span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dff7f5;
+    color: #17666b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+    .store-business-categories-options {
+        grid-template-columns: 1fr;
+    }
+}
+

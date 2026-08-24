@@ -54,6 +54,28 @@ def save_store_profile(
         value = values.get(optional_field)
         values[optional_field] = str(value).strip() if value else None
 
+    categories = values.get("business_categories") or []
+    normalized_categories = []
+    seen_categories = set()
+
+    for category in categories:
+        value = " ".join(str(category or "").strip().split())
+        if not value:
+            continue
+        if len(value) > 80:
+            raise ValueError("Cada rubro puede tener hasta 80 caracteres.")
+
+        key = value.casefold()
+        if key in seen_categories:
+            continue
+
+        seen_categories.add(key)
+        normalized_categories.append(value)
+
+    if len(normalized_categories) > 8:
+        raise ValueError("Selecciona hasta 8 rubros por tienda.")
+
+    values["business_categories"] = normalized_categories
     values["name"] = values["name"].strip()
 
     if store:

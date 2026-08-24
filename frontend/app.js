@@ -283,6 +283,45 @@ async function handleResetPassword() {
     }
 }
 
+
+function clearLoginCredentials() {
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
+
+    if (emailInput) emailInput.value = "";
+    if (passwordInput) passwordInput.value = "";
+}
+
+function prepareLocalLoginForm() {
+    const isLocal =
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "localhost";
+
+    if (!isLocal) return;
+
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
+
+    if (emailInput) {
+        emailInput.setAttribute("autocomplete", "off");
+        emailInput.value = "";
+    }
+
+    if (passwordInput) {
+        passwordInput.setAttribute("autocomplete", "new-password");
+        passwordInput.value = "";
+    }
+}
+
+window.addEventListener("pageshow", () => {
+    window.setTimeout(prepareLocalLoginForm, 100);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    window.setTimeout(prepareLocalLoginForm, 100);
+});
+
+
 async function handleLogin() {
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
@@ -392,8 +431,8 @@ function handleLogout() {
 
     updateCartUI();
 
-    const loginPasswordInput = document.getElementById("login-password");
-    if (loginPasswordInput) loginPasswordInput.value = "";
+    clearLoginCredentials();
+    prepareLocalLoginForm();
 
     showAuth();
 
@@ -1025,7 +1064,7 @@ function renderProducts(products) {
                                 )
                             "
                         >
-                            🛒 Agregar
+                            Agregar
                         </button>
                         `
 
@@ -4737,6 +4776,11 @@ async function showPublicStore(sellerId) {
                     <span>Tienda en WalZ One</span>
                     <h1>${escapeHtml(store.name || "Tienda")}</h1>
                     ${store.description ? `<p>${escapeHtml(store.description)}</p>` : ""}
+                    ${Array.isArray(store.business_categories) && store.business_categories.length ? `
+                        <div class="public-store-categories">
+                            ${store.business_categories.map(category => `<span>${escapeHtml(category)}</span>`).join("")}
+                        </div>
+                    ` : ""}
                     <div class="public-store-contact">
                         ${store.city ? `<span>Ciudad: <strong>${escapeHtml(store.city)}</strong></span>` : ""}
                         ${store.phone ? `<span>Telefono: <strong>${escapeHtml(store.phone)}</strong></span>` : ""}
@@ -4814,11 +4858,67 @@ async function uploadStoreLogo(file) {
 }
 
 
+function getStoreBusinessCategoriesFromForm() {
+    const selected = Array.from(
+        document.querySelectorAll(".store-business-category:checked")
+    ).map(input => String(input.value || "").trim());
+
+    const custom = String(
+        document.getElementById("store-business-categories-custom")?.value || ""
+    )
+        .split(",")
+        .map(value => value.trim())
+        .filter(Boolean);
+
+    const result = [];
+    const seen = new Set();
+
+    for (const value of [...selected, ...custom]) {
+        const normalized = value.replace(/\s+/g, " ").trim();
+        if (!normalized) continue;
+
+        const key = normalized.toLocaleLowerCase("es");
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        result.push(normalized);
+    }
+
+    return result;
+}
+
+
+function setStoreBusinessCategoriesForm(categories) {
+    const values = Array.isArray(categories)
+        ? categories.map(value => String(value || "").trim()).filter(Boolean)
+        : [];
+
+    const remaining = new Map(
+        values.map(value => [value.toLocaleLowerCase("es"), value])
+    );
+
+    document.querySelectorAll(".store-business-category").forEach(input => {
+        const key = String(input.value || "").trim().toLocaleLowerCase("es");
+        const selected = remaining.has(key);
+        input.checked = selected;
+        if (selected) remaining.delete(key);
+    });
+
+    const customInput =
+        document.getElementById("store-business-categories-custom");
+
+    if (customInput) {
+        customInput.value = Array.from(remaining.values()).join(", ");
+    }
+}
+
+
 function renderStorePreview() {
     const container = document.getElementById("store-profile-preview");
     if (!container) return;
     const name = document.getElementById("store-name")?.value.trim() || "Nombre de tu tienda";
     const description = document.getElementById("store-description")?.value.trim() || "La descripcion de tu negocio aparecera aqui.";
+    const businessCategories = getStoreBusinessCategoriesFromForm();
     const deliveryEnabled = document.getElementById("store-delivery-enabled")?.checked !== false;
     const pickupEnabled = document.getElementById("store-pickup-enabled")?.checked !== false;
     const deliveryLabels = [
@@ -4832,6 +4932,11 @@ function renderStorePreview() {
             <div>
                 <h3>${escapeHtml(name)}</h3>
                 <p>${escapeHtml(description)}</p>
+                <div class="store-preview-categories">
+                    ${businessCategories.length
+                        ? businessCategories.map(category => `<span>${escapeHtml(category)}</span>`).join("")
+                        : "<strong>Selecciona al menos un rubro</strong>"}
+                </div>
                 <div class="store-preview-delivery">
                     ${deliveryLabels.length
                         ? deliveryLabels.map(label => `<span>${escapeHtml(label)}</span>`).join("")
@@ -4883,6 +4988,7 @@ async function loadStoreProfile() {
         const pickupInput = document.getElementById("store-pickup-enabled");
         if (deliveryInput) deliveryInput.checked = values.delivery_enabled !== false;
         if (pickupInput) pickupInput.checked = values.pickup_enabled !== false;
+        setStoreBusinessCategoriesForm(values.business_categories || []);
         const textFields = {
         };
         for (const [id, value] of Object.entries({...fields, ...textFields})) {
@@ -4911,8 +5017,19 @@ async function saveStoreProfile(event) {
         errorElement.textContent = "";
         errorElement.classList.remove("store-profile-success-message");
     }
+    const businessCategories = getStoreBusinessCategoriesFromForm();
     const deliveryEnabled = Boolean(document.getElementById("store-delivery-enabled")?.checked);
     const pickupEnabled = Boolean(document.getElementById("store-pickup-enabled")?.checked);
+
+    if (!businessCategories.length) {
+        if (errorElement) errorElement.textContent = "Selecciona al menos un rubro para tu tienda.";
+        return;
+    }
+
+    if (businessCategories.length > 8) {
+        if (errorElement) errorElement.textContent = "Podes seleccionar hasta 8 rubros por tienda.";
+        return;
+    }
     if (!deliveryEnabled && !pickupEnabled) {
         if (errorElement) errorElement.textContent = "Selecciona al menos una forma de entrega.";
         return;
@@ -4942,6 +5059,7 @@ async function saveStoreProfile(event) {
                 phone: value("store-phone") || null,
                 city: value("store-city") || null,
                 address: value("store-address") || null,
+                business_categories: businessCategories,
                 delivery_enabled: deliveryEnabled,
                 pickup_enabled: pickupEnabled
             })
@@ -5567,3 +5685,4 @@ document.addEventListener(
         }
     }
 );
+

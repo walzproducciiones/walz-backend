@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, UUID
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, JSON, String, Text, UUID
 from sqlalchemy.sql import func
 
 from backend.app.database.session import Base
@@ -24,6 +24,7 @@ class Store(Base):
     phone = Column(String(40), nullable=True)
     city = Column(String(120), nullable=True)
     address = Column(String(250), nullable=True)
+    business_categories = Column(JSON, nullable=False, default=list)
     delivery_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     pickup_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     is_active = Column(Boolean, nullable=False, default=True, server_default="1")

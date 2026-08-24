@@ -942,6 +942,34 @@
                 <span>Descripci&oacute;n</span>
                 <textarea id="store-description" maxlength="1200" placeholder="Cont&aacute; brevemente qu&eacute; ofrece tu negocio" oninput="renderStorePreview()"></textarea>
             </label>
+
+            <fieldset class="store-business-categories store-profile-wide">
+                <div class="store-delivery-title">Rubros de tu tienda</div>
+                <p>Eleg&iacute; uno o varios rubros que representen lo que vend&eacute;s. Pod&eacute;s modificarlos m&aacute;s adelante.</p>
+
+                <div id="store-business-categories-options" class="store-business-categories-options">
+                    <label><input type="checkbox" class="store-business-category" value="Alimentos y bebidas" onchange="renderStorePreview()"><span>Alimentos y bebidas</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Gastronom&iacute;a y comidas" onchange="renderStorePreview()"><span>Gastronom&iacute;a y comidas</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Farmacia y salud" onchange="renderStorePreview()"><span>Farmacia y salud</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Perfumer&iacute;a y belleza" onchange="renderStorePreview()"><span>Perfumer&iacute;a y belleza</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Cuidado personal" onchange="renderStorePreview()"><span>Cuidado personal</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Hogar y muebles" onchange="renderStorePreview()"><span>Hogar y muebles</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Textil y ropa de cama" onchange="renderStorePreview()"><span>Textil y ropa de cama</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Beb&eacute;s y ni&ntilde;os" onchange="renderStorePreview()"><span>Beb&eacute;s y ni&ntilde;os</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Indumentaria y calzado" onchange="renderStorePreview()"><span>Indumentaria y calzado</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Ferreter&iacute;a y construcci&oacute;n" onchange="renderStorePreview()"><span>Ferreter&iacute;a y construcci&oacute;n</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Tecnolog&iacute;a y electr&oacute;nica" onchange="renderStorePreview()"><span>Tecnolog&iacute;a y electr&oacute;nica</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Mascotas" onchange="renderStorePreview()"><span>Mascotas</span></label>
+                    <label><input type="checkbox" class="store-business-category" value="Servicios" onchange="renderStorePreview()"><span>Servicios</span></label>
+                </div>
+
+                <label class="store-business-custom">
+                    <span>Otros rubros</span>
+                    <input id="store-business-categories-custom" type="text" maxlength="400" placeholder="Ejemplo: Pizzer&iacute;a, Empanadas" oninput="renderStorePreview()">
+                    <small>Separalos con comas. Pod&eacute;s elegir hasta 8 rubros en total.</small>
+                </label>
+            </fieldset>
+
             <label>
                 <span>Tel&eacute;fono comercial</span>
                 <input id="store-phone" type="text" maxlength="40" placeholder="Ejemplo: 02281 123456">

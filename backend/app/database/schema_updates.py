@@ -155,6 +155,34 @@ def ensure_store_delivery_columns(engine):
                 "ALTER TABLE stores ADD COLUMN pickup_enabled BOOLEAN NOT NULL DEFAULT TRUE"
             ))
 
+def ensure_store_business_categories_column(engine):
+    """Add multiple business categories to stores without deleting existing data."""
+    inspector = inspect(engine)
+
+    if "stores" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("stores")
+    }
+
+    if "business_categories" in existing_columns:
+        return
+
+    with engine.begin() as connection:
+        if engine.dialect.name == "postgresql":
+            connection.execute(text(
+                "ALTER TABLE stores "
+                "ADD COLUMN business_categories JSONB NOT NULL DEFAULT '[]'::jsonb"
+            ))
+        else:
+            connection.execute(text(
+                "ALTER TABLE stores "
+                "ADD COLUMN business_categories TEXT NOT NULL DEFAULT '[]'"
+            ))
+
+
 def ensure_order_pickup_columns(engine):
     """Add safe pickup confirmations without modifying existing orders."""
     inspector = inspect(engine)

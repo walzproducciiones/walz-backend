@@ -13,6 +13,7 @@ from backend.app.database.schema_updates import (
     ensure_product_promotion_columns,
     ensure_product_deletion_column,
     ensure_store_delivery_columns,
+    ensure_store_business_categories_column,
     ensure_store_slug_column,
     ensure_user_terms_columns,
 )
@@ -38,6 +39,7 @@ ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)
 ensure_store_delivery_columns(engine)
+ensure_store_business_categories_column(engine)
 ensure_store_slug_column(engine)
 ensure_order_pickup_columns(engine)
 
