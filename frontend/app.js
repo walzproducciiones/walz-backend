@@ -365,6 +365,8 @@ async function handleLogin() {
             updateAdminBannerVisibility();
             await loadCurrentUserProfile();
             cart = loadCart();
+            pendingCheckout = null;
+            updateCartUI();
 
             showMessage(
                 "Bienvenido a WalZ!",
@@ -374,6 +376,7 @@ async function handleLogin() {
             showMarketplace();
 
             await loadProducts();
+            await loadActiveBanners();
 
             // WALZ_LOGIN_KEYBOARD_V1
         for (const fieldId of ["login-email", "login-password"]) {
@@ -2876,6 +2879,16 @@ function showResetPassword() { hideAuthForms(); document.getElementById("reset-p
 
 function showAuth() {
     hideAllWalzWorkSections();
+    stopMarketplaceBannerRotation();
+
+    const bannerContainer = document.getElementById("marketplace-banners");
+    if (bannerContainer) {
+        bannerContainer.style.display = "none";
+        bannerContainer.innerHTML = "";
+    }
+
+    window.walzActiveBanners = [];
+
     document.getElementById("auth-section").style.display = "block";
     document.getElementById("marketplace-section").style.display = "none";
     if (new URLSearchParams(window.location.search).get("reset_token")) showResetPassword();
@@ -4521,10 +4534,28 @@ async function loadActiveBanners() {
     const container = document.getElementById("marketplace-banners");
     if (!container) return;
 
+    const requestToken = localStorage.getItem("walz_token");
+
+    if (!requestToken) {
+        stopMarketplaceBannerRotation();
+        window.walzActiveBanners = [];
+        container.style.display = "none";
+        container.innerHTML = "";
+        return;
+    }
+
     try {
         const response = await fetch(`${API_URL}/banners/active`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const banners = await response.json();
+
+        if (localStorage.getItem("walz_token") !== requestToken) {
+            stopMarketplaceBannerRotation();
+            window.walzActiveBanners = [];
+            container.style.display = "none";
+            container.innerHTML = "";
+            return;
+        }
 
         if (!Array.isArray(banners) || banners.length === 0) {
             stopMarketplaceBannerRotation();
