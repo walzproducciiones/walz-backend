@@ -1,4 +1,4 @@
-﻿const API_URL = window.location.origin;
+const API_URL = window.location.origin;
 
 let token = localStorage.getItem("walz_token");
 let currentUserId = localStorage.getItem("walz_user_id");
@@ -1482,6 +1482,7 @@ function toggleCart() {
 // =====================================================
 
 function showMyOrders() {
+    hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -2897,6 +2898,7 @@ function showMarketplace() {
 // =====================================================
 
 function showReceivedOrders() {
+    hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -3676,6 +3678,7 @@ async function previewBulkProductsFile(event) {
 // =====================================================
 
 function showMyProducts() {
+    hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
