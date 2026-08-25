@@ -307,25 +307,227 @@
 
 </header>
 
-<div id="marketplace-banners" class="marketplace-banners" style="display:none;"></div>
 
-<div class="marketplace-title">
 
-        <div class="marketplace-welcome-copy">
-        <span class="marketplace-welcome-kicker">WalZ One Marketplace</span>
-        <h2>Todo lo que buscas, cerca de vos</h2>
-        <p>Descubri productos y tiendas. Compra de forma simple y directa.</p>
+<!-- WALZ_PORTADA_EXPLORACION_V1 -->
+<div class="marketplace-title walz-discovery-hero">
+
+    <div class="marketplace-welcome-copy walz-discovery-copy">
+        <span class="marketplace-welcome-kicker">WalZ One ? Tu ciudad en un solo lugar</span>
+
+        <h2><span>Donde estes.</span> Miles de posibilidades.</h2>
+
+        <p>
+            Encontra lo que necesitas, descubri algo nuevo
+            o simplemente recorre. WalZ One empieza por vos.
+        </p>
+
+        <div class="walz-main-search">
+            <span class="walz-main-search-icon" aria-hidden="true">&#128269;</span>
+
+            <input
+                type="text"
+                id="product-search"
+                placeholder="Buscar productos, tiendas o rubros..."
+                oninput="filterProducts()"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="walz-search-examples">
+            <span>Farmacia</span>
+            <span>Carne</span>
+            <span>Hogar</span>
+            <span>Regalos</span>
+            <span>Protector solar</span>
+        </div>
+    </div>
+
+    <div class="walz-hero-city" aria-hidden="true">
+        <span class="walz-city-bubble bubble-one">Salud</span>
+        <span class="walz-city-bubble bubble-two">Hogar</span>
+        <span class="walz-city-bubble bubble-three">Alimentos</span>
+        <span class="walz-city-bubble bubble-four">Moda</span>
+        <strong>W</strong>
     </div>
 
 </div>
 
-        <div id="marketplace-content">
+<section class="walz-explore-section" aria-labelledby="walz-explore-title">
+
+    <div class="walz-section-heading">
+        <span>Vos elegis el recorrido</span>
+        <h2 id="walz-explore-title">Explora a tu manera</h2>
+    </div>
+
+    <div class="walz-explore-grid">
+
+        <article class="walz-explore-card">
+            <span class="walz-explore-symbol">&#128722;</span>
+            <strong>Productos</strong>
+            <small>Encontra lo que necesitas</small>
+        </article>
+
+        <article class="walz-explore-card">
+            <span class="walz-explore-symbol">&#127978;</span>
+            <strong>Tiendas</strong>
+            <small>Conoce los comercios</small>
+        </article>
+
+        <article class="walz-explore-card">
+            <span class="walz-explore-symbol">&#10024;</span>
+            <strong>Ofertas</strong>
+            <small>Descubri oportunidades</small>
+        </article>
+
+        <article class="walz-explore-card">
+            <span class="walz-explore-symbol">&#128205;</span>
+            <strong>Por ubicacion</strong>
+            <small>Explora tu zona</small>
+        </article>
+
+    </div>
+
+</section>
+
+<section class="walz-macro-section" aria-labelledby="walz-macro-title">
+
+    <div class="walz-section-heading walz-section-heading-row">
+        <div>
+            <span>Una ciudad, muchas posibilidades</span>
+            <h2 id="walz-macro-title">?Que estas buscando?</h2>
+        </div>
+
+        <small>Los rubros se activan a medida que se suman comercios.</small>
+    </div>
+
+    <div class="walz-macro-grid">
+
+        <article class="walz-macro-card is-active">
+            <span class="walz-macro-icon">&#10010;</span>
+            <div>
+                <strong>Salud y bienestar</strong>
+                <p>Farmacias ? Cuidado personal</p>
+            </div>
+            <em>Disponible</em>
+        </article>
+
+        <article class="walz-macro-card is-active">
+            <span class="walz-macro-icon">&#10024;</span>
+            <div>
+                <strong>Belleza y cuidado personal</strong>
+                <p>Perfumeria ? Belleza ? Cuidado</p>
+            </div>
+            <em>Disponible</em>
+        </article>
+
+        <article class="walz-macro-card is-active">
+            <span class="walz-macro-icon">&#127968;</span>
+            <div>
+                <strong>Hogar y decoracion</strong>
+                <p>Hogar ? Textil ? Equipamiento</p>
+            </div>
+            <em>Disponible</em>
+        </article>
+
+        <article class="walz-macro-card is-active">
+            <span class="walz-macro-icon">&#128118;</span>
+            <div>
+                <strong>Bebes y ni?os</strong>
+                <p>Productos para los mas chicos</p>
+            </div>
+            <em>Disponible</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#127828;</span>
+            <div>
+                <strong>Alimentos y bebidas</strong>
+                <p>Carnicerias ? Verdulerias ? Panaderias</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#128085;</span>
+            <div>
+                <strong>Indumentaria y calzado</strong>
+                <p>Moda ? Accesorios ? Calzado</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#128187;</span>
+            <div>
+                <strong>Tecnologia</strong>
+                <p>Electronica ? Informatica ? Telefonia</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#128062;</span>
+            <div>
+                <strong>Mascotas</strong>
+                <p>Alimentos ? Accesorios ? Cuidado</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#128663;</span>
+            <div>
+                <strong>Automotor</strong>
+                <p>Repuestos ? Accesorios ? Servicios</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#127869;</span>
+            <div>
+                <strong>Gastronomia</strong>
+                <p>Restaurantes ? Comidas ? Cafeterias</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#128295;</span>
+            <div>
+                <strong>Servicios</strong>
+                <p>Profesionales ? Oficios ? Soluciones</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+        <article class="walz-macro-card">
+            <span class="walz-macro-icon">&#9917;</span>
+            <div>
+                <strong>Deportes</strong>
+                <p>Indumentaria ? Equipamiento ? Actividades</p>
+            </div>
+            <em>Sumando comercios</em>
+        </article>
+
+    </div>
+
+</section>
+
+        <!-- WALZ_BANNERS_AFTER_DISCOVERY_V6 -->
+<div id="marketplace-banners" class="marketplace-banners" style="display:none;"></div>
+
+<div id="marketplace-content">
 
         <!-- =================================================
              PRODUCTOS
         ================================================== -->
 
-       <h3>Lista de Productos</h3>
+       <div class="walz-products-heading">
+    <span>Segui explorando</span>
+    <h3>Productos disponibles</h3>
+</div>
 
 <!-- ==============================
      BUSCADOR Y FILTROS
@@ -333,12 +535,7 @@
 
 <div class="product-filters">
 
-    <input
-        type="text"
-        id="product-search"
-        placeholder="🔎 Buscar producto..."
-        oninput="filterProducts()"
-    >
+    
 
     <input
         type="number"
