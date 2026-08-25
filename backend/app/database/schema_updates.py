@@ -217,3 +217,30 @@ def ensure_order_pickup_columns(engine):
                 connection.execute(text(
                     f"ALTER TABLE orders ADD COLUMN {column_name} {definition}"
                 ))
+
+def ensure_seller_application_business_categories_column(engine):
+    """Add seller business categories without deleting existing applications."""
+    inspector = inspect(engine)
+
+    if "seller_applications" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("seller_applications")
+    }
+
+    if "business_categories" in existing_columns:
+        return
+
+    with engine.begin() as connection:
+        if engine.dialect.name == "postgresql":
+            connection.execute(text(
+                "ALTER TABLE seller_applications "
+                "ADD COLUMN business_categories JSONB NOT NULL DEFAULT '[]'::jsonb"
+            ))
+        else:
+            connection.execute(text(
+                "ALTER TABLE seller_applications "
+                "ADD COLUMN business_categories TEXT NOT NULL DEFAULT '[]'"
+            ))

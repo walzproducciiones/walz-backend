@@ -363,6 +363,7 @@ async function handleLogin() {
             currentUserRole = String(data.user.role || "").toUpperCase();
             localStorage.setItem("walz_user_role", currentUserRole);
             updateAdminBannerVisibility();
+            await loadCurrentUserProfile();
             cart = loadCart();
 
             showMessage(
@@ -434,6 +435,7 @@ function handleLogout() {
     clearLoginCredentials();
     prepareLocalLoginForm();
 
+    hideAllWalzWorkSections();
     showAuth();
 
 
@@ -2873,6 +2875,7 @@ function showForgotPassword() { hideAuthForms(); document.getElementById("forgot
 function showResetPassword() { hideAuthForms(); document.getElementById("reset-password-form").style.display = "flex"; }
 
 function showAuth() {
+    hideAllWalzWorkSections();
     document.getElementById("auth-section").style.display = "block";
     document.getElementById("marketplace-section").style.display = "none";
     if (new URLSearchParams(window.location.search).get("reset_token")) showResetPassword();
@@ -4560,6 +4563,129 @@ function getSellerApplicationStatus(status) {
 }
 
 
+function getAvailableBusinessCategories() {
+    const result = [];
+    const seen = new Set();
+
+    document.querySelectorAll(".store-business-category").forEach(input => {
+        const value = String(input.value || "").replace(/\s+/g, " ").trim();
+        if (!value) return;
+
+        const key = value.toLocaleLowerCase("es");
+        if (seen.has(key)) return;
+
+        seen.add(key);
+        result.push(value);
+    });
+
+    return result;
+}
+
+
+function normalizeSellerApplicationBusinessCategories(values) {
+    const result = [];
+    const seen = new Set();
+
+    for (const rawValue of Array.isArray(values) ? values : []) {
+        const value = String(rawValue || "").replace(/\s+/g, " ").trim();
+        if (!value) continue;
+
+        const key = value.toLocaleLowerCase("es");
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        result.push(value);
+    }
+
+    return result;
+}
+
+
+function getSellerApplicationBusinessCategoriesFromForm() {
+    const selected = Array.from(
+        document.querySelectorAll(".seller-application-business-category:checked")
+    ).map(input => String(input.value || "").trim());
+
+    const custom = String(
+        document.getElementById("seller-application-business-categories-custom")?.value || ""
+    )
+        .split(",")
+        .map(value => value.trim())
+        .filter(Boolean);
+
+    return normalizeSellerApplicationBusinessCategories([
+        ...selected,
+        ...custom
+    ]);
+}
+
+
+function renderSellerApplicationBusinessCategoriesField(categories = []) {
+    const available = getAvailableBusinessCategories();
+    const selected = normalizeSellerApplicationBusinessCategories(categories);
+
+    const selectedMap = new Map(
+        selected.map(value => [value.toLocaleLowerCase("es"), value])
+    );
+
+    const availableKeys = new Set(
+        available.map(value => value.toLocaleLowerCase("es"))
+    );
+
+    const customValues = selected.filter(
+        value => !availableKeys.has(value.toLocaleLowerCase("es"))
+    );
+
+    const options = available.map(category => {
+        const key = category.toLocaleLowerCase("es");
+        const checked = selectedMap.has(key) ? " checked" : "";
+
+        return `<label>
+            <input
+                type="checkbox"
+                class="seller-application-business-category"
+                value="${escapeHtml(category)}"${checked}
+            >
+            <span>${escapeHtml(category)}</span>
+        </label>`;
+    }).join("");
+
+    return `
+        <fieldset class="store-business-categories seller-application-wide">
+            <div class="store-delivery-title">&iquest;Qu&eacute; vend&eacute;s u ofrec&eacute;s?</div>
+            <p>Eleg&iacute; uno o varios rubros. Pod&eacute;s seleccionar hasta 8.</p>
+
+            <div class="store-business-categories-options">
+                ${options}
+            </div>
+
+            <label class="store-business-custom">
+                <span>Otros rubros</span>
+                <input
+                    id="seller-application-business-categories-custom"
+                    type="text"
+                    maxlength="400"
+                    placeholder="Ejemplo: Fotograf?a, Reparaci?n de bicicletas"
+                    value="${escapeHtml(customValues.join(", "))}"
+                >
+                <small>Si tu actividad no aparece, escribila ac&aacute;. Separ&aacute; varios rubros con comas.</small>
+            </label>
+        </fieldset>
+    `;
+}
+
+
+function renderSellerApplicationCategoriesSummary(categories) {
+    const values = normalizeSellerApplicationBusinessCategories(categories);
+
+    if (!values.length) return "";
+
+    return `<p><strong>Rubros:</strong> ${values
+        .map(value => escapeHtml(value))
+        .join(" &middot; ")}</p>`;
+}
+
+
 function renderSellerApplicationForm(application = null) {
     const container = document.getElementById("seller-application-content");
     if (!container) return;
@@ -4571,6 +4697,7 @@ function renderSellerApplicationForm(application = null) {
             <h3>${escapeHtml(application.business_name || "")}</h3>
             <p>${escapeHtml(application.reason || "")}</p>
             ${application.city ? `<p>Ciudad: <strong>${escapeHtml(application.city)}</strong></p>` : ""}
+            ${renderSellerApplicationCategoriesSummary(application.business_categories)}
             <small>WalZ te avisara cuando la solicitud sea revisada.</small>
         </div>`;
         return;
@@ -4593,6 +4720,7 @@ function renderSellerApplicationForm(application = null) {
         <form class="seller-application-form" onsubmit="submitSellerApplication(event)">
             <label><span>Nombre del negocio</span><input id="seller-application-business" type="text" minlength="2" maxlength="160" required value="${escapeHtml(application?.business_name || "")}"></label>
             <label><span>Ciudad</span><input id="seller-application-city" type="text" maxlength="120" value="${escapeHtml(application?.city || "")}"></label>
+            ${renderSellerApplicationBusinessCategoriesField(application?.business_categories || [])}
             <label class="seller-application-wide"><span>Contanos que queres vender</span><textarea id="seller-application-reason" minlength="10" maxlength="1200" required>${escapeHtml(application?.reason || "")}</textarea></label>
             <button type="submit">Enviar solicitud</button>
         </form>
@@ -4634,12 +4762,35 @@ async function submitSellerApplication(event) {
     const businessName = document.getElementById("seller-application-business")?.value.trim() || "";
     const city = document.getElementById("seller-application-city")?.value.trim() || "";
     const reason = document.getElementById("seller-application-reason")?.value.trim() || "";
+    const businessCategories = getSellerApplicationBusinessCategoriesFromForm();
+
     if (errorElement) errorElement.textContent = "";
+
+    if (!businessCategories.length) {
+        if (errorElement) errorElement.textContent = "Selecciona al menos un rubro.";
+        return;
+    }
+
+    if (businessCategories.length > 8) {
+        if (errorElement) errorElement.textContent = "Podes seleccionar hasta 8 rubros.";
+        return;
+    }
+
+    if (businessCategories.some(category => category.length > 80)) {
+        if (errorElement) errorElement.textContent = "Cada rubro puede tener hasta 80 caracteres.";
+        return;
+    }
+
     try {
         const response = await fetch(`${API_URL}/seller-applications/mine`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
-            body: JSON.stringify({ business_name: businessName, city: city || null, reason })
+            body: JSON.stringify({
+                business_name: businessName,
+                city: city || null,
+                reason,
+                business_categories: businessCategories
+            })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
@@ -4696,6 +4847,7 @@ async function loadSellerApplicationsAdmin() {
                 <div class="seller-application-heading"><div><small>Solicitante</small><h3>${escapeHtml(application.applicant_name || "")}</h3><p>${escapeHtml(application.applicant_email || "")}</p></div><span class="banner-review-state ${state.css}">${state.label}</span></div>
                 <p><strong>Negocio:</strong> ${escapeHtml(application.business_name || "")}</p>
                 ${application.city ? `<p><strong>Ciudad:</strong> ${escapeHtml(application.city)}</p>` : ""}
+                ${renderSellerApplicationCategoriesSummary(application.business_categories)}
                 <p><strong>Propuesta:</strong> ${escapeHtml(application.reason || "")}</p>
                 ${application.admin_note ? `<p><strong>Observacion:</strong> ${escapeHtml(application.admin_note)}</p>` : ""}
                 ${isPending ? `<textarea id="seller-review-note-${escapeHtml(String(application.id))}" maxlength="1200" placeholder="Observacion opcional para el solicitante"></textarea>

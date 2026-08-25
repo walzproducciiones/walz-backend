@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text, UUID
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, Text, UUID
 from sqlalchemy.sql import func
 
 from backend.app.database.session import Base
@@ -20,6 +20,7 @@ class SellerApplication(Base):
     business_name = Column(String(160), nullable=False)
     city = Column(String(120), nullable=True)
     reason = Column(Text, nullable=False)
+    business_categories = Column(JSON, nullable=False, default=list)
     status = Column(String(20), nullable=False, default="pending", server_default="pending")
     admin_note = Column(Text, nullable=True)
     reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)

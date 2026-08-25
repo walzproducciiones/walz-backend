@@ -9,6 +9,7 @@ class SellerApplicationCreate(BaseModel):
     business_name: str = Field(..., min_length=2, max_length=160)
     city: Optional[str] = Field(default=None, max_length=120)
     reason: str = Field(..., min_length=10, max_length=1200)
+    business_categories: list[str] = Field(..., min_length=1, max_length=8)
 
 
 class SellerApplicationReview(BaseModel):
@@ -22,6 +23,7 @@ class SellerApplicationResponse(BaseModel):
     business_name: str
     city: Optional[str] = None
     reason: str
+    business_categories: list[str] = Field(default_factory=list)
     status: str
     admin_note: Optional[str] = None
     reviewed_by: Optional[UUID] = None

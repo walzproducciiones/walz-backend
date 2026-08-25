@@ -39,6 +39,35 @@ def submit_seller_application(
     values["city"] = values["city"].strip() if values.get("city") else None
     values["reason"] = values["reason"].strip()
 
+    raw_categories = values.get("business_categories") or []
+    normalized_categories = []
+    seen_categories = set()
+
+    for raw_category in raw_categories:
+        category = " ".join(str(raw_category or "").split())
+
+        if not category:
+            continue
+
+        if len(category) > 80:
+            return None, "Cada rubro puede tener hasta 80 caracteres."
+
+        key = category.casefold()
+
+        if key in seen_categories:
+            continue
+
+        seen_categories.add(key)
+        normalized_categories.append(category)
+
+    if not normalized_categories:
+        return None, "Selecciona al menos un rubro."
+
+    if len(normalized_categories) > 8:
+        return None, "Podes seleccionar hasta 8 rubros."
+
+    values["business_categories"] = normalized_categories
+
     if application:
         for field, value in values.items():
             setattr(application, field, value)
@@ -71,6 +100,7 @@ def list_seller_applications_for_admin(db: Session):
             "business_name": application.business_name,
             "city": application.city,
             "reason": application.reason,
+            "business_categories": application.business_categories or [],
             "status": application.status,
             "admin_note": application.admin_note,
             "reviewed_by": application.reviewed_by,
