@@ -2555,7 +2555,7 @@ body {
     transform: translateY(-51%);
 }
 
-#marketplace-section .marketplace-title h2 {
+.marketplace-title h2 {
     position: relative;
     z-index: 1;
     margin: 5px 0 8px;
