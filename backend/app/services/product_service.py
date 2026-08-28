@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, case
 from backend.app.models.product import Product
 from backend.app.models.banner import Banner
+from backend.app.models.store import Store
 from backend.app.schemas.product import ProductCreate, ProductFilter, ProductUpdate
 from uuid import UUID
 from datetime import datetime, timezone
@@ -118,9 +119,15 @@ def create_products_bulk(db: Session, seller_id: UUID, products_data: list[Produ
 
 
 def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductFilter = None):
-    query = db.query(Product).filter(
-        Product.is_active == True,
-        Product.is_deleted == False,
+    query = (
+        db.query(Product)
+        .join(Store, Store.owner_id == Product.seller_id)
+        .filter(
+            Product.is_active == True,
+            Product.is_deleted == False,
+            Store.is_active == True,
+            Store.operational_status == "ACTIVE",
+        )
     )
     
     if filters:
