@@ -3722,6 +3722,134 @@ async function changeAdminStoreStatus(storeId, requestedStatus) {
 
 
 
+function showAdminSellerDetail(ownerId) {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    const stores = Array.isArray(window.walzAdminStores)
+        ? window.walzAdminStores
+        : [];
+
+    const store = stores.find(
+        item => String(item.owner_id) === String(ownerId)
+    );
+
+    if (!store) {
+        showMessage("No se encontro el vendedor.", "error");
+        return;
+    }
+
+    const container = document.getElementById("admin-stores-list");
+    const summary = document.getElementById("admin-stores-summary");
+    const toolbar = document.querySelector(
+        "#admin-stores-section .admin-stores-toolbar"
+    );
+
+    if (!container) return;
+
+    if (toolbar) toolbar.style.display = "none";
+    if (summary) summary.textContent = "Detalle administrativo del vendedor";
+
+    const categories = Array.isArray(store.business_categories)
+        ? store.business_categories.filter(Boolean)
+        : [];
+
+    const statusInfo = getAdminStoreStatusPresentation(
+        store.operational_status
+    );
+
+    const deliveryMethods = [];
+    if (store.delivery_enabled) deliveryMethods.push("Envio a domicilio");
+    if (store.pickup_enabled) deliveryMethods.push("Retiro en el local");
+
+    container.innerHTML = `
+        <article class="admin-store-card">
+            <button
+                type="button"
+                class="admin-store-status-action admin-seller-detail-back"
+                onclick="showAdminStoresListFromDetail()"
+            >
+                &larr; Volver a vendedores
+            </button>
+
+            <div class="admin-store-main">
+                <div>
+                    <small>Detalle administrativo</small>
+                    <h3>${escapeHtml(store.name || "Sin nombre")}</h3>
+                    ${store.city ? `<p>${escapeHtml(store.city)}</p>` : ""}
+                </div>
+
+                <span class="admin-store-status ${statusInfo.css}">
+                    ${statusInfo.label}
+                </span>
+            </div>
+
+            <div class="admin-store-status-reason">
+                <strong>ID interno del vendedor:</strong>
+                <span>${escapeHtml(String(store.owner_id || ""))}</span>
+            </div>
+
+            <div class="admin-store-status-reason">
+                <strong>Slug de la tienda:</strong>
+                <span>${escapeHtml(store.slug || "Sin slug")}</span>
+            </div>
+
+            <div class="admin-store-status-reason">
+                <strong>Telefono comercial:</strong>
+                <span>${escapeHtml(store.phone || "No informado")}</span>
+            </div>
+
+            <div class="admin-store-status-reason">
+                <strong>Direccion:</strong>
+                <span>${escapeHtml(store.address || "No informada")}</span>
+            </div>
+
+            <div class="admin-store-status-reason">
+                <strong>Formas de entrega:</strong>
+                <span>${escapeHtml(deliveryMethods.length ? deliveryMethods.join(" / ") : "No informadas")}</span>
+            </div>
+
+            ${store.description ? `
+                <div class="admin-store-status-reason">
+                    <strong>Descripcion:</strong>
+                    <span>${escapeHtml(store.description)}</span>
+                </div>
+            ` : ""}
+
+            ${categories.length ? `
+                <div class="admin-store-categories">
+                    ${categories.map(category => `<span>${escapeHtml(category)}</span>`).join("")}
+                </div>
+            ` : ""}
+
+            <div class="admin-store-actions">
+                ${renderAdminStoreStatusActions(store)}
+            </div>
+        </article>
+    `;
+
+    window.scrollTo(0, 0);
+}
+
+
+function showAdminStoresListFromDetail() {
+    const toolbar = document.querySelector(
+        "#admin-stores-section .admin-stores-toolbar"
+    );
+
+    if (toolbar) toolbar.style.display = "";
+
+    renderAdminStores(
+        Array.isArray(window.walzAdminStores)
+            ? window.walzAdminStores
+            : []
+    );
+
+    window.scrollTo(0, 0);
+}
+
 function renderAdminStores(stores) {
     const container = document.getElementById("admin-stores-list");
     const summary = document.getElementById("admin-stores-summary");
@@ -3801,6 +3929,13 @@ function renderAdminStores(stores) {
                 ` : ""}
 
                 <div class="admin-store-actions">
+                    <button
+                        type="button"
+                        class="admin-store-status-action"
+                        onclick="showAdminSellerDetail('${escapeJs(String(store.owner_id || ""))}')"
+                    >
+                        Ver detalle
+                    </button>
                     ${publicAction}
                     ${renderAdminStoreStatusActions(store)}
                 </div>

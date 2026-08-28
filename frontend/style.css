@@ -8074,6 +8074,19 @@ button.admin-central-card:hover {
 }
 
 
+/* WALZ_ADMIN_SELLER_DETAIL_BACK_V1 */
+.admin-store-status-action.admin-seller-detail-back {
+    margin-bottom: 24px;
+    border-color: rgba(255, 102, 72, 0.72);
+    background: #ff6648;
+    color: #ffffff;
+}
+
+.admin-store-status-action.admin-seller-detail-back:hover {
+    border-color: #f15c3f;
+    background: #f15c3f;
+}
+
 /* WALZ_ADMIN_STORE_STATUS_V1 */
 .admin-store-status.is-paused {
     background: rgba(245, 180, 70, 0.14);
