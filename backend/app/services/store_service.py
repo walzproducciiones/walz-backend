@@ -1,5 +1,6 @@
 import re
 import unicodedata
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -47,6 +48,157 @@ def get_active_stores(db: Session):
 
 def get_store_by_owner(db: Session, owner_id: UUID):
     return db.query(Store).filter(Store.owner_id == owner_id).first()
+
+
+SELLER_STORE_STATUS_TRANSITIONS = {
+    "ACTIVE": {"PAUSED"},
+    "PAUSED": {"ACTIVE"},
+    "SUSPENDED": {"REACTIVATION_REQUESTED"},
+    "UNDER_REVIEW": set(),
+    "REACTIVATION_REQUESTED": set(),
+    "CLOSED": set(),
+}
+
+
+ADMIN_STORE_STATUS_TRANSITIONS = {
+    "ACTIVE": {"SUSPENDED", "UNDER_REVIEW"},
+    "PAUSED": {"ACTIVE", "SUSPENDED", "UNDER_REVIEW"},
+    "SUSPENDED": {"ACTIVE", "UNDER_REVIEW"},
+    "UNDER_REVIEW": {"ACTIVE", "SUSPENDED"},
+    "REACTIVATION_REQUESTED": {"ACTIVE", "SUSPENDED", "UNDER_REVIEW"},
+    "CLOSED": set(),
+}
+
+
+def get_store_by_id(db: Session, store_id: UUID):
+    return db.query(Store).filter(Store.id == store_id).first()
+
+
+def normalize_store_status_reason(reason):
+    value = str(reason or "").strip()
+    return value or None
+
+
+def apply_store_operational_status(
+    db: Session,
+    store: Store,
+    requested_status: str,
+    reason=None,
+):
+    normalized_status = str(requested_status or "").strip().upper()
+    normalized_reason = normalize_store_status_reason(reason)
+
+    store.operational_status = normalized_status
+    store.status_reason = normalized_reason
+    store.status_changed_at = datetime.now(timezone.utc)
+    store.is_active = normalized_status == "ACTIVE"
+
+    try:
+        db.commit()
+        db.refresh(store)
+        return store
+    except Exception:
+        db.rollback()
+        raise
+
+
+def change_store_status_by_seller(
+    db: Session,
+    owner_id: UUID,
+    requested_status: str,
+    reason=None,
+):
+    store = get_store_by_owner(db, owner_id)
+
+    if not store:
+        raise ValueError("Tienda no encontrada.")
+
+    current_status = str(
+        store.operational_status or "ACTIVE"
+    ).strip().upper()
+
+    requested_status = str(
+        requested_status or ""
+    ).strip().upper()
+
+    allowed = SELLER_STORE_STATUS_TRANSITIONS.get(
+        current_status,
+        set(),
+    )
+
+    if requested_status not in allowed:
+        if current_status == "SUSPENDED" and requested_status == "ACTIVE":
+            raise ValueError(
+                "Una tienda suspendida por WalZ One no puede "
+                "reactivarse directamente. Solicita la reactivacion."
+            )
+
+        raise ValueError(
+            f"No se permite cambiar la tienda de "
+            f"{current_status} a {requested_status}."
+        )
+
+    if requested_status == "REACTIVATION_REQUESTED":
+        normalized_reason = normalize_store_status_reason(reason)
+
+        if not normalized_reason:
+            raise ValueError(
+                "Explica brevemente por que solicitas la reactivacion "
+                "o que situacion fue corregida."
+            )
+
+    return apply_store_operational_status(
+        db,
+        store,
+        requested_status,
+        reason,
+    )
+
+
+def change_store_status_by_admin(
+    db: Session,
+    store_id: UUID,
+    requested_status: str,
+    reason=None,
+):
+    store = get_store_by_id(db, store_id)
+
+    if not store:
+        raise ValueError("Tienda no encontrada.")
+
+    current_status = str(
+        store.operational_status or "ACTIVE"
+    ).strip().upper()
+
+    requested_status = str(
+        requested_status or ""
+    ).strip().upper()
+
+    allowed = ADMIN_STORE_STATUS_TRANSITIONS.get(
+        current_status,
+        set(),
+    )
+
+    if requested_status not in allowed:
+        raise ValueError(
+            f"No se permite cambiar la tienda de "
+            f"{current_status} a {requested_status} desde Administracion Central."
+        )
+
+    normalized_reason = normalize_store_status_reason(reason)
+
+    if requested_status in {"SUSPENDED", "UNDER_REVIEW"} and not normalized_reason:
+        raise ValueError(
+            "Indica el motivo de la suspension o revision."
+        )
+
+    return apply_store_operational_status(
+        db,
+        store,
+        requested_status,
+        reason,
+    )
+
 
 
 def save_store_profile(

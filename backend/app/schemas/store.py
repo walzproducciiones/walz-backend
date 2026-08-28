@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -21,6 +21,25 @@ class StoreProfileUpdate(BaseModel):
 
     delivery_enabled: bool = True
     pickup_enabled: bool = True
+
+
+class StoreSellerStatusUpdate(BaseModel):
+    status: Literal[
+        "ACTIVE",
+        "PAUSED",
+        "REACTIVATION_REQUESTED",
+    ]
+    reason: Optional[str] = Field(default=None, max_length=1000)
+
+
+class StoreAdminStatusUpdate(BaseModel):
+    status: Literal[
+        "ACTIVE",
+        "SUSPENDED",
+        "UNDER_REVIEW",
+    ]
+    reason: Optional[str] = Field(default=None, max_length=1000)
+
 
 
 class StoreResponse(StoreProfileUpdate):
