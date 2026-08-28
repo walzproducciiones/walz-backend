@@ -1726,11 +1726,110 @@
                     <span><strong>Env&iacute;o a domicilio</strong><small>Correo, moto, transporte propio u otro medio.</small></span>
                 </label>
                 <label>
-                    <input id="store-pickup-enabled" type="checkbox" checked onchange="renderStorePreview()">
+                    <input id="store-pickup-enabled" type="checkbox" checked onchange="renderStorePreview(); syncStorePaymentPickupAvailability()">
                     <span><strong>Retiro en el local</strong><small>El comprador retira cuando el pedido est&eacute; listo.</small></span>
                 </label>
             </fieldset>
             <button type="submit" id="store-save-button">Guardar tienda</button>
+
+            <fieldset class="store-payment-settings store-profile-wide">
+                <div class="store-delivery-title">Formas de pago</div>
+
+                <p>
+                    Eleg&iacute; c&oacute;mo pueden pagarte tus compradores.
+                    Pod&eacute;s modificar estas opciones cuando quieras.
+                </p>
+
+                <div class="store-payment-method-card">
+                    <label class="store-payment-method-main">
+                        <input
+                            id="store-payment-cash-enabled"
+                            type="checkbox"
+                            onchange="syncStorePaymentPickupAvailability()"
+                        >
+                        <span>
+                            <strong>Efectivo</strong>
+                            <small>El pago se realiza directamente al comercio.</small>
+                        </span>
+                    </label>
+
+                    <label class="store-payment-pickup-option">
+                        <input id="store-payment-cash-pickup" type="checkbox">
+                        <span>Tambi&eacute;n permitir pagar al retirar</span>
+                    </label>
+                </div>
+
+                <div class="store-payment-method-card">
+                    <label class="store-payment-method-main">
+                        <input
+                            id="store-payment-bank-transfer-enabled"
+                            type="checkbox"
+                            onchange="syncStorePaymentPickupAvailability()"
+                        >
+                        <span>
+                            <strong>Transferencia bancaria</strong>
+                            <small>Transferencia directa al comercio.</small>
+                        </span>
+                    </label>
+
+                    <label class="store-payment-pickup-option">
+                        <input id="store-payment-bank-transfer-pickup" type="checkbox">
+                        <span>Tambi&eacute;n permitir pagar al retirar</span>
+                    </label>
+                </div>
+
+                <div class="store-payment-method-card">
+                    <label class="store-payment-method-main">
+                        <input
+                            id="store-payment-cuenta-dni-enabled"
+                            type="checkbox"
+                            onchange="syncStorePaymentPickupAvailability()"
+                        >
+                        <span>
+                            <strong>Cuenta DNI</strong>
+                            <small>Medio de pago asociado a Banco Provincia.</small>
+                        </span>
+                    </label>
+
+                    <label class="store-payment-pickup-option">
+                        <input id="store-payment-cuenta-dni-pickup" type="checkbox">
+                        <span>Tambi&eacute;n permitir pagar al retirar</span>
+                    </label>
+                </div>
+
+                <div class="store-payment-method-card">
+                    <label class="store-payment-method-main">
+                        <input
+                            id="store-payment-mercado-pago-enabled"
+                            type="checkbox"
+                            onchange="syncStorePaymentPickupAvailability()"
+                        >
+                        <span>
+                            <strong>Mercado Pago</strong>
+                            <small>La integraci&oacute;n online contin&uacute;a deshabilitada por ahora.</small>
+                        </span>
+                    </label>
+
+                    <label class="store-payment-pickup-option">
+                        <input id="store-payment-mercado-pago-pickup" type="checkbox">
+                        <span>Tambi&eacute;n permitir pagar al retirar</span>
+                    </label>
+                </div>
+
+                <button
+                    type="button"
+                    id="store-payment-methods-save-button"
+                    onclick="saveStorePaymentMethods()"
+                >
+                    Guardar formas de pago
+                </button>
+
+                <p
+                    id="store-payment-methods-message"
+                    class="store-payment-methods-message"
+                    role="status"
+                ></p>
+            </fieldset>
         </form>
 
         <aside class="store-preview-panel">

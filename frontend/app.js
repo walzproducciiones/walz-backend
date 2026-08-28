@@ -9880,6 +9880,7 @@ async function showStoreProfile() {
     document.getElementById("banner-proposal-section")?.style.setProperty("display", "none");
     section.style.display = "block";
     await loadStoreProfile();
+    await loadStorePaymentMethods();
 }
 
 
@@ -10132,6 +10133,251 @@ async function loadStoreProfile() {
     } catch (error) {
         if (errorElement) errorElement.textContent = error.message || "No se pudo cargar la tienda.";
         renderStorePreview();
+    }
+}
+
+
+const STORE_PAYMENT_METHOD_UI = {
+    CASH: {
+        enabledId: "store-payment-cash-enabled",
+        pickupId: "store-payment-cash-pickup"
+    },
+    BANK_TRANSFER: {
+        enabledId: "store-payment-bank-transfer-enabled",
+        pickupId: "store-payment-bank-transfer-pickup"
+    },
+    CUENTA_DNI: {
+        enabledId: "store-payment-cuenta-dni-enabled",
+        pickupId: "store-payment-cuenta-dni-pickup"
+    },
+    MERCADO_PAGO: {
+        enabledId: "store-payment-mercado-pago-enabled",
+        pickupId: "store-payment-mercado-pago-pickup"
+    }
+};
+
+
+function syncStorePaymentPickupAvailability() {
+    const storePickupEnabled =
+        document.getElementById("store-pickup-enabled")?.checked === true;
+
+    for (const config of Object.values(STORE_PAYMENT_METHOD_UI)) {
+        const enabledInput =
+            document.getElementById(config.enabledId);
+
+        const pickupInput =
+            document.getElementById(config.pickupId);
+
+        if (!enabledInput || !pickupInput) continue;
+
+        const canUsePickup =
+            storePickupEnabled && enabledInput.checked;
+
+        pickupInput.disabled = !canUsePickup;
+
+        if (!canUsePickup) {
+            pickupInput.checked = false;
+        }
+    }
+}
+
+
+function renderStorePaymentMethods(methods) {
+    const rows = Array.isArray(methods) ? methods : [];
+
+    const byMethod = Object.fromEntries(
+        rows.map(item => [
+            String(item.method || "").trim().toUpperCase(),
+            item
+        ])
+    );
+
+    for (const [method, config] of Object.entries(
+        STORE_PAYMENT_METHOD_UI
+    )) {
+        const values = byMethod[method] || {};
+
+        const enabledInput =
+            document.getElementById(config.enabledId);
+
+        const pickupInput =
+            document.getElementById(config.pickupId);
+
+        if (enabledInput) {
+            enabledInput.checked = values.enabled === true;
+        }
+
+        if (pickupInput) {
+            pickupInput.checked =
+                values.allow_pay_on_pickup === true;
+        }
+    }
+
+    syncStorePaymentPickupAvailability();
+}
+
+
+async function loadStorePaymentMethods() {
+    const currentToken = localStorage.getItem("walz_token");
+
+    const messageElement =
+        document.getElementById("store-payment-methods-message");
+
+    if (messageElement) {
+        messageElement.textContent = "";
+        messageElement.classList.remove("is-success", "is-error");
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/payments/methods/mine`,
+            {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data =
+            await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron cargar las formas de pago."
+            );
+        }
+
+        renderStorePaymentMethods(data.methods);
+
+    } catch (error) {
+        console.error("Error cargando formas de pago:", error);
+
+        if (messageElement) {
+            messageElement.textContent =
+                error.message ||
+                "No se pudieron cargar las formas de pago.";
+
+            messageElement.classList.add("is-error");
+        }
+    }
+}
+
+
+async function saveStorePaymentMethods() {
+    const currentToken = localStorage.getItem("walz_token");
+
+    const messageElement =
+        document.getElementById("store-payment-methods-message");
+
+    const saveButton =
+        document.getElementById("store-payment-methods-save-button");
+
+    if (messageElement) {
+        messageElement.textContent = "";
+        messageElement.classList.remove("is-success", "is-error");
+    }
+
+    const methods = Object.entries(
+        STORE_PAYMENT_METHOD_UI
+    ).map(([method, config]) => {
+        const enabledInput =
+            document.getElementById(config.enabledId);
+
+        const pickupInput =
+            document.getElementById(config.pickupId);
+
+        return {
+            method,
+            enabled: enabledInput?.checked === true,
+            allow_pay_on_pickup:
+                pickupInput?.checked === true
+        };
+    });
+
+    if (!methods.some(item => item.enabled)) {
+        const message =
+            "Eleg? al menos una forma de pago.";
+
+        if (messageElement) {
+            messageElement.textContent = message;
+            messageElement.classList.add("is-error");
+        }
+
+        showMessage(message, "error");
+        return;
+    }
+
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = "Guardando...";
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/payments/methods/mine`,
+            {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${currentToken}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ methods })
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data =
+            await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron guardar las formas de pago."
+            );
+        }
+
+        renderStorePaymentMethods(data.methods);
+
+        const message =
+            "Formas de pago guardadas correctamente.";
+
+        if (messageElement) {
+            messageElement.textContent = message;
+            messageElement.classList.add("is-success");
+        }
+
+        showMessage(message, "success");
+
+    } catch (error) {
+        console.error("Error guardando formas de pago:", error);
+
+        const message =
+            error.message ||
+            "No se pudieron guardar las formas de pago.";
+
+        if (messageElement) {
+            messageElement.textContent = message;
+            messageElement.classList.add("is-error");
+        }
+
+        showMessage(message, "error");
+
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent =
+                "Guardar formas de pago";
+        }
     }
 }
 
@@ -10640,6 +10886,9 @@ window.showPublicStore = showPublicStore;
 window.showStoreProfile = showStoreProfile;
 window.loadStoreProfile = loadStoreProfile;
 window.saveStoreProfile = saveStoreProfile;
+window.loadStorePaymentMethods = loadStorePaymentMethods;
+window.saveStorePaymentMethods = saveStorePaymentMethods;
+window.syncStorePaymentPickupAvailability = syncStorePaymentPickupAvailability;
 window.renderStorePreview = renderStorePreview;
 window.showBannerAdmin = showBannerAdmin;
 window.showBannerProposal = showBannerProposal;

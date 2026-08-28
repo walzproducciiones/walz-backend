@@ -3117,6 +3117,91 @@ body {
     font-weight: 800;
     line-height: 1.25;
 }
+/* FORMAS DE PAGO CONFIGURABLES POR TIENDA */
+.store-payment-settings {
+    display: grid;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 18px 15px 15px;
+    background: #f7f4fb;
+    border: 1px solid #ddd3e8;
+    border-radius: 12px;
+}
+
+.store-payment-settings > p {
+    margin: 0 0 3px;
+    color: #657078;
+    font-size: 13px;
+}
+
+.store-payment-method-card {
+    display: grid;
+    gap: 8px;
+    padding: 11px;
+    background: #fff;
+    border: 1px solid #e2dce8;
+    border-radius: 10px;
+}
+
+.store-payment-settings .store-payment-method-main,
+.store-payment-settings .store-payment-pickup-option {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    margin: 0;
+}
+
+.store-payment-settings .store-payment-method-main input,
+.store-payment-settings .store-payment-pickup-option input {
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+    accent-color: var(--walz-turquoise);
+}
+
+.store-payment-settings .store-payment-method-main span {
+    display: grid;
+    gap: 3px;
+}
+
+.store-payment-settings small {
+    color: #68747a;
+}
+
+.store-payment-settings .store-payment-pickup-option {
+    margin-left: 34px;
+    padding-top: 7px;
+    border-top: 1px solid #eee8f2;
+    color: #4e5e64;
+    font-size: 13px;
+}
+
+.store-payment-settings .store-payment-pickup-option input:disabled + span {
+    opacity: 0.5;
+}
+
+.store-payment-methods-message {
+    min-height: 20px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.store-payment-methods-message.is-success {
+    color: #17633b;
+}
+
+.store-payment-methods-message.is-error {
+    color: #a32620;
+}
+
+@media (max-width: 600px) {
+    .store-payment-settings .store-payment-pickup-option {
+        margin-left: 0;
+    }
+}
+
 /* CHECKOUT CON ENTREGA POR CADA TIENDA */
 .seller-delivery-methods { display: grid; gap: 12px; margin-bottom: 18px; }
 .seller-delivery-card { padding: 13px; background: #28383b; border: 1px solid #446166; border-radius: 12px; }
@@ -8501,4 +8586,13 @@ button.admin-central-card:hover {
     opacity: 1;
     cursor: default;
     font-weight: 900;
+}
+
+/* 4C.1A - CONTRASTE FORMAS DE PAGO */
+.store-payment-settings .store-payment-method-main strong {
+    color: #173f47;
+}
+
+.store-payment-settings .store-payment-method-main {
+    color: #173f47;
 }

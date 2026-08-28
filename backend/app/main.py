@@ -30,7 +30,7 @@ from backend.app.database.schema_updates import (
     ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, email_change_token, institutional_setting, user, product, order, password_reset_token, seller_application, store
+from backend.app.models import banner, email_change_token, institutional_setting, user, product, order, password_reset_token, seller_application, store, store_payment_method
 
 
 # ============================================================
@@ -43,6 +43,7 @@ order.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
 institutional_setting.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
+store_payment_method.Base.metadata.create_all(bind=engine)
 seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
 email_change_token.Base.metadata.create_all(bind=engine)

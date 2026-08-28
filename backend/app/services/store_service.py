@@ -258,6 +258,21 @@ def save_store_profile(
         store = Store(owner_id=owner_id, **values)
         db.add(store)
 
+    if values.get("pickup_enabled") is False and store.id is not None:
+        from backend.app.models.store_payment_method import StorePaymentMethod
+
+        (
+            db.query(StorePaymentMethod)
+            .filter(
+                StorePaymentMethod.store_id == store.id,
+                StorePaymentMethod.allow_pay_on_pickup == True,
+            )
+            .update(
+                {"allow_pay_on_pickup": False},
+                synchronize_session=False,
+            )
+        )
+
     db.commit()
     db.refresh(store)
     return store
