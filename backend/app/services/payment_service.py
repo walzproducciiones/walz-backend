@@ -1,23 +1,575 @@
-from enum import Enum
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from backend.app.models.order import Order, OrderStatus
+from backend.app.models.payment import Payment, PaymentStatus
+from backend.app.models.product import Product
+from backend.app.models.store import Store
 from backend.app.models.store_payment_method import StorePaymentMethod
 from backend.app.services.store_service import get_store_by_owner
 
 
-class PaymentStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    CANCELLED = "cancelled"
-    REFUNDED = "refunded"
-
-
 PAYMENTS_ENABLED = False
 PAYMENT_PROVIDER: Optional[str] = None
+
+
+PAYMENT_STATUS_TRANSITIONS = {
+    PaymentStatus.PENDING: {
+        PaymentStatus.REPORTED,
+        PaymentStatus.APPROVED,
+        PaymentStatus.REJECTED,
+        PaymentStatus.CANCELLED,
+    },
+    PaymentStatus.REPORTED: {
+        PaymentStatus.APPROVED,
+        PaymentStatus.REJECTED,
+        PaymentStatus.CANCELLED,
+    },
+    PaymentStatus.APPROVED: set(),
+    PaymentStatus.REJECTED: set(),
+    PaymentStatus.CANCELLED: set(),
+}
+
+
+def normalize_payment_status(value) -> PaymentStatus:
+    if isinstance(value, PaymentStatus):
+        return value
+
+    normalized = str(value or "").strip().lower()
+
+    try:
+        return PaymentStatus(normalized)
+    except ValueError:
+        raise ValueError(
+            f"Estado de pago no valido: {value or 'vacio'}."
+        )
+
+
+def change_payment_status(
+    db: Session,
+    payment_id: UUID,
+    requested_status,
+):
+    payment = (
+        db.query(Payment)
+        .filter(Payment.id == payment_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not payment:
+        raise ValueError("Pago no encontrado.")
+
+    current_status = normalize_payment_status(
+        payment.status
+    )
+
+    target_status = normalize_payment_status(
+        requested_status
+    )
+
+    # Operacion idempotente:
+    # repetir el estado actual no genera error ni altera fechas.
+    if target_status == current_status:
+        return payment
+
+    allowed = PAYMENT_STATUS_TRANSITIONS.get(
+        current_status,
+        set(),
+    )
+
+    if target_status not in allowed:
+        raise ValueError(
+            "Transicion de pago no permitida: "
+            f"{current_status.value} -> "
+            f"{target_status.value}."
+        )
+
+    now = datetime.now(timezone.utc)
+
+    payment.status = target_status
+
+    if target_status == PaymentStatus.REPORTED:
+        payment.reported_at = now
+
+    elif target_status == PaymentStatus.APPROVED:
+        payment.approved_at = now
+
+    elif target_status == PaymentStatus.REJECTED:
+        payment.rejected_at = now
+
+    elif target_status == PaymentStatus.CANCELLED:
+        payment.cancelled_at = now
+
+    db.commit()
+    db.refresh(payment)
+
+    return payment
+
+
+BUYER_REPORTABLE_PAYMENT_METHODS = {
+    "BANK_TRANSFER",
+    "CUENTA_DNI",
+}
+
+
+ACTIVE_PAYMENT_STATUSES = {
+    PaymentStatus.PENDING,
+    PaymentStatus.REPORTED,
+    PaymentStatus.APPROVED,
+}
+
+
+def _payment_money(value, field_name: str) -> Decimal:
+    if value is None:
+        raise ValueError(
+            f"El pedido no tiene {field_name} definido."
+        )
+
+    return Decimal(
+        str(value)
+    ).quantize(
+        Decimal("0.01")
+    )
+
+
+def create_payment_for_order(
+    db: Session,
+    order_id: UUID,
+    buyer_id: UUID,
+    requested_method: str,
+):
+    """
+    Create the financial Payment for an existing order.
+
+    The client may choose only the payment method.
+    Store, provider, amount and currency are derived
+    and validated server-side.
+    """
+    order = (
+        db.query(Order)
+        .filter(
+            Order.id == order_id,
+            Order.buyer_id == buyer_id,
+        )
+        .with_for_update()
+        .first()
+    )
+
+    if not order:
+        raise ValueError("Pedido no encontrado.")
+
+    if order.status in {
+        OrderStatus.CANCELLED,
+        OrderStatus.DELIVERED,
+    }:
+        raise ValueError(
+            "El pedido ya no admite iniciar un pago."
+        )
+
+    if not order.store_id:
+        raise ValueError(
+            "El pedido no tiene una tienda financiera definida."
+        )
+
+    fulfillment_method = str(
+        order.fulfillment_method or ""
+    ).strip().lower()
+
+    if fulfillment_method not in {
+        "delivery",
+        "pickup",
+    }:
+        raise ValueError(
+            "El pedido no tiene una modalidad "
+            "de entrega financiera valida."
+        )
+
+    store = (
+        db.query(Store)
+        .filter(Store.id == order.store_id)
+        .first()
+    )
+
+    if not store:
+        raise ValueError(
+            "La tienda asociada al pedido no existe."
+        )
+
+    product_ids = [
+        item.product_id
+        for item in order.items
+    ]
+
+    if not product_ids:
+        raise ValueError(
+            "El pedido no contiene productos."
+        )
+
+    products = (
+        db.query(Product)
+        .filter(
+            Product.id.in_(product_ids)
+        )
+        .all()
+    )
+
+    if (
+        len(products) != len(set(product_ids))
+        or any(
+            product.seller_id != store.owner_id
+            for product in products
+        )
+    ):
+        raise ValueError(
+            "El pedido no coincide con la tienda "
+            "asociada al pago."
+        )
+
+    method = str(
+        requested_method or ""
+    ).strip().upper()
+
+    if method not in PAYMENT_METHOD_DEFINITIONS:
+        raise ValueError(
+            f"Forma de pago no valida: "
+            f"{method or 'vacia'}."
+        )
+
+    configured_method = (
+        db.query(StorePaymentMethod)
+        .filter(
+            StorePaymentMethod.store_id == store.id,
+            StorePaymentMethod.method == method,
+        )
+        .first()
+    )
+
+    if (
+        not configured_method
+        or not configured_method.enabled
+    ):
+        raise ValueError(
+            "La tienda no tiene habilitada "
+            "esa forma de pago."
+        )
+
+    definition = PAYMENT_METHOD_DEFINITIONS[
+        method
+    ]
+
+    provider = definition["provider"]
+
+    if method == "MERCADO_PAGO":
+        if not PAYMENTS_ENABLED:
+            raise ValueError(
+                "Mercado Pago todavia no esta habilitado."
+            )
+
+    if method == "CASH":
+        if fulfillment_method != "pickup":
+            raise ValueError(
+                "El efectivo solamente esta habilitado "
+                "para retiro en el local."
+            )
+
+        if not configured_method.allow_pay_on_pickup:
+            raise ValueError(
+                "La tienda no permite pagar en efectivo "
+                "al retirar."
+            )
+
+    items_subtotal = _payment_money(
+        order.items_subtotal,
+        "items_subtotal",
+    )
+
+    shipping_amount = _payment_money(
+        order.shipping_amount,
+        "shipping_amount",
+    )
+
+    discount_amount = _payment_money(
+        order.discount_amount,
+        "discount_amount",
+    )
+
+    payable_amount = _payment_money(
+        order.payable_amount,
+        "payable_amount",
+    )
+
+    calculated_payable = (
+        items_subtotal
+        + shipping_amount
+        - discount_amount
+    ).quantize(
+        Decimal("0.01")
+    )
+
+    if calculated_payable != payable_amount:
+        raise ValueError(
+            "El snapshot financiero del pedido "
+            "es inconsistente."
+        )
+
+    if payable_amount <= Decimal("0.00"):
+        raise ValueError(
+            "El importe pagable debe ser mayor a cero."
+        )
+
+    currency = str(
+        order.currency or ""
+    ).strip().upper()
+
+    if currency != "ARS":
+        raise ValueError(
+            "La moneda del pedido no esta soportada."
+        )
+
+    existing_payment = (
+        db.query(Payment)
+        .filter(
+            Payment.order_id == order.id,
+            Payment.status.in_(
+                list(ACTIVE_PAYMENT_STATUSES)
+            ),
+        )
+        .order_by(
+            Payment.created_at.desc(),
+            Payment.id.desc(),
+        )
+        .first()
+    )
+
+    if existing_payment:
+        current_status = normalize_payment_status(
+            existing_payment.status
+        )
+
+        if current_status == PaymentStatus.APPROVED:
+            raise ValueError(
+                "El pedido ya tiene un pago aprobado."
+            )
+
+        same_payment = (
+            str(
+                existing_payment.method or ""
+            ).strip().upper()
+            == method
+
+            and existing_payment.store_id
+            == store.id
+
+            and _payment_money(
+                existing_payment.amount,
+                "amount",
+            )
+            == payable_amount
+
+            and str(
+                existing_payment.currency or ""
+            ).strip().upper()
+            == currency
+        )
+
+        if same_payment:
+            return existing_payment
+
+        raise ValueError(
+            "El pedido ya tiene un pago activo."
+        )
+
+    payment = Payment(
+        order_id=order.id,
+        store_id=store.id,
+        method=method,
+        provider=provider,
+        status=PaymentStatus.PENDING,
+        amount=payable_amount,
+        currency=currency,
+    )
+
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+
+    return payment
+
+
+def get_payments_by_buyer(
+    db: Session,
+    buyer_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+):
+    return (
+        db.query(Payment)
+        .join(
+            Order,
+            Order.id == Payment.order_id,
+        )
+        .filter(
+            Order.buyer_id == buyer_id,
+        )
+        .order_by(
+            Payment.created_at.desc(),
+            Payment.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+def get_payments_by_seller(
+    db: Session,
+    seller_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+):
+    return (
+        db.query(Payment)
+        .join(
+            Store,
+            Store.id == Payment.store_id,
+        )
+        .filter(
+            Store.owner_id == seller_id,
+        )
+        .order_by(
+            Payment.created_at.desc(),
+            Payment.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+def get_payments_for_admin(
+    db: Session,
+    limit: int = 100,
+    offset: int = 0,
+):
+    return (
+        db.query(Payment)
+        .order_by(
+            Payment.created_at.desc(),
+            Payment.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+def get_payment_for_buyer(
+    db: Session,
+    payment_id: UUID,
+    buyer_id: UUID,
+):
+    return (
+        db.query(Payment)
+        .join(
+            Order,
+            Order.id == Payment.order_id,
+        )
+        .filter(
+            Payment.id == payment_id,
+            Order.buyer_id == buyer_id,
+        )
+        .first()
+    )
+
+
+def get_payment_for_seller(
+    db: Session,
+    payment_id: UUID,
+    seller_id: UUID,
+):
+    return (
+        db.query(Payment)
+        .join(
+            Store,
+            Store.id == Payment.store_id,
+        )
+        .filter(
+            Payment.id == payment_id,
+            Store.owner_id == seller_id,
+        )
+        .first()
+    )
+
+
+def report_payment_by_buyer(
+    db: Session,
+    payment_id: UUID,
+    buyer_id: UUID,
+):
+    payment = get_payment_for_buyer(
+        db,
+        payment_id,
+        buyer_id,
+    )
+
+    if not payment:
+        raise ValueError("Pago no encontrado.")
+
+    method = str(
+        payment.method or ""
+    ).strip().upper()
+
+    if method not in BUYER_REPORTABLE_PAYMENT_METHODS:
+        raise ValueError(
+            "Esta forma de pago no se informa manualmente "
+            "por el comprador."
+        )
+
+    return change_payment_status(
+        db,
+        payment.id,
+        PaymentStatus.REPORTED,
+    )
+
+
+def review_payment_by_seller(
+    db: Session,
+    payment_id: UUID,
+    seller_id: UUID,
+    requested_status,
+):
+    payment = get_payment_for_seller(
+        db,
+        payment_id,
+        seller_id,
+    )
+
+    if not payment:
+        raise ValueError("Pago no encontrado.")
+
+    target_status = normalize_payment_status(
+        requested_status
+    )
+
+    if target_status not in {
+        PaymentStatus.APPROVED,
+        PaymentStatus.REJECTED,
+    }:
+        raise ValueError(
+            "El vendedor solamente puede aprobar "
+            "o rechazar un pago."
+        )
+
+    return change_payment_status(
+        db,
+        payment.id,
+        target_status,
+    )
 
 
 PAYMENT_METHOD_DEFINITIONS = {

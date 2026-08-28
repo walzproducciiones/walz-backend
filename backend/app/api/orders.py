@@ -8,12 +8,11 @@ from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.services.product_image_service import upload_delivery_person_photo
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderAdminResponse, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderAdminResponse, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
     assign_delivery_responsible_by_seller,
     cancel_order_by_buyer,
     confirm_pickup_handover_by_seller,
-    create_order,
     create_orders_by_seller,
     decide_delivery_plan_by_buyer,
     get_order_by_id,
@@ -38,18 +37,15 @@ def get_db():
         db.close()
 
 
-@router.post("/", response_model=OrderResponse)
-def create_new_order(
-    order: OrderCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    new_order, error = create_order(db, current_user.id, order)
-
-    if error:
-        raise HTTPException(status_code=400, detail=error)
-
-    return new_order
+@router.post("/")
+def create_new_order():
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "La creacion directa de pedidos fue reemplazada "
+            "por el checkout multivendedor."
+        ),
+    )
 
 
 @router.get("/", response_model=List[OrderResponse])

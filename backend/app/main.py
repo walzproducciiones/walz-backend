@@ -15,6 +15,7 @@ from backend.app.database.schema_updates import (
     ensure_admin_user,
     ensure_banner_proposal_columns,
     ensure_order_confirmed_status,
+    ensure_order_financial_snapshot_columns,
     ensure_order_pickup_columns,
     ensure_product_promotion_columns,
     ensure_product_deletion_column,
@@ -30,7 +31,7 @@ from backend.app.database.schema_updates import (
     ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, email_change_token, institutional_setting, user, product, order, password_reset_token, seller_application, store, store_payment_method
+from backend.app.models import banner, email_change_token, institutional_setting, user, product, order, payment, password_reset_token, seller_application, store, store_payment_method
 
 
 # ============================================================
@@ -40,6 +41,7 @@ from backend.app.models import banner, email_change_token, institutional_setting
 user.Base.metadata.create_all(bind=engine)
 product.Base.metadata.create_all(bind=engine)
 order.Base.metadata.create_all(bind=engine)
+payment.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
 institutional_setting.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
@@ -62,6 +64,7 @@ ensure_store_business_categories_column(engine)
 ensure_seller_application_business_categories_column(engine)
 ensure_store_slug_column(engine)
 ensure_order_pickup_columns(engine)
+ensure_order_financial_snapshot_columns(engine)
 ensure_order_confirmed_status(engine)
 
 

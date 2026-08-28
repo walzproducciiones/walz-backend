@@ -32,10 +32,6 @@ class OrderBase(BaseModel):
     )
 
 
-class OrderCreate(OrderBase):
-    items: List[OrderItemCreate] = Field(min_length=1, max_length=100)
-
-
 class SellerDeliveryChoice(BaseModel):
     seller_id: UUID
     method: Literal["delivery", "pickup"]

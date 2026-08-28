@@ -1,6 +1,10 @@
+from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from backend.app.models.payment import PaymentStatus
 
 
 class StorePaymentMethodUpdate(BaseModel):
@@ -32,3 +36,41 @@ class StorePaymentMethodsResponse(BaseModel):
     store_id: UUID
     store_name: str
     methods: list[StorePaymentMethodResponse]
+
+
+
+class PaymentCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: str = Field(
+        min_length=1,
+        max_length=40,
+    )
+
+
+class PaymentSellerStatusUpdate(BaseModel):
+    status: PaymentStatus
+
+
+class PaymentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    order_id: UUID
+    store_id: UUID
+    method: str
+    provider: str
+    status: PaymentStatus
+    amount: Decimal
+    currency: str
+
+    external_reference: str | None = None
+    provider_payment_id: str | None = None
+
+    reported_at: datetime | None = None
+    approved_at: datetime | None = None
+    rejected_at: datetime | None = None
+    cancelled_at: datetime | None = None
+
+    created_at: datetime
+    updated_at: datetime

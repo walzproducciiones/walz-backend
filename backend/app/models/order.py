@@ -5,6 +5,7 @@ from sqlalchemy import (
     Column,
     String,
     Float,
+    Numeric,
     Integer,
     ForeignKey,
     UUID,
@@ -47,6 +48,45 @@ class Order(Base):
     total_amount = Column(
         Float,
         nullable=False
+    )
+
+    # Snapshot comercial/financiero para pedidos nuevos.
+    # Los pedidos historicos pueden conservar NULL.
+    store_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("stores.id"),
+        nullable=True,
+        index=True
+    )
+
+    fulfillment_method = Column(
+        String(20),
+        nullable=True
+    )
+
+    items_subtotal = Column(
+        Numeric(14, 2),
+        nullable=True
+    )
+
+    shipping_amount = Column(
+        Numeric(14, 2),
+        nullable=True
+    )
+
+    discount_amount = Column(
+        Numeric(14, 2),
+        nullable=True
+    )
+
+    payable_amount = Column(
+        Numeric(14, 2),
+        nullable=True
+    )
+
+    currency = Column(
+        String(3),
+        nullable=True
     )
 
     status = Column(

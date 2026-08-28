@@ -403,3 +403,78 @@ def ensure_order_confirmed_status(engine):
             "SET status = 'CONFIRMED' "
             "WHERE status = 'PAID'"
         ))
+
+
+
+def ensure_order_financial_snapshot_columns(engine):
+    """
+    Add financial/store snapshot fields for new orders.
+
+    Existing orders are deliberately preserved with NULL values.
+    No historical monetary values are inferred or fabricated.
+
+    Existing SQLite databases receive the store_id index but are
+    not rebuilt only to retrofit a foreign-key declaration.
+    PostgreSQL receives both the index and the real FK constraint.
+    Fresh databases created from SQLAlchemy metadata already contain
+    the model-level FK and index.
+    """
+    inspector = inspect(engine)
+
+    if "orders" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("orders")
+    }
+
+    definitions = {
+        "store_id": "UUID",
+        "fulfillment_method": "VARCHAR(20)",
+        "items_subtotal": "NUMERIC(14, 2)",
+        "shipping_amount": "NUMERIC(14, 2)",
+        "discount_amount": "NUMERIC(14, 2)",
+        "payable_amount": "NUMERIC(14, 2)",
+        "currency": "VARCHAR(3)",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    f"ALTER TABLE orders "
+                    f"ADD COLUMN {column_name} {definition}"
+                ))
+
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS "
+            "ix_orders_store_id "
+            "ON orders (store_id)"
+        ))
+
+    # SQLite cannot add a new FK constraint to an existing table
+    # without rebuilding the complete table. Do not perform that
+    # invasive operation on the local historical database.
+    if engine.dialect.name != "postgresql":
+        return
+
+    refreshed_inspector = inspect(engine)
+
+    store_fk_exists = any(
+        foreign_key.get("referred_table") == "stores"
+        and foreign_key.get("constrained_columns") == ["store_id"]
+        for foreign_key
+        in refreshed_inspector.get_foreign_keys("orders")
+    )
+
+    if store_fk_exists:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text(
+            "ALTER TABLE orders "
+            "ADD CONSTRAINT fk_orders_store_id_stores "
+            "FOREIGN KEY (store_id) "
+            "REFERENCES stores(id)"
+        ))
