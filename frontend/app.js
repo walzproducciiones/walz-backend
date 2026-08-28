@@ -6366,6 +6366,374 @@ function clearReceivedOrdersFilters() {
 
 
 
+
+// =====================================================
+// ETAPA 4A - SUPERVISION CENTRAL DE PEDIDOS
+// =====================================================
+
+async function showAdminOrders() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById("admin-orders-section");
+    if (!section) {
+        console.error("No existe la seccion Pedidos Central.");
+        return;
+    }
+
+    section.style.display = "block";
+    scrollPageToTop();
+    await loadAdminOrders();
+}
+
+
+async function loadAdminOrders() {
+    const container = document.getElementById("admin-orders-content");
+    const counter = document.getElementById("admin-orders-results-count");
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!container) return;
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="orders-state-card orders-loading">
+            Cargando pedidos...
+        </div>
+    `;
+
+    if (counter) counter.textContent = "";
+
+    try {
+        const response = await fetch(`${API_URL}/orders/admin`, {
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ([]));
+
+        if (!response.ok) {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+
+        window.walzAdminOrders = Array.isArray(data) ? data : [];
+
+        populateAdminOrdersStoreFilter();
+        applyAdminOrdersFilters();
+
+    } catch (error) {
+        console.error("Error cargando pedidos para administracion:", error);
+
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                <h3>No pudimos cargar los pedidos</h3>
+                <p>${escapeHtml(error.message || "Error desconocido")}</p>
+            </div>
+        `;
+    }
+}
+
+
+function populateAdminOrdersStoreFilter() {
+    const select = document.getElementById("admin-orders-store-filter");
+    if (!select) return;
+
+    const previousValue = String(select.value || "");
+    const entries = Array.isArray(window.walzAdminOrders)
+        ? window.walzAdminOrders
+        : [];
+
+    const stores = new Map();
+
+    entries.forEach(entry => {
+        const order = entry?.order || {};
+        const sellerId = String(
+            entry?.store?.seller_id ||
+            order.seller_id ||
+            ""
+        );
+
+        if (!sellerId) return;
+
+        const storeName =
+            entry?.store?.name ||
+            order.seller_display_name ||
+            order.seller_account_email ||
+            "Tienda sin nombre";
+
+        if (!stores.has(sellerId)) {
+            stores.set(sellerId, storeName);
+        }
+    });
+
+    const options = [...stores.entries()]
+        .sort((first, second) =>
+            String(first[1]).localeCompare(String(second[1]), "es")
+        )
+        .map(([sellerId, storeName]) => `
+            <option value="${escapeHtml(sellerId)}">
+                ${escapeHtml(storeName)}
+            </option>
+        `)
+        .join("");
+
+    select.innerHTML = `
+        <option value="">Todas las tiendas</option>
+        ${options}
+    `;
+
+    if (previousValue && stores.has(previousValue)) {
+        select.value = previousValue;
+    }
+}
+
+
+function applyAdminOrdersFilters() {
+    const allEntries = Array.isArray(window.walzAdminOrders)
+        ? window.walzAdminOrders
+        : [];
+
+    const search = normalizeSalesSearchText(
+        document.getElementById("admin-orders-search")?.value
+    );
+
+    const selectedStatus = String(
+        document.getElementById("admin-orders-status-filter")?.value || ""
+    ).toLowerCase();
+
+    const selectedStore = String(
+        document.getElementById("admin-orders-store-filter")?.value || ""
+    );
+
+    const filteredEntries = allEntries.filter(entry => {
+        const order = entry?.order || {};
+        const store = entry?.store || {};
+        const buyer = entry?.buyer || {};
+
+        if (!orderMatchesWorkStatus(order, selectedStatus)) {
+            return false;
+        }
+
+        const sellerId = String(
+            store.seller_id ||
+            order.seller_id ||
+            ""
+        );
+
+        if (selectedStore && sellerId !== selectedStore) {
+            return false;
+        }
+
+        if (!search) {
+            return true;
+        }
+
+        const itemNames = (Array.isArray(order.items) ? order.items : [])
+            .map(item => item?.product?.name || "")
+            .join(" ");
+
+        const status = String(order.status || "").toLowerCase();
+
+        const searchableText = normalizeSalesSearchText([
+            order.id,
+            status,
+            getOrderStatusInfo(status).label,
+            store.name,
+            store.slug,
+            order.seller_display_name,
+            order.seller_account_email,
+            buyer.name,
+            buyer.email,
+            order.shipping_address,
+            itemNames
+        ].join(" "));
+
+        return searchableText.includes(search);
+    });
+
+    const counter = document.getElementById("admin-orders-results-count");
+
+    if (counter) {
+        counter.textContent =
+            allEntries.length === filteredEntries.length
+                ? `${allEntries.length} pedido${allEntries.length === 1 ? "" : "s"}`
+                : `${filteredEntries.length} de ${allEntries.length} pedidos`;
+    }
+
+    renderAdminOrders(filteredEntries);
+}
+
+
+function clearAdminOrdersFilters() {
+    const search = document.getElementById("admin-orders-search");
+    const status = document.getElementById("admin-orders-status-filter");
+    const store = document.getElementById("admin-orders-store-filter");
+
+    if (search) search.value = "";
+    if (status) status.value = "active";
+    if (store) store.value = "";
+
+    applyAdminOrdersFilters();
+}
+
+
+function renderAdminOrders(entries) {
+    const container = document.getElementById("admin-orders-content");
+    if (!container) return;
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+        const hasOrders =
+            Array.isArray(window.walzAdminOrders) &&
+            window.walzAdminOrders.length > 0;
+
+        container.innerHTML = `
+            <div class="orders-state-card orders-empty">
+                <h3>${hasOrders
+                    ? "No encontramos pedidos con esos filtros"
+                    : "Todavia no hay pedidos registrados"
+                }</h3>
+                <p>${hasOrders
+                    ? "Proba otra busqueda, estado o tienda."
+                    : "Cuando se registren compras apareceran aqui."
+                }</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="sales-orders-list">
+            ${entries.map(entry => {
+                const order = entry?.order || {};
+                const buyer = entry?.buyer || {};
+                const store = entry?.store || {};
+
+                const statusInfo = getOrderStatusInfo(order.status);
+
+                const latestActivity = getOrderLatestActivity(order);
+                const activityAt = latestActivity
+                    ? formatWalzDate(latestActivity.toISOString())
+                    : "Fecha no disponible";
+
+                const createdAt = order.created_at
+                    ? formatWalzDate(order.created_at)
+                    : "Fecha no disponible";
+
+                const storeName =
+                    store.name ||
+                    order.seller_display_name ||
+                    "Tienda no disponible";
+
+                const sellerContact =
+                    order.seller_account_email ||
+                    "No disponible";
+
+                const items = Array.isArray(order.items)
+                    ? order.items
+                    : [];
+
+                const isPickup = String(order.shipping_address || "")
+                    .toLowerCase()
+                    .includes("retiro en el local");
+
+                const coordination = isPickup
+                    ? renderOrderTimeline(order)
+                    : renderDeliveryPlan(order, false) +
+                      renderDeliveryResponsible(order);
+
+                return `
+                    <article class="order-card sales-order-card admin-order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <span class="order-card-label">Pedido</span>
+                                <h3>#${escapeHtml(String(order.id || ""))}</h3>
+                            </div>
+
+                            <span class="order-status ${statusInfo.className}">
+                                ${escapeHtml(statusInfo.label)}
+                            </span>
+                        </div>
+
+                        <div class="sales-buyer-data">
+                            <div>
+                                <span>Tienda</span>
+                                <strong>${escapeHtml(storeName)}</strong>
+                            </div>
+
+                            <div>
+                                <span>Cuenta vendedora</span>
+                                <strong>${escapeHtml(sellerContact)}</strong>
+                            </div>
+
+                            <div>
+                                <span>Comprador</span>
+                                <strong>${escapeHtml(buyer.name || "Sin nombre")}</strong>
+                            </div>
+
+                            <div>
+                                <span>Email comprador</span>
+                                <strong>${escapeHtml(buyer.email || "No disponible")}</strong>
+                            </div>
+
+                            <div>
+                                <span>Fecha del pedido</span>
+                                <strong>${escapeHtml(createdAt)}</strong>
+                            </div>
+
+                            <div>
+                                <span>Ultimo movimiento</span>
+                                <strong>${escapeHtml(activityAt)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="sales-order-items">
+                            ${items.map(item => {
+                                const quantity = Number(item.quantity || 0);
+                                const price = Number(item.price_at_purchase || 0);
+                                const subtotal = quantity * price;
+
+                                return `
+                                    <div class="sales-order-item">
+                                        <strong>${escapeHtml(item?.product?.name || "Producto")}</strong>
+                                        <span>Cantidad: ${quantity}</span>
+                                        <span>Precio: $${price.toFixed(2)}</span>
+                                        <strong>Subtotal: $${subtotal.toFixed(2)}</strong>
+                                    </div>
+                                `;
+                            }).join("")}
+                        </div>
+
+                        <div class="sales-delivery-data">
+                            <span>Datos de entrega</span>
+                            <p>${escapeHtml(order.shipping_address || "No disponibles")}</p>
+                        </div>
+
+                        ${coordination}
+
+                        <h3 class="order-total">
+                            Total del pedido: $${Number(order.total_amount || 0).toFixed(2)}
+                        </h3>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
+
 // =====================================================
 // FASE 5P - CARGA MASIVA DE PRODUCTOS (VISTA PREVIA)
 // =====================================================
@@ -8527,7 +8895,7 @@ function hideAllWalzWorkSections() {
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
-        "admin-central-section", "admin-stores-section", "institutional-settings-section"
+        "admin-central-section", "admin-stores-section", "admin-orders-section", "institutional-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }

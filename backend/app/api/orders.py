@@ -4,11 +4,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from backend.app.api.auth import get_current_user
+from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.services.product_image_service import upload_delivery_person_photo
-from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
+from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate, OrderAdminResponse, OrderCreate, OrderResponse, OrderStatusUpdate, PickupStatusUpdate
 from backend.app.services.order_service import (
     assign_delivery_responsible_by_seller,
     cancel_order_by_buyer,
@@ -18,6 +18,7 @@ from backend.app.services.order_service import (
     decide_delivery_plan_by_buyer,
     get_order_by_id,
     get_orders_by_buyer,
+    get_orders_for_admin,
     get_orders_received_by_seller,
     schedule_delivery_by_seller,
     seller_owns_order,
@@ -57,6 +58,14 @@ def get_my_orders(
     current_user: User = Depends(get_current_user)
 ):
     return get_orders_by_buyer(db, current_user.id)
+
+
+@router.get("/admin", response_model=List[OrderAdminResponse])
+def get_admin_orders(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    return get_orders_for_admin(db)
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

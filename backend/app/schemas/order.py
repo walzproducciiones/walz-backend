@@ -109,3 +109,20 @@ class DeliveryResponsibleUpdate(BaseModel):
     carrier_company: Optional[str] = Field(default=None, max_length=120)
     tracking_code: Optional[str] = Field(default=None, max_length=120)
 
+
+
+class OrderAdminBuyerResponse(BaseModel):
+    name: str
+    email: str
+
+
+class OrderAdminStoreResponse(BaseModel):
+    seller_id: UUID
+    name: str
+    slug: Optional[str] = None
+
+
+class OrderAdminResponse(BaseModel):
+    order: OrderResponse
+    buyer: OrderAdminBuyerResponse
+    store: Optional[OrderAdminStoreResponse] = None

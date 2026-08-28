@@ -366,6 +366,12 @@
                 <small>Buscar comercios, revisar su estado y abrir su tienda publica.</small>
             </button>
 
+            <button type="button" class="admin-central-card" onclick="showAdminOrders()">
+                <span class="admin-central-icon">&#128230;</span>
+                <strong>Pedidos Central</strong>
+                <small>Supervisar pedidos de todos los vendedores sin intervenir en la operacion.</small>
+            </button>
+
             <button type="button" class="admin-central-card" onclick="showBannerAdmin()">
                 <span class="admin-central-icon">&#128226;</span>
                 <strong>Publicidad Central</strong>
@@ -420,6 +426,81 @@
 
         <div id="admin-stores-summary" class="admin-stores-summary"></div>
         <div id="admin-stores-list" class="admin-stores-list"></div>
+    </div>
+</section>
+
+<!-- WALZ_ADMIN_ORDERS_V1 -->
+<section id="admin-orders-section" class="admin-central-section" style="display:none;">
+    <div class="admin-central-shell">
+        <button type="button" onclick="showAdminCentralPanel()">
+            &larr; Volver a Administracion Central
+        </button>
+
+        <div class="admin-central-heading">
+            <span class="admin-central-kicker">WalZ One Central</span>
+            <h2>Pedidos Central</h2>
+            <p>Supervision general de pedidos de todos los vendedores. Esta vista es solo informativa.</p>
+        </div>
+
+        <div class="sales-orders-filters admin-orders-filters">
+            <label>
+                <span>Buscar pedido</span>
+                <input
+                    type="search"
+                    id="admin-orders-search"
+                    placeholder="Pedido, tienda, vendedor, comprador, email o producto"
+                    onkeydown="if (event.key === 'Enter') applyAdminOrdersFilters()"
+                >
+            </label>
+
+            <label>
+                <span>Estado</span>
+                <select
+                    id="admin-orders-status-filter"
+                    onchange="applyAdminOrdersFilters()"
+                >
+                    <option value="active" selected>En curso / requieren atencion</option>
+                    <option value="">Todos</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="paid">Confirmado</option>
+                    <option value="shipped">Enviado / listo para retirar</option>
+                    <option value="delivered">Entregado</option>
+                    <option value="cancelled">Cancelado</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Tienda</span>
+                <select
+                    id="admin-orders-store-filter"
+                    onchange="applyAdminOrdersFilters()"
+                >
+                    <option value="">Todas las tiendas</option>
+                </select>
+            </label>
+
+            <button type="button" onclick="applyAdminOrdersFilters()">
+                Aplicar filtros
+            </button>
+
+            <button type="button" onclick="clearAdminOrdersFilters()">
+                Limpiar filtros
+            </button>
+
+            <button type="button" onclick="loadAdminOrders()">
+                Actualizar datos
+            </button>
+        </div>
+
+        <p
+            id="admin-orders-results-count"
+            class="sales-orders-results-count"
+            aria-live="polite"
+        ></p>
+
+        <div id="admin-orders-content">
+            Cargando pedidos...
+        </div>
     </div>
 </section>
 

@@ -688,3 +688,67 @@ def assign_delivery_responsible_by_seller(
     except SQLAlchemyError:
         db.rollback()
         raise
+
+
+
+def get_orders_for_admin(db: Session):
+    orders = (
+        db.query(Order)
+        .options(
+            selectinload(Order.buyer),
+            selectinload(Order.items)
+            .selectinload(OrderItem.product)
+            .selectinload(Product.seller),
+        )
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    seller_ids = {
+        order.seller_id
+        for order in orders
+        if order.seller_id is not None
+    }
+
+    stores = (
+        db.query(Store)
+        .filter(Store.owner_id.in_(seller_ids))
+        .all()
+        if seller_ids
+        else []
+    )
+    stores_by_owner = {store.owner_id: store for store in stores}
+
+    result = []
+
+    for order in orders:
+        buyer = order.buyer
+        buyer_name = ' '.join(
+            part
+            for part in [
+                getattr(buyer, 'first_name', None),
+                getattr(buyer, 'last_name', None),
+            ]
+            if part
+        ).strip()
+
+        store = stores_by_owner.get(order.seller_id)
+
+        result.append({
+            'order': order,
+            'buyer': {
+                'name': buyer_name or getattr(buyer, 'email', 'Sin nombre'),
+                'email': getattr(buyer, 'email', ''),
+            },
+            'store': (
+                {
+                    'seller_id': store.owner_id,
+                    'name': store.name,
+                    'slug': store.slug,
+                }
+                if store
+                else None
+            ),
+        })
+
+    return result
