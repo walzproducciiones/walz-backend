@@ -8149,3 +8149,143 @@ button.admin-central-card:hover {
         width: 100%;
     }
 }
+
+
+/* WALZ_SELLER_STORE_STATUS_V1 */
+.seller-store-status-panel {
+    margin: 18px 0 22px;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
+    background: #202127;
+}
+
+.seller-store-status-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.seller-store-status-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.seller-store-status-heading small {
+    color: rgba(255, 255, 255, 0.62);
+    font-weight: 700;
+}
+
+.seller-store-status-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.seller-store-status-badge.is-active {
+    background: rgba(73, 184, 111, 0.14);
+    color: #aee8c1;
+    border: 1px solid rgba(73, 184, 111, 0.30);
+}
+
+.seller-store-status-badge.is-paused {
+    background: rgba(245, 180, 70, 0.14);
+    color: #ffd38a;
+    border: 1px solid rgba(245, 180, 70, 0.28);
+}
+
+.seller-store-status-badge.is-suspended {
+    background: rgba(220, 75, 75, 0.15);
+    color: #ffaaaa;
+    border: 1px solid rgba(220, 75, 75, 0.30);
+}
+
+.seller-store-status-badge.is-review {
+    background: rgba(120, 145, 255, 0.14);
+    color: #bdc9ff;
+    border: 1px solid rgba(120, 145, 255, 0.28);
+}
+
+.seller-store-status-badge.is-requested {
+    background: rgba(255, 102, 72, 0.15);
+    color: #ffb2a2;
+    border: 1px solid rgba(255, 102, 72, 0.30);
+}
+
+.seller-store-status-badge.is-closed,
+.seller-store-status-badge.is-unknown {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.seller-store-status-panel > p {
+    margin: 12px 0 0;
+    color: rgba(255, 255, 255, 0.74);
+    line-height: 1.5;
+}
+
+.seller-store-status-reason {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.seller-store-status-reason strong {
+    color: #ffffff;
+    font-size: 0.86rem;
+}
+
+.seller-store-status-reason span {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.seller-store-status-actions {
+    margin-top: 16px;
+}
+
+.seller-store-status-action {
+    min-height: 42px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.seller-store-status-action.pause {
+    border: 1px solid rgba(245, 180, 70, 0.38);
+    background: rgba(245, 180, 70, 0.12);
+    color: #ffd38a;
+}
+
+.seller-store-status-action.activate {
+    border: 1px solid rgba(73, 184, 111, 0.42);
+    background: rgba(73, 184, 111, 0.14);
+    color: #aee8c1;
+}
+
+.seller-store-status-action.request {
+    border: 1px solid rgba(255, 102, 72, 0.42);
+    background: rgba(255, 102, 72, 0.14);
+    color: #ffb2a2;
+}
+
+.seller-store-status-action:hover {
+    filter: brightness(1.12);
+}
+
+@media (max-width: 640px) {
+    .seller-store-status-action {
+        width: 100%;
+    }
+}

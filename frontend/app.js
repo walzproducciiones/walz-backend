@@ -8618,6 +8618,213 @@ async function showStoreProfile() {
 }
 
 
+
+function getSellerStoreStatusPresentation(status) {
+    const value = String(status || "ACTIVE").trim().toUpperCase();
+
+    const states = {
+        ACTIVE: {
+            label: "Activa",
+            description: "Tu tienda esta visible para los compradores.",
+            css: "is-active"
+        },
+        PAUSED: {
+            label: "Pausada",
+            description: "Tu tienda no esta visible publicamente. Podes reactivarla cuando quieras.",
+            css: "is-paused"
+        },
+        SUSPENDED: {
+            label: "Suspendida por WalZ One",
+            description: "La tienda no esta visible publicamente. Podes solicitar su reactivacion.",
+            css: "is-suspended"
+        },
+        UNDER_REVIEW: {
+            label: "En revision por WalZ One",
+            description: "La tienda esta siendo revisada y no se muestra publicamente.",
+            css: "is-review"
+        },
+        REACTIVATION_REQUESTED: {
+            label: "Reactivacion solicitada",
+            description: "WalZ One recibio tu solicitud. La tienda continuara sin mostrarse hasta que Central la apruebe.",
+            css: "is-requested"
+        },
+        CLOSED: {
+            label: "Cerrada",
+            description: "Esta tienda se encuentra cerrada.",
+            css: "is-closed"
+        }
+    };
+
+    return states[value] || {
+        label: value || "Estado desconocido",
+        description: "Consulta con WalZ One si necesitas asistencia.",
+        css: "is-unknown"
+    };
+}
+
+
+function renderSellerStoreStatus(store) {
+    const panel = document.getElementById("seller-store-status-panel");
+    if (!panel) return;
+
+    if (!store || !store.id) {
+        panel.style.display = "none";
+        panel.innerHTML = "";
+        return;
+    }
+
+    const status = String(
+        store.operational_status || "ACTIVE"
+    ).trim().toUpperCase();
+
+    const info = getSellerStoreStatusPresentation(status);
+
+    let action = "";
+
+    if (status === "ACTIVE") {
+        action = `
+            <button type="button"
+                class="seller-store-status-action pause"
+                onclick="changeSellerStoreStatus('PAUSED')">
+                Pausar temporalmente mi tienda
+            </button>
+        `;
+    }
+
+    if (status === "PAUSED") {
+        action = `
+            <button type="button"
+                class="seller-store-status-action activate"
+                onclick="changeSellerStoreStatus('ACTIVE')">
+                Reactivar mi tienda
+            </button>
+        `;
+    }
+
+    if (status === "SUSPENDED") {
+        action = `
+            <button type="button"
+                class="seller-store-status-action request"
+                onclick="changeSellerStoreStatus('REACTIVATION_REQUESTED')">
+                Solicitar reactivacion
+            </button>
+        `;
+    }
+
+    panel.innerHTML = `
+        <div class="seller-store-status-heading">
+            <div>
+                <small>Estado de tu tienda</small>
+                <strong class="seller-store-status-badge ${info.css}">
+                    ${escapeHtml(info.label)}
+                </strong>
+            </div>
+        </div>
+
+        <p>${escapeHtml(info.description)}</p>
+
+        ${store.status_reason ? `
+            <div class="seller-store-status-reason">
+                <strong>Motivo / observacion</strong>
+                <span>${escapeHtml(store.status_reason)}</span>
+            </div>
+        ` : ""}
+
+        ${action ? `
+            <div class="seller-store-status-actions">
+                ${action}
+            </div>
+        ` : ""}
+    `;
+
+    panel.style.display = "block";
+}
+
+
+async function changeSellerStoreStatus(requestedStatus) {
+    if (!["VENDEDOR", "SELLER"].includes(currentUserRole)) {
+        showMessage("Se requiere una cuenta vendedora.", "error");
+        return;
+    }
+
+    const status = String(requestedStatus || "").trim().toUpperCase();
+    let reason = null;
+
+    if (status === "PAUSED") {
+        const confirmed = window.confirm(
+            "?Queres pausar temporalmente tu tienda? Dejaria de mostrarse a los compradores hasta que la reactives."
+        );
+        if (!confirmed) return;
+    }
+
+    if (status === "ACTIVE") {
+        const confirmed = window.confirm(
+            "?Queres reactivar tu tienda y volver a mostrarla publicamente?"
+        );
+        if (!confirmed) return;
+    }
+
+    if (status === "REACTIVATION_REQUESTED") {
+        reason = window.prompt(
+            "Conta brevemente por que solicitas la reactivacion:"
+        );
+
+        if (reason === null) return;
+
+        reason = reason.trim();
+
+        if (!reason) {
+            showMessage(
+                "Es necesario explicar brevemente la solicitud de reactivacion.",
+                "error"
+            );
+            return;
+        }
+    }
+
+    const currentToken = localStorage.getItem("walz_token");
+
+    try {
+        const response = await fetch(`${API_URL}/stores/mine/status`, {
+            method: "PATCH",
+            headers: {
+                Authorization: `Bearer ${currentToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                status,
+                reason
+            })
+        });
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "No se pudo cambiar el estado de la tienda."
+            );
+        }
+
+        window.walzMyStore = data;
+        renderSellerStoreStatus(data);
+
+        showMessage("Estado de tu tienda actualizado.", "success");
+
+    } catch (error) {
+        console.error("Error cambiando estado de la tienda:", error);
+        showMessage(
+            error.message || "No se pudo cambiar el estado de la tienda.",
+            "error"
+        );
+    }
+}
+
+
 async function loadStoreProfile() {
     const currentToken = localStorage.getItem("walz_token");
     const errorElement = document.getElementById("store-profile-error");
@@ -8630,6 +8837,7 @@ async function loadStoreProfile() {
         if (!response.ok) throw new Error(store?.detail || `HTTP ${response.status}`);
         const values = store || {};
         window.walzMyStore = values;
+        renderSellerStoreStatus(values);
         const fields = {
             "store-name": values.name || "",
             "store-logo-url": values.logo_url || "",
