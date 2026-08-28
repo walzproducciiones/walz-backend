@@ -65,7 +65,7 @@ function clearCartStorage() {
 }
 
 // =====================================================
-// AUTENTICACIÓN
+// AUTENTICACIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œN
 // =====================================================
 
 function openTermsModal(){const modal=document.getElementById("terms-modal");if(modal)modal.style.display="flex"}
@@ -108,7 +108,7 @@ async function handleRegister() {
         const data = await res.json();
 
         if (res.ok) {
-            showMessage("Cuenta creada. Inicia sesión.", "success");
+            showMessage("Cuenta creada. Inicia sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.", "success");
             showLogin();
         } else {
             showMessage(
@@ -119,7 +119,7 @@ async function handleRegister() {
 
     } catch (e) {
         console.error("Error registro:", e);
-        showMessage("Error de conexión.", "error");
+        showMessage("Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.", "error");
     }
 }
 
@@ -128,6 +128,7 @@ async function showAccountSettings() {
     hideAllWalzWorkSections();
     const section = document.getElementById("account-settings-section");
     if (section) section.style.display = "block";
+    window.scrollTo(0, 0);
     const currentToken = localStorage.getItem("walz_token");
     if (!currentToken) { handleExpiredSession(); return; }
     try {
@@ -327,7 +328,7 @@ async function handleLogin() {
     const password = document.getElementById("login-password").value;
 
     if (!email || !password) {
-        showMessage("Ingresa correo y contraseña.", "error");
+        showMessage("Ingresa correo y contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a.", "error");
         return;
     }
 
@@ -375,8 +376,13 @@ async function handleLogin() {
 
             showMarketplace();
 
-            await loadProducts();
-            await loadActiveBanners();
+            if (currentUserRole === "ADMIN") {
+                showAdminCentralPanel();
+            } else {
+                showMarketplaceContent();
+                await loadProducts();
+                await loadActiveBanners();
+            }
 
             // WALZ_LOGIN_KEYBOARD_V1
         for (const fieldId of ["login-email", "login-password"]) {
@@ -401,12 +407,12 @@ async function handleLogin() {
     } catch (e) {
 
         console.error(
-            "Error al iniciar sesión:",
+            "Error al iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n:",
             e
         );
 
         showMessage(
-            "Error de conexión.",
+            "Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
             "error"
         );
     }
@@ -439,7 +445,9 @@ function handleLogout() {
     prepareLocalLoginForm();
 
     hideAllWalzWorkSections();
-    showAuth();
+    showMarketplace();
+    showMarketplaceContent();
+    loadProducts();
 
 
 }
@@ -496,10 +504,24 @@ let isHandlingExpiredSession = false;
 
 function handleExpiredSession() {
     if (isHandlingExpiredSession || !localStorage.getItem("walz_token")) return;
+
     isHandlingExpiredSession = true;
+
+    const savedCart = Array.isArray(cart) ? [...cart] : [];
+
     handleLogout();
-    showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
-    window.setTimeout(() => { isHandlingExpiredSession = false; }, 500);
+
+    cart = savedCart;
+    updateCartUI();
+
+    showMessage(
+        "Tu sesion vencio. Podes seguir explorando o iniciar sesion nuevamente.",
+        "error"
+    );
+
+    window.setTimeout(() => {
+        isHandlingExpiredSession = false;
+    }, 500);
 }
 
 
@@ -530,11 +552,367 @@ async function uploadNewProductImage(file) {
     return data.image_url;
 }
 
+
+async function handleEditProductImageSelection(productId, event) {
+    const input = event?.target;
+    const file = input?.files?.[0];
+
+    if (!file) return;
+
+    const imageField =
+        document.getElementById(
+            `edit-product-image-${productId}`
+        );
+
+    const status =
+        document.getElementById(
+            `edit-product-image-status-${productId}`
+        );
+
+    const preview =
+        document.getElementById(
+            `edit-product-image-preview-${productId}`
+        );
+
+    if (!imageField) {
+        showMessage(
+            "No se encontro el campo de imagen.",
+            "error"
+        );
+        return;
+    }
+
+    input.disabled = true;
+
+    if (status) {
+        status.textContent =
+            "Preparando y subiendo imagen...";
+    }
+
+    try {
+        const imageUrl =
+            await uploadNewProductImage(file);
+
+        if (!imageUrl) {
+            throw new Error(
+                "La imagen se subio pero no devolvio una URL."
+            );
+        }
+
+        imageField.value = imageUrl;
+
+        if (preview) {
+            preview.innerHTML =
+                renderProductImage(
+                    imageUrl,
+                    "Vista previa",
+                    "product-card-image"
+                );
+        }
+
+        saveCurrentMyProductDraft();
+
+        input.value = "";
+
+        if (status) {
+            status.textContent =
+                "Imagen preparada y conservada. Guarda los cambios del producto.";
+        }
+
+        showMessage(
+            "Imagen preparada correctamente.",
+            "success"
+        );
+
+    } catch (error) {
+        console.error(
+            "Error preparando imagen del producto:",
+            error
+        );
+
+        if (status) {
+            status.textContent =
+                "No se pudo preparar la imagen.";
+        }
+
+        showMessage(
+            error.message ||
+            "No se pudo subir la imagen.",
+            "error"
+        );
+
+    } finally {
+        input.disabled = false;
+    }
+}
+
+
 function previewNewProductImage() {
     const file = document.getElementById("prod-image-file")?.files?.[0]; const preview = document.getElementById("prod-image-preview");
     if (!preview) return; if (!file) { preview.textContent = "Sin imagen seleccionada"; return; }
     const url = URL.createObjectURL(file); preview.innerHTML = `<img src="${url}" alt="Vista previa">`;
 }
+
+// =====================================================
+// CARGA RAPIDA DESDE WHATSAPP
+// =====================================================
+
+function inferWhatsAppProductCategory(text) {
+    const value = String(text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    const rules = [
+        {
+            words: [
+                "perfume", "crema", "shampoo", "acondicionador",
+                "maquillaje", "labial", "mascara", "serum",
+                "esmalte", "cosmetica"
+            ],
+            category: "Belleza y cuidado personal",
+            subcategory: "Cuidado personal"
+        },
+        {
+            words: [
+                "sabana", "acolchado", "toalla", "cortina",
+                "almohada", "organizador", "blanqueria",
+                "frazada", "mantel"
+            ],
+            category: "Hogar",
+            subcategory: "Textil y organizacion"
+        },
+        {
+            words: [
+                "termo", "mate", "vaso", "botella", "taza",
+                "olla", "sarten", "cubierto", "cocina",
+                "vajilla"
+            ],
+            category: "Bazar y cocina",
+            subcategory: "Cocina y accesorios"
+        },
+        {
+            words: [
+                "remera", "pantalon", "buzo", "campera",
+                "vestido", "cartera", "mochila", "zapatilla",
+                "gorra", "bijou", "collar", "pulsera"
+            ],
+            category: "Moda y accesorios",
+            subcategory: "Indumentaria y accesorios"
+        },
+        {
+            words: [
+                "auricular", "cargador", "cable", "parlante",
+                "smartwatch", "celular", "iphone", "telefono",
+                "powerbank"
+            ],
+            category: "Tecnologia y accesorios",
+            subcategory: "Accesorios tecnologicos"
+        },
+        {
+            words: [
+                "juguete", "muneca", "peluche", "juego",
+                "regalo"
+            ],
+            category: "Regalos y varios",
+            subcategory: "Juguetes y regalos"
+        }
+    ];
+
+    for (const rule of rules) {
+        if (rule.words.some(word => value.includes(word))) {
+            return {
+                category: rule.category,
+                subcategory: rule.subcategory
+            };
+        }
+    }
+
+    return {
+        category: "",
+        subcategory: ""
+    };
+}
+
+
+function buildWhatsAppProductTitle(text) {
+    const firstUsefulLine = String(text || "")
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .find(line => line.length > 0) || "Producto";
+
+    let title = firstUsefulLine
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(/\$\s*[\d.,]+/g, "")
+        .replace(/[*_~|]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!title) title = "Producto";
+
+    return title.slice(0, 140);
+}
+
+
+function buildWhatsAppProductDescription(text) {
+    const lines = String(text || "")
+        .split(/\r?\n/)
+        .map(line => {
+            return line
+                .replace(/https?:\/\/\S+/gi, "")
+                .replace(/wa\.me\/\S+/gi, "")
+                .replace(/\$\s*[\d.,]+/g, "")
+                .replace(/\s+/g, " ")
+                .trim();
+        })
+        .filter(line => {
+            if (!line) return false;
+
+            if (
+                /^(precio mayorista|pedido minimo|pedido mínimo)\b/i.test(line)
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+    return lines.join("\n").slice(0, 1000);
+}
+
+function prepareWhatsAppProduct() {
+    const source =
+        document.getElementById("wa-product-source")?.value.trim() || "";
+
+    const originalText =
+        document.getElementById("wa-product-original-text")?.value.trim() || "";
+
+    const cost =
+        Number(document.getElementById("wa-product-cost")?.value);
+
+    const margin =
+        Number(document.getElementById("wa-product-margin")?.value);
+
+    const stock =
+        parseInt(
+            document.getElementById("wa-product-stock")?.value || "1",
+            10
+        );
+
+    const imageFile =
+        document.getElementById("wa-product-image")?.files?.[0] || null;
+
+    if (!originalText) {
+        showMessage(
+            "Pega primero el mensaje recibido del proveedor.",
+            "error"
+        );
+        return;
+    }
+
+    if (!Number.isFinite(cost) || cost <= 0) {
+        showMessage(
+            "Ingresa el costo del producto.",
+            "error"
+        );
+        return;
+    }
+
+    if (!Number.isFinite(margin) || margin < 0) {
+        showMessage(
+            "Ingresa un margen valido.",
+            "error"
+        );
+        return;
+    }
+
+    if (!Number.isInteger(stock) || stock < 0) {
+        showMessage(
+            "El stock debe ser un numero entero igual o mayor que cero.",
+            "error"
+        );
+        return;
+    }
+
+    const calculatedPrice =
+        Math.round((cost * (1 + margin / 100)) * 100) / 100;
+
+    const title =
+        buildWhatsAppProductTitle(originalText);
+
+    const description =
+        buildWhatsAppProductDescription(originalText);
+
+    const classification =
+        inferWhatsAppProductCategory(originalText);
+
+    document.getElementById("prod-name").value =
+        title;
+
+    document.getElementById("prod-price").value =
+        calculatedPrice.toFixed(2);
+
+    document.getElementById("prod-stock").value =
+        stock;
+
+    document.getElementById("prod-category").value =
+        classification.category;
+
+    document.getElementById("prod-subcategory").value =
+        classification.subcategory;
+
+    document.getElementById("prod-description").value =
+        description;
+
+    document.getElementById("prod-commercial-type").value =
+        "";
+
+    document.getElementById("prod-commercial-text").value =
+        "";
+
+    document.getElementById("prod-offer-price").value =
+        "";
+
+    window.walzPreparedWhatsAppImage =
+        imageFile || null;
+
+    window.walzPreparedFromWhatsApp = true;
+
+    window.walzPreparedWhatsAppSource =
+        source;
+
+    const preview =
+        document.getElementById("prod-image-preview");
+
+    if (preview && imageFile) {
+        const previewUrl =
+            URL.createObjectURL(imageFile);
+
+        preview.innerHTML =
+            `<img src="${previewUrl}" alt="Vista previa">`;
+    }
+
+    const createSection =
+        document.getElementById("seller-product-create-section");
+
+    if (createSection) {
+        createSection.style.display = "block";
+        createSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+
+    showMessage(
+        "Producto preparado. Revisa los datos antes de publicarlo.",
+        "success"
+    );
+
+    setTimeout(() => {
+        document.getElementById("prod-name")?.focus();
+    }, 500);
+}
+
 async function handleCreateProduct() {
 
     token = localStorage.getItem("walz_token");
@@ -546,7 +924,7 @@ async function handleCreateProduct() {
 
     if (!token) {
         showMessage(
-            "Debes iniciar sesión.",
+            "Debes iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
             "error"
         );
         return;
@@ -587,11 +965,20 @@ async function handleCreateProduct() {
     const category =
         document.getElementById("prod-category").value.trim();
 
+    const subcategory =
+        document.getElementById("prod-subcategory").value.trim();
+
+    const brand =
+        document.getElementById("prod-brand").value.trim();
+
+    const avanterEnabled =
+        Boolean(document.getElementById("prod-avanter-enabled")?.checked);
+
     const description =
         document.getElementById("prod-description").value.trim();
 
     let imageUrl = document.getElementById("prod-image-url").value.trim();
-    const imageFile = document.getElementById("prod-image-file")?.files?.[0] || null;
+    const imageFile = document.getElementById("prod-image-file")?.files?.[0] || window.walzPreparedWhatsAppImage || null;
 
     if (!name || isNaN(price) || isNaN(stock)) {
 
@@ -653,6 +1040,9 @@ async function handleCreateProduct() {
                     commercial_active: commercialActive,
                     stock,
                     category: category || null,
+                    subcategory: subcategory || null,
+                    brand: brand || null,
+                    avanter_enabled: avanterEnabled,
                     description: description || null,
                     image_url: imageUrl || null
                 })
@@ -662,7 +1052,7 @@ async function handleCreateProduct() {
         const text = await res.text();
 
         console.log(
-            "Respuesta creación producto:",
+            "Respuesta creaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n producto:",
             text
         );
 
@@ -690,10 +1080,28 @@ async function handleCreateProduct() {
             ).value = "";
 
             document.getElementById("prod-category").value = "";
+            document.getElementById("prod-subcategory").value = "";
+            document.getElementById("prod-brand").value = "";
+            document.getElementById("prod-avanter-enabled").checked = false;
             document.getElementById("prod-description").value = "";
             document.getElementById("prod-image-url").value = "";
             document.getElementById("prod-image-file").value = "";
             document.getElementById("prod-image-preview").textContent = "Sin imagen seleccionada";
+
+            if (window.walzPreparedFromWhatsApp) {
+                window.walzPreparedWhatsAppImage = null;
+                window.walzPreparedFromWhatsApp = false;
+
+                const waText = document.getElementById("wa-product-original-text");
+                const waCost = document.getElementById("wa-product-cost");
+                const waStock = document.getElementById("wa-product-stock");
+                const waImage = document.getElementById("wa-product-image");
+
+                if (waText) waText.value = "";
+                if (waCost) waCost.value = "";
+                if (waStock) waStock.value = "1";
+                if (waImage) waImage.value = "";
+            }
 
             await Promise.all([loadMyProducts(), loadProducts()]);
 
@@ -720,7 +1128,7 @@ async function handleCreateProduct() {
         );
 
         showMessage(
-            "Error de conexión.",
+            "Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
             "error"
         );
     }
@@ -730,6 +1138,15 @@ async function handleCreateProduct() {
 // =====================================================
 // CARGAR PRODUCTOS
 // =====================================================
+
+
+
+function openCentralMarketplace() {
+    window.walzMarketplaceSellerId = null;
+    window.walzPublicStoreSellerId = null;
+
+    window.location.assign("/");
+}
 
 
 async function loadProducts() {
@@ -756,11 +1173,41 @@ async function loadProducts() {
                 store
             ])
         );
-        window.walzProducts = products;
+        // La portada general de WalZ One SIEMPRE es general.
+        // Un marketplace particular se activa solamente
+        // cuando la ruta publica de una tienda establece
+        // window.walzMarketplaceSellerId.
+        const marketplaceSellerId =
+            window.walzMarketplaceSellerId || null;
 
-        syncCartWithProducts(products);
+        const sellerMarketplace =
+            Boolean(marketplaceSellerId);
 
-        renderProducts(products);
+        const directStoreMarketplaceButton =
+            document.getElementById("direct-store-marketplace-button");
+
+        if (directStoreMarketplaceButton) {
+            directStoreMarketplaceButton.style.display =
+                sellerMarketplace ? "inline-flex" : "none";
+        }
+
+        const visibleProducts = sellerMarketplace
+            ? products.filter(product =>
+                String(product.seller_id) === String(marketplaceSellerId)
+            )
+            : products;
+
+        window.walzProducts = visibleProducts;
+
+        renderSellerMarketplaceClassification(
+            visibleProducts,
+            sellerMarketplace,
+            marketplaceSellerId
+        );
+
+        syncCartWithProducts(visibleProducts);
+
+        renderProducts(visibleProducts);
 
     } catch (e) {
 
@@ -968,6 +1415,1341 @@ function renderProductStoreIdentity(product) {
 }
 
 
+function renderSellerMarketplaceClassification(
+    products,
+    isSellerMarketplace,
+    marketplaceSellerId = null
+) {
+    const section = document.querySelector(".walz-macro-section");
+    const grid = section?.querySelector(".walz-macro-grid");
+
+    if (!section || !grid) return;
+
+    const eyebrow =
+        section.querySelector(".walz-section-heading span");
+
+    const title =
+        section.querySelector("#walz-macro-title");
+
+    const note =
+        section.querySelector(".walz-section-heading > small");
+
+    if (!window.walzDefaultMacroClassification) {
+        window.walzDefaultMacroClassification = {
+            html: grid.innerHTML,
+            eyebrow: eyebrow?.textContent || "",
+            title: title?.textContent || "",
+            note: note?.textContent || ""
+        };
+    }
+
+    const heroBubbles =
+        Array.from(
+            document.querySelectorAll(
+                ".walz-city-bubble"
+            )
+        );
+
+    if (!window.walzDefaultHeroBubbleTexts) {
+        window.walzDefaultHeroBubbleTexts =
+            heroBubbles.map(
+                bubble =>
+                    String(
+                        bubble.textContent || ""
+                    ).trim()
+            );
+    }
+
+    const exploreSection =
+        document.querySelector(".walz-explore-section");
+
+    const exploreGrid =
+        exploreSection?.querySelector(
+            ".walz-explore-grid"
+        );
+
+    if (
+        exploreGrid &&
+        !window.walzDefaultExploreHtml
+    ) {
+        window.walzDefaultExploreHtml =
+            exploreGrid.innerHTML;
+    }
+
+    if (!isSellerMarketplace) {
+        const original = window.walzDefaultMacroClassification;
+
+        document
+            .querySelector(".walz-seller-marketplace-identity")
+            ?.remove();
+
+        document
+            .querySelector(".walz-seller-avanter-hero")
+            ?.remove();
+
+        const publicSearchExamples =
+            document.querySelector(".walz-search-examples");
+
+        if (
+            publicSearchExamples &&
+            window.walzDefaultSearchExamplesHtml
+        ) {
+            publicSearchExamples.innerHTML =
+                window.walzDefaultSearchExamplesHtml;
+        }
+
+        grid.innerHTML = original.html;
+
+        if (eyebrow) eyebrow.textContent = original.eyebrow;
+        if (title) title.textContent = original.title;
+        if (note) note.textContent = original.note;
+
+        window.walzMarketplaceCategoryFilter = "";
+        window.walzMarketplaceSubcategoryFilter = "";
+
+        document
+            .getElementById("walz-seller-filter-notice")
+            ?.remove();
+
+        if (
+            exploreGrid &&
+            window.walzDefaultExploreHtml
+        ) {
+            exploreGrid.innerHTML =
+                window.walzDefaultExploreHtml;
+        }
+
+        heroBubbles.forEach(
+            (bubble, index) => {
+                bubble.textContent =
+                    window.walzDefaultHeroBubbleTexts[index] || "";
+
+                bubble.style.display = "";
+                bubble.onclick = null;
+                bubble.onkeydown = null;
+                bubble.classList.remove(
+                    "walz-city-bubble-clickable"
+                );
+                bubble.removeAttribute("role");
+                bubble.removeAttribute("tabindex");
+            }
+        );
+
+        document
+            .querySelector(".walz-hero-city")
+            ?.setAttribute("aria-hidden", "true");
+
+        return;
+    }
+
+    const sellerProducts =
+        Array.isArray(products) ? products : [];
+
+    const storeOwnerId =
+        marketplaceSellerId || currentUserId;
+
+    const store =
+        window.walzStoresByOwner?.[String(storeOwnerId)] || {};
+
+    const storeName =
+        String(
+            store.name ||
+            store.business_name ||
+            "Tu tienda"
+        ).trim();
+
+    const city =
+        String(store.city || "").trim();
+
+    const storeDescription =
+        String(store.description || "").trim() ||
+        `Explor\u00e1 productos y propuestas de ${storeName}.`;
+
+    const categoryCounts = new Map();
+    const subcategoryCounts = new Map();
+
+    sellerProducts.forEach(product => {
+        const category =
+            String(product.category || "").trim();
+
+        const subcategory =
+            String(product.subcategory || "").trim();
+
+        if (category) {
+            categoryCounts.set(
+                category,
+                (categoryCounts.get(category) || 0) + 1
+            );
+        }
+
+        if (subcategory) {
+            subcategoryCounts.set(
+                subcategory,
+                (subcategoryCounts.get(subcategory) || 0) + 1
+            );
+        }
+    });
+
+    const categoriesByUse =
+        [...categoryCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([name]) => name);
+
+    const subcategoriesByUse =
+        [...subcategoryCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([name]) => name);
+
+    const heroTerms = [];
+
+    const addHeroTerm = value => {
+        const term = String(value || "").trim();
+
+        if (!term) return;
+
+        const alreadyExists =
+            heroTerms.some(
+                current =>
+                    current.toLowerCase() ===
+                    term.toLowerCase()
+            );
+
+        if (!alreadyExists) {
+            heroTerms.push(term);
+        }
+    };
+
+    addHeroTerm(categoriesByUse[0]);
+    addHeroTerm(subcategoriesByUse[0]);
+    addHeroTerm(categoriesByUse[1]);
+    addHeroTerm(subcategoriesByUse[1]);
+
+    categoriesByUse.forEach(addHeroTerm);
+    subcategoriesByUse.forEach(addHeroTerm);
+
+    sellerProducts.forEach(product => {
+        if (heroTerms.length < 4) {
+            addHeroTerm(product.name);
+        }
+    });
+
+    heroBubbles.forEach(
+        (bubble, index) => {
+            const term = heroTerms[index];
+
+            if (!term) {
+                bubble.style.display = "none";
+                bubble.onclick = null;
+                bubble.onkeydown = null;
+                return;
+            }
+
+            bubble.style.display = "";
+            bubble.textContent = term;
+            bubble.title = `Ver ${term}`;
+            bubble.classList.add(
+                "walz-city-bubble-clickable"
+            );
+
+            const isCategory =
+                categoriesByUse.includes(term);
+
+            const matchingProduct =
+                sellerProducts.find(
+                    product =>
+                        String(
+                            product.subcategory || ""
+                        ).trim() === term
+                );
+
+            const category =
+                isCategory
+                    ? term
+                    : String(
+                        matchingProduct?.category || ""
+                    ).trim();
+
+            const subcategory =
+                isCategory
+                    ? ""
+                    : term;
+
+            const openBubbleFilter = () => {
+                setSellerMarketplaceClassification(
+                    category,
+                    subcategory
+                );
+
+                setTimeout(() => {
+                    document
+                        .getElementById("product-list")
+                        ?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                }, 50);
+            };
+
+            bubble.onclick =
+                openBubbleFilter;
+
+            bubble.setAttribute(
+                "role",
+                "button"
+            );
+
+            bubble.setAttribute(
+                "tabindex",
+                "0"
+            );
+
+            bubble.onkeydown =
+                event => {
+                    if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ) {
+                        event.preventDefault();
+                        openBubbleFilter();
+                    }
+                };
+        }
+    );
+
+    document
+        .querySelector(".walz-hero-city")
+        ?.removeAttribute("aria-hidden");
+
+    // ========================================================
+    // EXPLORA A TU MANERA - CONTENIDO REAL DE LA TIENDA
+    // ========================================================
+
+    if (exploreGrid) {
+        exploreGrid.innerHTML = "";
+
+        const addExploreCard = ({
+            symbol,
+            title,
+            text,
+            action
+        }) => {
+            const card =
+                document.createElement("article");
+
+            card.className =
+                "walz-explore-card";
+
+            card.setAttribute(
+                "role",
+                "button"
+            );
+
+            card.setAttribute(
+                "tabindex",
+                "0"
+            );
+
+            card.innerHTML = `
+                <span class="walz-explore-symbol">
+                    ${symbol}
+                </span>
+
+                <strong>${escapeHtml(title)}</strong>
+                <small>${escapeHtml(text)}</small>
+            `;
+
+            const runAction = () => {
+                if (typeof action === "function") {
+                    action();
+                }
+            };
+
+            card.addEventListener(
+                "click",
+                runAction
+            );
+
+            card.addEventListener(
+                "keydown",
+                event => {
+                    if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ) {
+                        event.preventDefault();
+                        runAction();
+                    }
+                }
+            );
+
+            exploreGrid.appendChild(card);
+        };
+
+
+        // ----------------------------------------------------
+        // PRODUCTOS
+        // ----------------------------------------------------
+
+        addExploreCard({
+            symbol: "&#128722;",
+            title: "Productos",
+            text:
+                sellerProducts.length === 1
+                    ? "1 producto activo"
+                    : `${sellerProducts.length} productos activos`,
+            action: () => {
+                setSellerMarketplaceClassification(
+                    "",
+                    ""
+                );
+
+                document
+                    .getElementById("product-list")
+                    ?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+            }
+        });
+
+
+        // ----------------------------------------------------
+        // RUBROS
+        // ----------------------------------------------------
+
+        if (categoryCounts.size > 0) {
+            addExploreCard({
+                symbol: "&#128194;",
+                title: "Rubros",
+                text:
+                    categoryCounts.size === 1
+                        ? "1 rubro disponible"
+                        : `${categoryCounts.size} rubros disponibles`,
+                action: () => {
+                    setSellerMarketplaceClassification(
+                        "",
+                        ""
+                    );
+
+                    document
+                        .querySelector(
+                            ".walz-macro-section"
+                        )
+                        ?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                }
+            });
+        }
+
+
+        // ----------------------------------------------------
+        // BONOS AVANTER
+        // ----------------------------------------------------
+
+        const avanterProducts =
+            sellerProducts.filter(
+                product =>
+                    product.avanter_enabled === true
+            );
+
+        if (
+            store.avanter_enabled === true &&
+            avanterProducts.length > 0
+        ) {
+            addExploreCard({
+                symbol: "&#127915;",
+                title: "Bonos Avanter",
+                text:
+                    avanterProducts.length === 1
+                        ? "1 producto adherido"
+                        : `${avanterProducts.length} productos adheridos`,
+                action: () => {
+                    const info =
+                        document.getElementById(
+                            "walz-seller-avanter-info"
+                        );
+
+                    if (info) {
+                        info.hidden = false;
+
+                        info.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                    }
+                }
+            });
+        }
+
+
+        // ----------------------------------------------------
+        // OFERTAS / PROMOCIONES
+        // Solo aparece si realmente existen.
+        // ----------------------------------------------------
+
+        const commercialProducts =
+            sellerProducts.filter(
+                product =>
+                    product.offer_active === true ||
+                    product.commercial_active === true
+            );
+
+        if (commercialProducts.length > 0) {
+            addExploreCard({
+                symbol: "&#10024;",
+                title: "Ofertas y promociones",
+                text:
+                    commercialProducts.length === 1
+                        ? "1 propuesta activa"
+                        : `${commercialProducts.length} propuestas activas`,
+                action: () => {
+                    renderProducts(
+                        commercialProducts
+                    );
+
+                    document
+                        .getElementById("product-list")
+                        ?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                }
+            });
+        }
+
+
+        // ----------------------------------------------------
+        // CONTACTO
+        // Solo aparece cuando la tienda tiene datos cargados.
+        // ----------------------------------------------------
+
+        const hasContact =
+            Boolean(
+                String(store.phone || "").trim() ||
+                String(store.address || "").trim()
+            );
+
+        if (hasContact) {
+            addExploreCard({
+                symbol: "&#128222;",
+                title: "Contacto",
+                text:
+                    String(store.phone || "").trim() ||
+                    String(store.address || "").trim(),
+                action: () => {
+                    document
+                        .querySelector(
+                            ".walz-seller-marketplace-identity"
+                        )
+                        ?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                }
+            });
+        }
+    }
+
+    const sellerSearchInput =
+        document.getElementById("product-search");
+
+    const sellerSearchIcon =
+        document.querySelector(
+            ".walz-main-search-icon"
+        );
+
+    if (
+        sellerSearchInput &&
+        !sellerSearchInput.dataset.walzSellerSearchBound
+    ) {
+        sellerSearchInput.dataset.walzSellerSearchBound =
+            "true";
+
+        sellerSearchInput.addEventListener(
+            "keydown",
+            event => {
+                if (event.key !== "Enter") return;
+
+                if (
+                    !document.querySelector(
+                        ".walz-seller-marketplace-identity"
+                    )
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                executeSellerMarketplaceSearch();
+            }
+        );
+    }
+
+    if (
+        sellerSearchIcon &&
+        !sellerSearchIcon.dataset.walzSellerSearchBound
+    ) {
+        sellerSearchIcon.dataset.walzSellerSearchBound =
+            "true";
+
+        sellerSearchIcon.removeAttribute(
+            "aria-hidden"
+        );
+
+        sellerSearchIcon.setAttribute(
+            "role",
+            "button"
+        );
+
+        sellerSearchIcon.setAttribute(
+            "tabindex",
+            "0"
+        );
+
+        sellerSearchIcon.title = "Buscar";
+
+        sellerSearchIcon.addEventListener(
+            "click",
+            () => {
+                if (
+                    document.querySelector(
+                        ".walz-seller-marketplace-identity"
+                    )
+                ) {
+                    executeSellerMarketplaceSearch();
+                }
+            }
+        );
+
+        sellerSearchIcon.addEventListener(
+            "keydown",
+            event => {
+                if (
+                    event.key !== "Enter" &&
+                    event.key !== " "
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                executeSellerMarketplaceSearch();
+            }
+        );
+    }
+
+    const searchExamples =
+        document.querySelector(".walz-search-examples");
+
+    if (searchExamples) {
+
+        if (!window.walzDefaultSearchExamplesHtml) {
+            window.walzDefaultSearchExamplesHtml =
+                searchExamples.innerHTML;
+        }
+
+        const subcategories = sellerProducts
+            .map(product =>
+                String(product.subcategory || "").trim()
+            )
+            .filter(Boolean);
+
+        const categories = sellerProducts
+            .map(product =>
+                String(product.category || "").trim()
+            )
+            .filter(Boolean);
+
+        const sellerSearchTerms = [
+            ...new Set([
+                ...subcategories,
+                ...categories
+            ])
+        ].slice(0, 5);
+
+        searchExamples.innerHTML = "";
+
+        const searchLabel =
+            document.createElement("strong");
+
+        searchLabel.className =
+            "walz-seller-search-label";
+
+        searchLabel.textContent =
+            `Busc? en ${storeName}:`;
+
+        searchExamples.appendChild(searchLabel);
+
+        sellerSearchTerms.forEach(term => {
+            const chip =
+                document.createElement("span");
+
+            chip.textContent = term;
+
+            searchExamples.appendChild(chip);
+        });
+    }
+
+    let sellerIdentity =
+        document.querySelector(
+            ".walz-seller-marketplace-identity"
+        );
+
+    if (!sellerIdentity) {
+        sellerIdentity = document.createElement("div");
+        sellerIdentity.className =
+            "walz-seller-marketplace-identity";
+    }
+
+    const discoveryHero =
+        document.querySelector(".walz-discovery-hero");
+
+    document
+        .querySelector(".walz-seller-avanter-hero")
+        ?.remove();
+
+    if (
+        store.avanter_enabled === true &&
+        discoveryHero
+    ) {
+        const discoveryCopy =
+            discoveryHero.querySelector(
+                ".walz-discovery-copy"
+            );
+
+        const examples =
+            discoveryHero.querySelector(
+                ".walz-search-examples"
+            );
+
+        if (discoveryCopy) {
+            const avanterHero =
+                document.createElement("div");
+
+            avanterHero.className =
+                "walz-seller-avanter-hero";
+
+            const avanterKicker =
+                document.createElement("span");
+
+            avanterKicker.className =
+                "walz-seller-avanter-kicker";
+
+            avanterKicker.textContent =
+                "BONOS AVANTER";
+
+            const avanterHeadline =
+                document.createElement("strong");
+
+            avanterHeadline.textContent =
+                `${storeName} trabaja con Bonos Avanter`;
+
+            const avanterDescription =
+                document.createElement("p");
+
+            avanterDescription.textContent =
+                "Consult\u00e1 productos adheridos y beneficios vigentes.";
+
+            avanterHero.appendChild(
+                avanterKicker
+            );
+
+            avanterHero.appendChild(
+                avanterHeadline
+            );
+
+            avanterHero.appendChild(
+                avanterDescription
+            );
+
+            const avanterButton =
+                document.createElement("button");
+
+            avanterButton.type = "button";
+
+            avanterButton.className =
+                "walz-seller-avanter-button";
+
+            avanterButton.textContent =
+                "Ver productos con Bonos Avanter";
+
+            avanterButton.addEventListener(
+                "click",
+                () => {
+                    const avanterInfo =
+                        document.getElementById(
+                            "walz-seller-avanter-info"
+                        );
+
+                    if (avanterInfo) {
+                        avanterInfo.hidden = false;
+                    }
+
+                    avanterInfo?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                }
+            );
+
+            avanterHero.appendChild(
+                avanterButton
+            );
+
+            if (
+                examples &&
+                examples.parentElement === discoveryCopy
+            ) {
+                discoveryCopy.insertBefore(
+                    avanterHero,
+                    examples
+                );
+            } else {
+                discoveryCopy.appendChild(
+                    avanterHero
+                );
+            }
+        }
+    }
+
+    if (
+        discoveryHero &&
+        sellerIdentity.nextElementSibling !== discoveryHero
+    ) {
+        discoveryHero.insertAdjacentElement(
+            "beforebegin",
+            sellerIdentity
+        );
+    }
+
+    sellerIdentity.innerHTML = "";
+
+    const sellerName =
+        document.createElement("h2");
+
+    sellerName.className =
+        "walz-seller-marketplace-name";
+
+    sellerName.textContent = storeName;
+
+    sellerIdentity.appendChild(sellerName);
+
+    if (storeDescription) {
+        const sellerDescription =
+            document.createElement("p");
+
+        sellerDescription.className =
+            "walz-seller-marketplace-description";
+
+        sellerDescription.textContent =
+            storeDescription;
+
+        sellerIdentity.appendChild(
+            sellerDescription
+        );
+    }
+
+    if (city) {
+        const sellerCity =
+            document.createElement("div");
+
+        sellerCity.className =
+            "walz-seller-marketplace-city";
+
+        sellerCity.textContent = city;
+
+        sellerIdentity.appendChild(
+            sellerCity
+        );
+    }
+
+    document
+        .getElementById("walz-seller-avanter-info")
+        ?.remove();
+
+    if (store.avanter_enabled === true) {
+        const productList =
+            document.getElementById("product-list");
+
+        if (productList) {
+            const avanterInfo =
+                document.createElement("section");
+
+            avanterInfo.id =
+                "walz-seller-avanter-info";
+
+            avanterInfo.className =
+                "walz-seller-avanter-info";
+
+            avanterInfo.hidden = true;
+
+            const kicker =
+                document.createElement("span");
+
+            kicker.className =
+                "walz-seller-avanter-info-kicker";
+
+            kicker.textContent =
+                "PROGRAMA DE BENEFICIOS";
+
+            const infoTitle =
+                document.createElement("h2");
+
+            infoTitle.textContent =
+                String(
+                    store.avanter_title ||
+                    "Bonos Avanter"
+                );
+
+            const infoText =
+                document.createElement("p");
+
+            infoText.textContent =
+                String(
+                    store.avanter_text || ""
+                ).trim() ||
+                "Present\u00e1 tu bono vigente al realizar la compra. El descuento aplicable es el indicado en el bono sobre el precio de lista de la farmacia. Cada bono permite una compra y tiene una fecha de vencimiento. La cantidad de unidades depende de lo autorizado por el laboratorio.";
+
+            const productsTitle =
+                document.createElement("strong");
+
+            productsTitle.textContent =
+                "Productos asociados a Bonos Avanter";
+
+            const avanterProducts =
+                sellerProducts.filter(
+                    product =>
+                        product.avanter_enabled === true
+                );
+
+            const avanterProductsList =
+                document.createElement("div");
+
+            avanterProductsList.className =
+                "walz-seller-avanter-products";
+
+            avanterProducts.forEach(product => {
+                const productCard =
+                    document.createElement("article");
+
+                productCard.className =
+                    "walz-seller-avanter-product";
+
+                productCard.innerHTML = `
+                    <div class="walz-seller-avanter-product-media">
+                        ${renderProductImage(
+                            product.image_url,
+                            product.name,
+                            "walz-seller-avanter-product-image"
+                        )}
+                    </div>
+
+                    <div class="walz-seller-avanter-product-copy">
+                        <span class="walz-seller-avanter-product-badge">
+                            Producto adherido a Bonos Avanter
+                        </span>
+
+                        <h3>
+                            ${escapeHtml(product.name || "Producto")}
+                        </h3>
+
+                        <div class="walz-seller-avanter-product-price">
+                            ${renderProductPrice(product)}
+                        </div>
+
+                        <small>
+                            El beneficio se aplica seg\u00fan el bono vigente presentado.
+                        </small>
+
+                        <span class="walz-seller-avanter-product-stock">
+                            Stock: ${Number(product.stock || 0)}
+                        </span>
+
+                        <button
+                            type="button"
+                            class="walz-seller-avanter-product-button"
+                        >
+                            Ver producto
+                        </button>
+                    </div>
+                `;
+
+                productCard
+                    .querySelector(
+                        ".walz-seller-avanter-product-button"
+                    )
+                    ?.addEventListener(
+                        "click",
+                        () => openProductDetail(
+                            String(product.id)
+                        )
+                    );
+
+                avanterProductsList.appendChild(
+                    productCard
+                );
+            });
+
+            avanterInfo.appendChild(kicker);
+            avanterInfo.appendChild(infoTitle);
+            avanterInfo.appendChild(infoText);
+            avanterInfo.appendChild(productsTitle);
+            avanterInfo.appendChild(avanterProductsList);
+
+            productList.insertAdjacentElement(
+                "beforebegin",
+                avanterInfo
+            );
+        }
+    }
+
+    if (eyebrow) {
+        eyebrow.textContent =
+            "Cat\u00e1logo de la tienda";
+    }
+
+    if (title) {
+        title.textContent =
+            "Explor\u00e1 por rubro";
+    }
+
+    if (note) {
+        note.textContent =
+            "Solo aparecen rubros y subrubros con productos activos.";
+    }
+
+    const groups = new Map();
+
+    sellerProducts.forEach(product => {
+        const category =
+            String(product.category || "").trim();
+
+        const subcategory =
+            String(product.subcategory || "").trim();
+
+        if (!category) return;
+
+        if (!groups.has(category)) {
+            groups.set(category, {
+                count: 0,
+                subcategories: new Map()
+            });
+        }
+
+        const group = groups.get(category);
+        group.count += 1;
+
+        if (subcategory) {
+            group.subcategories.set(
+                subcategory,
+                (group.subcategories.get(subcategory) || 0) + 1
+            );
+        }
+    });
+
+    if (groups.size === 0) {
+        grid.innerHTML = `
+            <article class="walz-macro-card is-active">
+                <span class="walz-macro-icon">&#128230;</span>
+                <div>
+                    <strong>Sin rubros cargados todavía</strong>
+                    <p>Asigná un Rubro a tus productos para organizarlos acá.</p>
+                </div>
+            </article>
+        `;
+        return;
+    }
+
+    const allCard = `
+        <article
+            class="walz-macro-card is-active"
+            onclick="setSellerMarketplaceClassification('', '')"
+        >
+            <span class="walz-macro-icon">&#128722;</span>
+
+            <div>
+                <strong>Todos los productos</strong>
+                <p>Ver el catálogo completo</p>
+            </div>
+
+            <em>${sellerProducts.length}</em>
+        </article>
+    `;
+
+    const categoryCards =
+        [...groups.entries()]
+            .sort((a, b) =>
+                a[0].localeCompare(b[0], "es")
+            )
+            .map(([category, group]) => {
+
+                const subcategoryButtons =
+                    [...group.subcategories.entries()]
+                        .sort((a, b) =>
+                            a[0].localeCompare(b[0], "es")
+                        )
+                        .map(([subcategory, count]) => `
+                            <button
+                                type="button"
+                                class="walz-subcategory-chip"
+                                onclick="
+                                    event.stopPropagation();
+                                    setSellerMarketplaceClassification(
+                                        '${escapeJs(category)}',
+                                        '${escapeJs(subcategory)}'
+                                    );
+                                "
+                            >
+                                ${escapeHtml(subcategory)} (${count})
+                            </button>
+                        `)
+                        .join("");
+
+                return `
+                    <article
+                        class="walz-macro-card is-active"
+                        onclick="
+                            setSellerMarketplaceClassification(
+                                '${escapeJs(category)}',
+                                ''
+                            )
+                        "
+                    >
+                        <span class="walz-macro-icon">&#128194;</span>
+
+                        <div>
+                            <strong>${escapeHtml(category)}</strong>
+
+                            <p>
+                                ${
+                                    subcategoryButtons ||
+                                    "Sin subrubros"
+                                }
+                            </p>
+                        </div>
+
+                        <em>${group.count}</em>
+                    </article>
+                `;
+            })
+            .join("");
+
+    grid.innerHTML =
+        allCard + categoryCards;
+}
+
+
+function executeSellerMarketplaceSearch() {
+    const input =
+        document.getElementById("product-search");
+
+    const query =
+        String(input?.value || "").trim();
+
+    if (!query) {
+        input?.focus();
+        return;
+    }
+
+    // Una b?squeda nueva sale de cualquier Rubro/Subrubro.
+    window.walzMarketplaceCategoryFilter = "";
+    window.walzMarketplaceSubcategoryFilter = "";
+
+    document
+        .getElementById("walz-seller-filter-notice")
+        ?.remove();
+
+    filterProducts();
+
+    const productList =
+        document.getElementById("product-list");
+
+    if (!productList) return;
+
+    let notice =
+        document.getElementById(
+            "walz-seller-search-notice"
+        );
+
+    if (!notice) {
+        notice = document.createElement("div");
+
+        notice.id =
+            "walz-seller-search-notice";
+
+        notice.className =
+            "walz-seller-filter-notice";
+
+        productList.insertAdjacentElement(
+            "beforebegin",
+            notice
+        );
+    }
+
+    notice.innerHTML = `
+        <div>
+            <span>Resultados para</span>
+            <strong>${escapeHtml(query)}</strong>
+        </div>
+
+        <button
+            type="button"
+            id="walz-seller-new-search"
+        >
+            Nueva b?squeda
+        </button>
+    `;
+
+    notice
+        .querySelector(
+            "#walz-seller-new-search"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+                if (input) {
+                    input.value = "";
+                }
+
+                notice.remove();
+
+                filterProducts();
+
+                document
+                    .querySelector(
+                        ".walz-discovery-hero"
+                    )
+                    ?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+
+                setTimeout(() => {
+                    input?.focus();
+                }, 350);
+            }
+        );
+
+    setTimeout(() => {
+        productList.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }, 60);
+}
+
+
+function updateSellerMarketplaceFilterNotice() {
+    const productList =
+        document.getElementById("product-list");
+
+    if (!productList) return;
+
+    const category =
+        String(
+            window.walzMarketplaceCategoryFilter || ""
+        ).trim();
+
+    const subcategory =
+        String(
+            window.walzMarketplaceSubcategoryFilter || ""
+        ).trim();
+
+    let notice =
+        document.getElementById(
+            "walz-seller-filter-notice"
+        );
+
+    if (!category && !subcategory) {
+        notice?.remove();
+        return;
+    }
+
+    if (!notice) {
+        notice = document.createElement("div");
+        notice.id =
+            "walz-seller-filter-notice";
+        notice.className =
+            "walz-seller-filter-notice";
+
+        productList.insertAdjacentElement(
+            "beforebegin",
+            notice
+        );
+    }
+
+    const filterLabel =
+        subcategory
+            ? `${category} ? ${subcategory}`
+            : category;
+
+    notice.innerHTML = `
+        <div>
+            <span>Est?s viendo</span>
+            <strong>${escapeHtml(filterLabel)}</strong>
+        </div>
+
+        <button
+            type="button"
+            id="walz-seller-clear-filter"
+        >
+            Volver a rubros
+        </button>
+    `;
+
+    notice
+        .querySelector(
+            "#walz-seller-clear-filter"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+                setSellerMarketplaceClassification(
+                    "",
+                    ""
+                );
+
+                document
+                    .querySelector(
+                        ".walz-macro-section"
+                    )
+                    ?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+            }
+        );
+}
+
+
+function setSellerMarketplaceClassification(category, subcategory) {
+    if (category || subcategory) {
+        const searchInput =
+            document.getElementById("product-search");
+
+        if (searchInput) {
+            searchInput.value = "";
+        }
+
+        document
+            .getElementById("walz-seller-search-notice")
+            ?.remove();
+    }
+
+    window.walzMarketplaceCategoryFilter =
+        String(category || "");
+
+    window.walzMarketplaceSubcategoryFilter =
+        String(subcategory || "");
+
+    filterProducts();
+    updateSellerMarketplaceFilterNotice();
+}
+
+
+
 function renderProducts(products) {
 
     const list =
@@ -1026,7 +2808,7 @@ function renderProducts(products) {
                     <p class="product-price">${renderProductPrice(product)}</p>
 
                     <p class="product-stock">
-                        📦 Stock: ${stockValue}
+                        \u{1F4E6} Stock: ${stockValue}
                     </p>
 
                 </div>
@@ -1094,7 +2876,6 @@ function renderProducts(products) {
 // =====================================================
 
 function filterProducts() {
-
     const products =
         window.walzProducts || [];
 
@@ -1114,11 +2895,43 @@ function filterProducts() {
             document.getElementById("price-max")?.value
         );
 
+    const selectedCategory =
+        String(
+            window.walzMarketplaceCategoryFilter || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    const selectedSubcategory =
+        String(
+            window.walzMarketplaceSubcategoryFilter || ""
+        )
+            .trim()
+            .toLowerCase();
+
     const filteredProducts =
         products.filter(product => {
 
-            const name =
-                String(product.name || "")
+            const category =
+                String(product.category || "")
+                    .trim()
+                    .toLowerCase();
+
+            const subcategory =
+                String(product.subcategory || "")
+                    .trim()
+                    .toLowerCase();
+
+            const searchable =
+                [
+                    product.name,
+                    product.category,
+                    product.subcategory,
+                    product.brand,
+                    product.description
+                ]
+                    .map(value => String(value || ""))
+                    .join(" ")
                     .toLowerCase();
 
             const price =
@@ -1126,7 +2939,21 @@ function filterProducts() {
 
             if (
                 search &&
-                !name.includes(search)
+                !searchable.includes(search)
+            ) {
+                return false;
+            }
+
+            if (
+                selectedCategory &&
+                category !== selectedCategory
+            ) {
+                return false;
+            }
+
+            if (
+                selectedSubcategory &&
+                subcategory !== selectedSubcategory
             ) {
                 return false;
             }
@@ -1157,6 +2984,17 @@ function filterProducts() {
 // =====================================================
 
 function clearProductFilters() {
+
+    window.walzMarketplaceCategoryFilter = "";
+    window.walzMarketplaceSubcategoryFilter = "";
+
+    document
+        .getElementById("walz-seller-filter-notice")
+        ?.remove();
+
+    document
+        .getElementById("walz-seller-search-notice")
+        ?.remove();
 
     const search =
         document.getElementById(
@@ -1198,7 +3036,7 @@ function clearProductFilters() {
 function openProductDetail(productId) {
 
     console.log(
-        "🔎 FICHA PRODUCTO:",
+        "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â½ FICHA PRODUCTO:",
         productId
     );
 
@@ -1272,7 +3110,7 @@ function openProductDetail(productId) {
 
         stockElement.textContent =
             product.stock > 0
-                ? `📦 Stock disponible: ${product.stock}`
+                ? `\u{1F4E6} Stock disponible: ${product.stock}`
                 : "Sin stock";
     }
 
@@ -1334,7 +3172,7 @@ function addToCart(
     stock
 ) {
 
-    console.log("🛒 AGREGAR PRESIONADO");
+    console.log("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ AGREGAR PRESIONADO");
     console.log("ID:", id);
     console.log("Nombre:", name);
     console.log("Precio:", price);
@@ -1368,7 +3206,7 @@ function addToCart(
         ) {
 
             showMessage(
-                `No puedes agregar más de ${existing.stock} unidades.`,
+                `No puedes agregar mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de ${existing.stock} unidades.`,
                 "error"
             );
 
@@ -1389,19 +3227,19 @@ function addToCart(
     }
 
     console.log(
-        "🛒 CARRITO ACTUAL:",
+        "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ CARRITO ACTUAL:",
         cart
     );
 
     showMessage(
-        `✅ ${name} (x${qty}) agregado`,
+        `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${name} (x${qty}) agregado`,
         "success"
     );
     saveCart();
 
     updateCartUI();
 
-    // Si el carrito está abierto,
+    // Si el carrito estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ abierto,
     // actualizarlo inmediatamente.
     const cartSection =
         document.getElementById(
@@ -1500,7 +3338,7 @@ function showMyOrders() {
         document.getElementById("orders-section");
 
     if (!marketplaceContent || !ordersSection) {
-        console.error("No existe la sección de pedidos.");
+        console.error("No existe la secciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de pedidos.");
         return;
     }
 
@@ -1518,13 +3356,288 @@ function showMyOrders() {
 }
 
 
-function showMarketplaceContent() {
-    const directStorePath = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
-    if (["farmacia-federico", "mayludstore"].includes(directStorePath)) {
-        hideAllWalzWorkSections();
-        document.getElementById("public-store-section")?.style.setProperty("display", "block");
+function showAdminCentralPanel() {
+    if (currentUserRole !== "ADMIN") {
+        showMarketplaceContent();
         return;
     }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById("admin-central-section");
+    if (section) section.style.display = "block";
+
+    showWalzNewsBarIfAllowed();
+    refreshAdminPendingCounts();
+}
+
+
+async function showInstitutionalSettings() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById("institutional-settings-section");
+    if (section) section.style.display = "block";
+
+    const saveButton = document.getElementById("institutional-settings-save-button");
+    if (saveButton) saveButton.onclick = saveInstitutionalSettings;
+
+    window.scrollTo(0, 0);
+    await loadInstitutionalSettings();
+}
+
+
+function setInstitutionalField(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.value = value || "";
+}
+
+
+async function loadInstitutionalSettings() {
+    const currentToken = localStorage.getItem("walz_token");
+    const message = document.getElementById("institutional-settings-message");
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    if (message) message.textContent = "Cargando configuracion...";
+
+    try {
+        const response = await fetch(`${API_URL}/institutional-settings/admin`, {
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+            throw new Error(data?.detail || `HTTP ${response.status}`);
+        }
+
+        setInstitutionalField("institutional-name", data?.institutional_name);
+        setInstitutionalField("institutional-description", data?.description);
+        setInstitutionalField("institutional-email", data?.email);
+        setInstitutionalField("institutional-phone", data?.phone);
+        setInstitutionalField("institutional-whatsapp", data?.whatsapp);
+        setInstitutionalField("institutional-city", data?.city);
+        setInstitutionalField("institutional-address", data?.address);
+        setInstitutionalField("institutional-website", data?.website_url);
+        setInstitutionalField("institutional-instagram", data?.instagram_url);
+        setInstitutionalField("institutional-facebook", data?.facebook_url);
+
+        if (message) {
+            message.textContent = data
+                ? "Configuracion institucional cargada."
+                : "Todavia no hay datos institucionales guardados.";
+        }
+    } catch (error) {
+        if (message) {
+            message.textContent =
+                error.message || "No se pudo cargar la configuracion institucional.";
+        }
+    }
+}
+
+
+async function saveInstitutionalSettings() {
+    const currentToken = localStorage.getItem("walz_token");
+    const message = document.getElementById("institutional-settings-message");
+    const saveButton = document.getElementById("institutional-settings-save-button");
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    const institutionalName =
+        document.getElementById("institutional-name")?.value.trim() || "";
+
+    if (institutionalName.length < 2) {
+        if (message) {
+            message.textContent = "Ingresa un nombre institucional valido.";
+        }
+        return;
+    }
+
+    const payload = {
+        institutional_name: institutionalName,
+        description: document.getElementById("institutional-description")?.value.trim() || null,
+        email: document.getElementById("institutional-email")?.value.trim() || null,
+        phone: document.getElementById("institutional-phone")?.value.trim() || null,
+        whatsapp: document.getElementById("institutional-whatsapp")?.value.trim() || null,
+        city: document.getElementById("institutional-city")?.value.trim() || null,
+        address: document.getElementById("institutional-address")?.value.trim() || null,
+        website_url: document.getElementById("institutional-website")?.value.trim() || null,
+        instagram_url: document.getElementById("institutional-instagram")?.value.trim() || null,
+        facebook_url: document.getElementById("institutional-facebook")?.value.trim() || null
+    };
+
+    if (saveButton) saveButton.disabled = true;
+    if (message) message.textContent = "Guardando configuracion...";
+
+    try {
+        const response = await fetch(`${API_URL}/institutional-settings/admin`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+
+        if (message) {
+            message.textContent = "Configuracion institucional guardada correctamente.";
+        }
+    } catch (error) {
+        if (message) {
+            message.textContent =
+                error.message || "No se pudo guardar la configuracion institucional.";
+        }
+    } finally {
+        if (saveButton) saveButton.disabled = false;
+    }
+}
+
+
+
+async function loadPublicInstitutionalContact() {
+    const section =
+        document.getElementById("walz-public-contact");
+
+    const description =
+        document.getElementById("walz-public-contact-description");
+
+    const links =
+        document.getElementById("walz-public-contact-links");
+
+    if (!section || !links) return;
+
+    const currentPath =
+        window.location.pathname
+            .split("/")
+            .filter(Boolean)
+            .join("/")
+            .toLowerCase();
+
+    // Solo WalZ One Central. Nunca dentro de una tienda directa.
+    if (currentPath !== "") {
+        section.style.display = "none";
+        links.replaceChildren();
+        return;
+    }
+
+    section.style.display = "none";
+    links.replaceChildren();
+
+    try {
+        const response = await fetch(
+            `${API_URL}/institutional-settings/public`
+        );
+
+        if (!response.ok) {
+            throw new Error("No se pudieron cargar los contactos institucionales.");
+        }
+
+        const data = await response.json();
+
+        if (!data) return;
+
+        if (description) {
+            description.textContent =
+                String(data.description || "").trim();
+        }
+
+        const addLink = (label, href) => {
+            if (!href) return;
+
+            const anchor = document.createElement("a");
+            anchor.className = "walz-public-contact-link";
+            anchor.href = href;
+            anchor.target = "_blank";
+            anchor.rel = "noopener noreferrer";
+            anchor.textContent = label;
+
+            links.appendChild(anchor);
+        };
+
+        const website =
+            String(data.website_url || "").trim();
+
+        const email =
+            String(data.email || "").trim();
+
+        const whatsapp =
+            String(data.whatsapp || "").trim();
+
+        const instagram =
+            String(data.instagram_url || "").trim();
+
+        const facebook =
+            String(data.facebook_url || "").trim();
+
+        addLink("Sitio web", website);
+
+        if (whatsapp) {
+            const whatsappNumber =
+                whatsapp.replace(/\D/g, "");
+
+            if (whatsappNumber) {
+                addLink(
+                    "WhatsApp",
+                    `https://wa.me/${whatsappNumber}`
+                );
+            }
+        }
+
+        if (email) {
+            addLink(
+                "Email",
+                `mailto:${email}`
+            );
+        }
+
+        addLink("Instagram", instagram);
+        addLink("Facebook", facebook);
+
+        if (links.children.length > 0) {
+            section.style.display = "block";
+        }
+    } catch (error) {
+        console.error(
+            "No se pudo cargar el contacto institucional:",
+            error
+        );
+
+        section.style.display = "none";
+        links.replaceChildren();
+    }
+}
+
+
+function showMarketplaceContent() {
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -1559,6 +3672,7 @@ function showMarketplaceContent() {
     hideBannerProposalSection();
     loadProducts();
     loadActiveBanners();
+    loadPublicInstitutionalContact();
 }
 
 
@@ -1878,7 +3992,7 @@ async function openOrderDetail(orderId) {
     token = localStorage.getItem("walz_token");
 
     if (!container || !token) {
-        showMessage("Debes iniciar sesión para ver el pedido.", "error");
+        showMessage("Debes iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n para ver el pedido.", "error");
         return;
     }
 
@@ -1919,7 +4033,7 @@ async function openOrderDetail(orderId) {
 
         container.innerHTML = `
             <p class="orders-error">
-                No se pudo cargar el detalle. Verificá tu conexión e intentá nuevamente.
+                No se pudo cargar el detalle. VerificÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ tu conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n e intentÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ nuevamente.
             </p>
             <button type="button" onclick="openOrderDetail('${escapeJs(String(orderId))}')">
                 Reintentar
@@ -1943,7 +4057,7 @@ function renderOrderDetail(order, items) {
     const createdAt = formatWalzDate(order.created_at);
     const pickupTimeline = renderOrderTimeline(order);
 
-    const address = order.shipping_address || "Dirección no disponible";
+    const address = order.shipping_address || "DirecciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n no disponible";
 
     const canCancel = String(order.status || '').toLowerCase() === 'pending';
     const isPickup = String(order.shipping_address || '').toLowerCase().includes('retiro en el local');
@@ -1956,7 +4070,7 @@ function renderOrderDetail(order, items) {
 
     container.innerHTML = `
         <button type="button" onclick="loadMyOrders()">
-            ← Volver a mis compras
+            ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Ãƒâ€šÃ‚Â Volver a mis compras
         </button>
         <article class="order-detail-card">
             <h3>Pedido #${escapeHtml(String(order.id))}</h3>
@@ -1965,7 +4079,7 @@ function renderOrderDetail(order, items) {
                 <div><dt>Compra realizada</dt><dd>${escapeHtml(createdAt)}</dd></div>
                 <div><dt>Vendido por</dt><dd>${escapeHtml(order.seller_display_name || "Vendedor sin nombre")}</dd></div>
                 <div><dt>Cuenta vendedora</dt><dd>${escapeHtml(order.seller_account_email || "No disponible")}</dd></div>
-                <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
+                <div><dt>DirecciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de envÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­o</dt><dd>${escapeHtml(address)}</dd></div>
             </dl>
             <h4>Productos</h4>
             <div class="order-detail-items">
@@ -1982,7 +4096,7 @@ function renderOrderDetail(order, items) {
                             <strong>Subtotal: $${subtotal.toFixed(2)}</strong>
                         </article>
                     `;
-                }).join("") || "<p>Este pedido no tiene artículos.</p>"}
+                }).join("") || "<p>Este pedido no tiene artÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­culos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
             ${isPickup ? pickupTimeline : renderDeliveryPlan(order) + renderDeliveryResponsible(order)}
@@ -2043,7 +4157,7 @@ async function cancelPendingOrder(orderId) {
     }
 
     const confirmed = window.confirm(
-        "¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
+        "ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
     );
 
     if (!confirmed) {
@@ -2089,7 +4203,7 @@ function renderOrderNotFound() {
     }
 
     container.innerHTML = `
-        <p class="orders-empty">El pedido solicitado no existe o ya no está disponible.</p>
+        <p class="orders-empty">El pedido solicitado no existe o ya no estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ disponible.</p>
         <button type="button" onclick="loadMyOrders()">
             Volver a mis compras
         </button>
@@ -2128,14 +4242,14 @@ function renderCart() {
 
 
     // -------------------------------------------------
-    // CARRITO VACÍO
+    // CARRITO VACÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂO
     // -------------------------------------------------
 
     if (cart.length === 0) {
 
         container.innerHTML = `
             <div class="cart-empty">
-                🛒 Carrito vacío.
+                ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Carrito vacÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­o.
             </div>
         `;
 
@@ -2186,7 +4300,7 @@ function renderCart() {
                             type="button"
                             onclick="decreaseCartItem(${index})"
                         >
-                            −
+                            ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
                         </button>
 
 
@@ -2213,7 +4327,7 @@ function renderCart() {
                             onclick="removeFromCart(${index})"
                             class="cart-remove"
                         >
-                            🗑️
+                            ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â
                         </button>
 
                     </div>
@@ -2255,7 +4369,7 @@ function increaseCartItem(index) {
     if (item.qty >= item.stock) {
 
         showMessage(
-            `No puedes agregar más de ${item.stock} unidades de ${item.name}.`,
+            `No puedes agregar mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de ${item.stock} unidades de ${item.name}.`,
             "error"
         );
 
@@ -2325,7 +4439,7 @@ function removeFromCart(index) {
     saveCart();
 
     showMessage(
-        `🗑️ ${item.name} eliminado del carrito.`,
+        `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â ${item.name} eliminado del carrito.`,
         "success"
     );
 
@@ -2860,7 +4974,7 @@ function showMessage(
 
 
 // =====================================================
-// UI AUTENTICACIÓN
+// UI AUTENTICACIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œN
 // =====================================================
 
 function hideAuthForms() {
@@ -2904,6 +5018,8 @@ function showMarketplace() {
     document.getElementById(
         "marketplace-section"
     ).style.display = "block";
+
+    updateAdminBannerVisibility();
 }
 
 
@@ -2913,7 +5029,39 @@ function showMarketplace() {
 // FASE 5J - PEDIDOS RECIBIDOS
 // =====================================================
 
+
+// =====================================================
+// CONTEXTO PRIVADO DEL VENDEDOR
+// =====================================================
+
+function enterSellerPrivateContext() {
+    const currentPath =
+        window.location.pathname
+            .split("/")
+            .filter(Boolean)
+            .join("/")
+            .toLowerCase();
+
+    const isDirectStorePath =
+        ["farmacia-federico", "mayludstore"]
+            .includes(currentPath);
+
+    // El panel privado nunca debe conservar
+    // el contexto de una tienda publica.
+    window.walzMarketplaceSellerId = null;
+    window.walzPublicStoreSellerId = null;
+
+    if (isDirectStorePath) {
+        window.history.replaceState(
+            {},
+            document.title,
+            "/"
+        );
+    }
+}
+
 function showReceivedOrders() {
+    enterSellerPrivateContext();
     hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
@@ -2940,6 +5088,7 @@ function showReceivedOrders() {
     }
 
     salesOrdersSection.style.display = "block";
+    scrollPageToTop();
     loadReceivedOrders();
 }
 
@@ -3326,7 +5475,7 @@ async function updateSellerOrderStatus(orderId, newStatus, actionLabel) {
     }
 
     const confirmed = window.confirm(
-        `${actionLabel}: ¿confirmas esta accion?`
+        `${actionLabel}: ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿confirmas esta accion?`
     );
 
     if (!confirmed) {
@@ -3693,7 +5842,54 @@ async function previewBulkProductsFile(event) {
 // FASE 5K - MIS PRODUCTOS
 // =====================================================
 
+
+async function loadMyStoreCapabilities() {
+    const currentToken = localStorage.getItem("walz_token");
+
+    let store = null;
+
+    try {
+        const response = await fetch(`${API_URL}/stores/mine`, {
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+
+        if (response.ok) {
+            store = await response.json().catch(() => null);
+        }
+    } catch (error) {
+        console.warn(
+            "No se pudieron cargar capacidades de la tienda:",
+            error
+        );
+    }
+
+    window.walzMyStore = store || null;
+
+    const avanterEnabled =
+        store?.avanter_enabled === true;
+
+    const avanterInput =
+        document.getElementById("prod-avanter-enabled");
+
+    const avanterLabel =
+        avanterInput?.closest("label");
+
+    if (avanterLabel) {
+        avanterLabel.style.display =
+            avanterEnabled ? "" : "none";
+    }
+
+    if (avanterInput && !avanterEnabled) {
+        avanterInput.checked = false;
+    }
+
+    return avanterEnabled;
+}
+
 function showMyProducts() {
+    enterSellerPrivateContext();
     hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
@@ -3715,7 +5911,8 @@ function showMyProducts() {
     if (salesOrdersSection) salesOrdersSection.style.display = "none";
     myProductsSection.style.display = "block";
 
-    loadMyProducts();
+    loadMyStoreCapabilities()
+        .finally(() => loadMyProducts());
 }
 
 
@@ -3816,6 +6013,13 @@ function applyMyProductsFilters() {
     }
 
     renderMyProducts(filteredProducts);
+
+    // restoreMyProductDraftAfterRender
+    if (window.walzEditingProductId) {
+        restoreMyProductDraft(
+            window.walzEditingProductId
+        );
+    }
 }
 
 
@@ -3834,6 +6038,380 @@ function clearMyProductsFilters() {
     applyMyProductsFilters();
 }
 
+
+
+// =====================================================
+// COMPARTIR PRODUCTOS - WHATSAPP / COPIAR PUBLICACION
+// =====================================================
+
+function getSellerPublicStoreUrl() {
+    const store = window.walzMyStore || {};
+
+    const slug = String(store.slug || "")
+        .trim()
+        .replace(/^\/+|\/+$/g, "");
+
+    const isLocal =
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "localhost";
+
+    const baseUrl = isLocal
+        ? "https://walzone.com.ar"
+        : window.location.origin;
+
+    if (slug) {
+        return `${baseUrl}/${slug}`;
+    }
+
+    return baseUrl;
+}
+
+
+function formatSellerSharePrice(product) {
+    const normalPrice = Number(product?.price || 0);
+    const offerPrice = Number(product?.offer_price || 0);
+
+    const useOffer =
+        product?.offer_active === true &&
+        Number.isFinite(offerPrice) &&
+        offerPrice > 0 &&
+        offerPrice < normalPrice;
+
+    const finalPrice = useOffer
+        ? offerPrice
+        : normalPrice;
+
+    if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
+        return "";
+    }
+
+    return new Intl.NumberFormat(
+        "es-AR",
+        {
+            style: "currency",
+            currency: "ARS",
+            maximumFractionDigits: 2
+        }
+    ).format(finalPrice);
+}
+
+
+function buildSellerProductShareText(product) {
+    const store = window.walzMyStore || {};
+
+    const storeName =
+        String(store.name || "WalZ One").trim();
+
+    const productName =
+        String(product?.name || "Producto").trim();
+
+    const rawDescription =
+        String(product?.description || "")
+            .trim()
+            .slice(0, 500);
+
+    const normalizedProductName =
+        productName
+            .toLocaleLowerCase("es-AR")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const normalizedDescription =
+        rawDescription
+            .toLocaleLowerCase("es-AR")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const description =
+        normalizedDescription === normalizedProductName
+            ? ""
+            : rawDescription;
+
+    const price =
+        formatSellerSharePrice(product);
+
+    const commercialText =
+        product?.commercial_active
+            ? String(product?.commercial_text || "").trim()
+            : "";
+
+    const storeUrl =
+        getSellerPublicStoreUrl();
+
+    return [
+        productName,
+        price,
+        commercialText,
+        description,
+        `Disponible en ${storeName}`,
+        storeUrl
+    ]
+        .filter(Boolean)
+        .join("\n");
+}
+
+
+
+async function copySellerProductImage(productId) {
+    const products =
+        Array.isArray(window.walzMyProducts)
+            ? window.walzMyProducts
+            : [];
+
+    const product =
+        products.find(
+            item => String(item.id) === String(productId)
+        );
+
+    if (!product) {
+        showMessage(
+            "No pudimos encontrar el producto.",
+            "error"
+        );
+        return;
+    }
+
+    const imageUrl =
+        String(product.image_url || "").trim();
+
+    if (!imageUrl) {
+        showMessage(
+            "Este producto no tiene una imagen cargada.",
+            "error"
+        );
+        return;
+    }
+
+    try {
+        if (
+            !navigator.clipboard ||
+            typeof navigator.clipboard.write !== "function" ||
+            typeof ClipboardItem === "undefined"
+        ) {
+            throw new Error(
+                "El navegador no permite copiar imagenes."
+            );
+        }
+
+        const response =
+            await fetch(imageUrl);
+
+        if (!response.ok) {
+            throw new Error(
+                "No se pudo descargar la imagen."
+            );
+        }
+
+        const sourceBlob =
+            await response.blob();
+
+        const bitmap =
+            await createImageBitmap(sourceBlob);
+
+        const canvas =
+            document.createElement("canvas");
+
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+
+        const context =
+            canvas.getContext("2d");
+
+        context.drawImage(bitmap, 0, 0);
+
+        const pngBlob =
+            await new Promise((resolve, reject) => {
+                canvas.toBlob(
+                    blob => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(
+                                new Error(
+                                    "No se pudo preparar la imagen."
+                                )
+                            );
+                        }
+                    },
+                    "image/png"
+                );
+            });
+
+        await navigator.clipboard.write([
+            new ClipboardItem({
+                "image/png": pngBlob
+            })
+        ]);
+
+        if (typeof bitmap.close === "function") {
+            bitmap.close();
+        }
+
+        showMessage(
+            "Imagen copiada. Podes pegarla en WhatsApp con Ctrl + V.",
+            "success"
+        );
+
+    } catch (error) {
+        console.error(
+            "Error copiando imagen del producto:",
+            error
+        );
+
+        showMessage(
+            "No se pudo copiar automaticamente. Abrimos la imagen para que puedas usarla.",
+            "error"
+        );
+
+        window.open(
+            imageUrl,
+            "_blank",
+            "noopener,noreferrer"
+        );
+    }
+}
+
+async function copySellerProductPublication(productId) {
+    const products =
+        Array.isArray(window.walzMyProducts)
+            ? window.walzMyProducts
+            : [];
+
+    const product =
+        products.find(
+            item =>
+                String(item.id) === String(productId)
+        );
+
+    if (!product) {
+        showMessage(
+            "No pudimos encontrar el producto.",
+            "error"
+        );
+        return;
+    }
+
+    const text =
+        buildSellerProductShareText(product);
+
+    try {
+        await navigator.clipboard.writeText(text);
+
+        showMessage(
+            "Publicacion copiada. Ya podes pegarla donde quieras.",
+            "success"
+        );
+    } catch (error) {
+        console.error(
+            "No se pudo copiar la publicacion:",
+            error
+        );
+
+        window.prompt(
+            "Copia esta publicacion:",
+            text
+        );
+    }
+}
+
+
+function shareSellerProductWhatsApp(productId) {
+    const products =
+        Array.isArray(window.walzMyProducts)
+            ? window.walzMyProducts
+            : [];
+
+    const product =
+        products.find(
+            item =>
+                String(item.id) === String(productId)
+        );
+
+    if (!product) {
+        showMessage(
+            "No pudimos encontrar el producto.",
+            "error"
+        );
+        return;
+    }
+
+    const text =
+        buildSellerProductShareText(product);
+
+    const url =
+        `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+    );
+}
+
+
+function shareSellerProductFacebook(productId) {
+    const products =
+        Array.isArray(window.walzMyProducts)
+            ? window.walzMyProducts
+            : [];
+
+    const product =
+        products.find(
+            item => String(item.id) === String(productId)
+        );
+
+    if (!product) {
+        showMessage(
+            "No pudimos encontrar el producto.",
+            "error"
+        );
+        return;
+    }
+
+    const storeUrl =
+        getSellerPublicStoreUrl();
+
+    const facebookUrl =
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(storeUrl)}`;
+
+    window.open(
+        facebookUrl,
+        "_blank",
+        "noopener,noreferrer,width=760,height=650"
+    );
+}
+
+
+function shareSellerProductInstagram(productId) {
+    const products =
+        Array.isArray(window.walzMyProducts)
+            ? window.walzMyProducts
+            : [];
+
+    const product =
+        products.find(
+            item => String(item.id) === String(productId)
+        );
+
+    if (!product) {
+        showMessage(
+            "No pudimos encontrar el producto.",
+            "error"
+        );
+        return;
+    }
+
+    showMessage(
+        "Instagram abierto. Usa Copiar imagen y Copiar publicacion para preparar el post.",
+        "success"
+    );
+
+    window.open(
+        "https://www.instagram.com/",
+        "_blank",
+        "noopener,noreferrer"
+    );
+}
 
 function renderMyProducts(products) {
     const container = document.getElementById("my-products-content");
@@ -3895,6 +6473,36 @@ function renderMyProducts(products) {
                                </button>
                                <button
                                    type="button"
+                                   onclick="shareSellerProductWhatsApp('${escapeJs(String(product.id))}')"
+                               >
+                                   &#128241; WhatsApp
+                               </button>
+                               <button
+                                   type="button"
+                                   onclick="shareSellerProductFacebook('${escapeJs(String(product.id))}')"
+                               >
+                                   Facebook
+                               </button>
+                               <button
+                                   type="button"
+                                   onclick="shareSellerProductInstagram('${escapeJs(String(product.id))}')"
+                               >
+                                   Instagram
+                               </button>
+                               <button
+                                   type="button"
+                                   onclick="copySellerProductImage('${escapeJs(String(product.id))}')"
+                               >
+                                   &#128444; Copiar imagen
+                               </button>
+                               <button
+                                   type="button"
+                                   onclick="copySellerProductPublication('${escapeJs(String(product.id))}')"
+                               >
+                                   &#128203; Copiar publicacion
+                               </button>
+                               <button
+                                   type="button"
                                    class="delete-product-button"
                                    onclick="deleteMyProduct('${escapeJs(String(product.id))}')"
                                >
@@ -3910,13 +6518,143 @@ function renderMyProducts(products) {
 
 
 
+function getMyProductDraftKey(productId) {
+    const userId =
+        localStorage.getItem("walz_user_id") ||
+        currentUserId ||
+        "seller";
+
+    return `walz_product_draft_${userId}_${productId}`;
+}
+
+
+function saveCurrentMyProductDraft() {
+    const productId = String(window.walzEditingProductId || "");
+
+    if (!productId) return;
+
+    const editor =
+        document.getElementById(`edit-product-name-${productId}`);
+
+    if (!editor) return;
+
+    const draft = {
+        name: document.getElementById(`edit-product-name-${productId}`)?.value || "",
+        price: document.getElementById(`edit-product-price-${productId}`)?.value || "",
+        commercial_type: document.getElementById(`edit-product-commercial-type-${productId}`)?.value || "",
+        commercial_text: document.getElementById(`edit-product-commercial-text-${productId}`)?.value || "",
+        offer_price: document.getElementById(`edit-product-offer-price-${productId}`)?.value || "",
+        commercial_active: Boolean(
+            document.getElementById(`edit-product-commercial-active-${productId}`)?.checked
+        ),
+        stock: document.getElementById(`edit-product-stock-${productId}`)?.value || "",
+        category: document.getElementById(`edit-product-category-${productId}`)?.value || "",
+        subcategory: document.getElementById(`edit-product-subcategory-${productId}`)?.value || "",
+        brand: document.getElementById(`edit-product-brand-${productId}`)?.value || "",
+        avanter_enabled: Boolean(
+            document.getElementById(`edit-product-avanter-enabled-${productId}`)?.checked
+        ),
+        description: document.getElementById(`edit-product-description-${productId}`)?.value || "",
+        image_url: document.getElementById(`edit-product-image-${productId}`)?.value || ""
+    };
+
+    localStorage.setItem(
+        getMyProductDraftKey(productId),
+        JSON.stringify(draft)
+    );
+}
+
+
+function restoreMyProductDraft(productId) {
+    const raw =
+        localStorage.getItem(getMyProductDraftKey(productId));
+
+    if (!raw) return;
+
+    let draft;
+
+    try {
+        draft = JSON.parse(raw);
+    } catch (_) {
+        return;
+    }
+
+    const setValue = (prefix, value) => {
+        const field =
+            document.getElementById(`${prefix}-${productId}`);
+
+        if (field && value !== undefined && value !== null) {
+            field.value = value;
+        }
+    };
+
+    setValue("edit-product-name", draft.name);
+    setValue("edit-product-price", draft.price);
+    setValue("edit-product-commercial-type", draft.commercial_type);
+    setValue("edit-product-commercial-text", draft.commercial_text);
+    setValue("edit-product-offer-price", draft.offer_price);
+    setValue("edit-product-stock", draft.stock);
+    setValue("edit-product-category", draft.category);
+    setValue("edit-product-subcategory", draft.subcategory);
+    setValue("edit-product-brand", draft.brand);
+
+    const avanterField =
+        document.getElementById(`edit-product-avanter-enabled-${productId}`);
+
+    if (avanterField && draft.avanter_enabled !== undefined) {
+        avanterField.checked = Boolean(draft.avanter_enabled);
+    }
+
+    setValue("edit-product-description", draft.description);
+    setValue("edit-product-image", draft.image_url);
+
+    const draftPreview =
+        document.getElementById(
+            `edit-product-image-preview-${productId}`
+        );
+
+    if (draftPreview) {
+        if (draft.image_url) {
+            draftPreview.innerHTML =
+                renderProductImage(
+                    draft.image_url,
+                    draft.name || "Producto",
+                    "product-card-image"
+                );
+        } else {
+            draftPreview.innerHTML =
+                "<small>Sin imagen actual.</small>";
+        }
+    }
+
+    const active =
+        document.getElementById(
+            `edit-product-commercial-active-${productId}`
+        );
+
+    if (active) {
+        active.checked = Boolean(draft.commercial_active);
+    }
+}
+
+
+function clearMyProductDraft(productId) {
+    localStorage.removeItem(
+        getMyProductDraftKey(productId)
+    );
+}
+
 function startEditingMyProduct(productId) {
     window.walzEditingProductId = String(productId);
     applyMyProductsFilters();
+    restoreMyProductDraft(productId);
 }
 
 
 function cancelEditingMyProduct() {
+    if (window.walzEditingProductId) {
+        clearMyProductDraft(window.walzEditingProductId);
+    }
     window.walzEditingProductId = null;
     applyMyProductsFilters();
 }
@@ -4005,6 +6743,32 @@ function renderMyProductEditor(product) {
                     value="${escapeHtml(product.category || "")}"
                 >
             </label>
+            <label>
+                <span>Subrubro</span>
+                <input
+                    id="edit-product-subcategory-${escapeHtml(String(product.id))}"
+                    type="text"
+                    maxlength="100"
+                    value="${escapeHtml(product.subcategory || "")}"
+                >
+            </label>
+            <label>
+                <span>Marca</span>
+                <input
+                    id="edit-product-brand-${escapeHtml(String(product.id))}"
+                    type="text"
+                    maxlength="100"
+                    value="${escapeHtml(product.brand || "")}"
+                >
+            </label>
+            <label class="my-product-offer-toggle">
+                <input
+                    id="edit-product-avanter-enabled-${escapeHtml(String(product.id))}"
+                    type="checkbox"
+                    ${product.avanter_enabled ? "checked" : ""}
+                >
+                <span>Asociado a Bonos Avanter</span>
+            </label>
             <label class="my-product-description-field">
                 <span>Descripcion</span>
                 <textarea
@@ -4026,8 +6790,30 @@ function renderMyProductEditor(product) {
                     id="edit-product-image-file-${escapeHtml(String(product.id))}"
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
+                    onchange="handleEditProductImageSelection('${escapeJs(String(product.id))}', event)"
                 >
                 <small>Si no elegis un archivo, se conservara el enlace actual.</small>
+
+                <div
+                    id="edit-product-image-preview-${escapeHtml(String(product.id))}"
+                    class="edit-product-image-preview"
+                >
+                    ${
+                        product.image_url
+                            ? renderProductImage(
+                                product.image_url,
+                                product.name,
+                                "product-card-image"
+                            )
+                            : "<small>Sin imagen actual.</small>"
+                    }
+                </div>
+
+                <small
+                    id="edit-product-image-status-${escapeHtml(String(product.id))}"
+                >
+                    La nueva imagen se prepara al seleccionarla.
+                </small>
             </label>
             <div class="my-product-editor-actions">
                 <button
@@ -4062,6 +6848,11 @@ async function saveMyProductChanges(productId) {
     const offerActive = commercialActive && offerPrice !== null;
     const stock = Number(document.getElementById(`edit-product-stock-${productId}`)?.value);
     const category = document.getElementById(`edit-product-category-${productId}`)?.value.trim() || "";
+    const subcategory = document.getElementById(`edit-product-subcategory-${productId}`)?.value.trim() || "";
+    const brand = document.getElementById(`edit-product-brand-${productId}`)?.value.trim() || "";
+    const avanterEnabled = Boolean(
+        document.getElementById(`edit-product-avanter-enabled-${productId}`)?.checked
+    );
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
     let imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
     const replacementImage = document.getElementById(`edit-product-image-file-${productId}`)?.files?.[0] || null;
@@ -4128,6 +6919,9 @@ async function saveMyProductChanges(productId) {
                 commercial_active: commercialActive,
                 stock,
                 category: category || null,
+                subcategory: subcategory || null,
+                brand: brand || null,
+                avanter_enabled: avanterEnabled,
                 description: description || null,
                 image_url: imageUrl
             })
@@ -4152,6 +6946,7 @@ async function saveMyProductChanges(productId) {
             window.walzMyProducts[index] = data;
         }
 
+        clearMyProductDraft(productId);
         window.walzEditingProductId = null;
         showMessage("Producto actualizado correctamente.", "success");
         applyMyProductsFilters();
@@ -4284,30 +7079,148 @@ async function deleteMyProduct(productId) {
 // FASE 5M - PUBLICIDAD Y BANNERS
 // =====================================================
 
-function updateAdminBannerVisibility() {
-    const isAdmin = currentUserRole === "ADMIN";
-    const canSell = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
-    const isBuyer = currentUserRole === "COMPRADOR";
 
-    const bannerButton = document.getElementById("banner-admin-button");
-    if (bannerButton) bannerButton.style.display = isAdmin ? "inline-flex" : "none";
+async function openMyPublicStore() {
+    const currentToken =
+        localStorage.getItem("walz_token");
 
-    const adminApplicationsButton = document.getElementById("seller-applications-admin-button");
-    if (adminApplicationsButton) adminApplicationsButton.style.display = isAdmin ? "inline-flex" : "none";
+    if (!currentToken) {
+        showAuth();
+        showLogin();
+        return;
+    }
 
-    const applicationButton = document.getElementById("seller-application-button");
-    if (applicationButton) applicationButton.style.display = isBuyer ? "inline-flex" : "none";
+    try {
+        const response = await fetch(
+            `${API_URL}/stores/mine`,
+            {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
 
-    const productCreateSection = document.getElementById("seller-product-create-section");
-    if (productCreateSection) productCreateSection.style.display = canSell ? "block" : "none";
+        const store =
+            await response.json().catch(() => ({}));
 
-    for (const id of ["store-profile-button", "sales-orders-button", "my-products-button"]) {
-        const sellerButton = document.getElementById(id);
-        if (sellerButton) sellerButton.style.display = canSell ? "inline-flex" : "none";
+        if (!response.ok) {
+            throw new Error(
+                store.detail ||
+                "No pudimos encontrar tu tienda."
+            );
+        }
+
+        const slug =
+            String(store.slug || "")
+                .trim()
+                .replace(/^\/+|\/+$/g, "");
+
+        if (!slug) {
+            throw new Error(
+                "Tu tienda todavia no tiene una direccion publica."
+            );
+        }
+
+        window.location.assign(
+            `${window.location.origin}/${encodeURIComponent(slug)}`
+        );
+
+    } catch (error) {
+        console.error(
+            "Error abriendo tienda publica:",
+            error
+        );
+
+        showMessage(
+            error.message ||
+            "No pudimos abrir tu tienda.",
+            "error"
+        );
     }
 }
 
 
+function updateAdminBannerVisibility() {
+    const hasSession = Boolean(localStorage.getItem("walz_token"));
+    const isAdmin = hasSession && currentUserRole === "ADMIN";
+    const canSell = hasSession && ["VENDEDOR", "SELLER"].includes(currentUserRole);
+    const isBuyer = hasSession && currentUserRole === "COMPRADOR";
+
+    const cartButton = document.querySelector(".cart-button");
+    if (cartButton) {
+        cartButton.style.display = isAdmin ? "none" : "inline-flex";
+    }
+
+    if (isAdmin) {
+        const cartSection = document.getElementById("cart-section");
+        if (cartSection) cartSection.style.display = "none";
+        document.body.classList.remove("cart-panel-open");
+    }
+
+    const viewMyStoreButton =
+        document.getElementById("view-my-store-button");
+
+    if (viewMyStoreButton) {
+        viewMyStoreButton.style.display =
+            canSell && !isAdmin
+                ? "inline-flex"
+                : "none";
+    }
+
+
+
+    const publicLoginButton = document.getElementById("public-login-button");
+    if (publicLoginButton) {
+        publicLoginButton.style.display = hasSession ? "none" : "inline-flex";
+    }
+
+    const publicRegisterButton = document.getElementById("public-register-button");
+    if (publicRegisterButton) {
+        publicRegisterButton.style.display = hasSession ? "none" : "inline-flex";
+    }
+
+    const myOrdersButton = document.getElementById("my-orders-button");
+    if (myOrdersButton) {
+        myOrdersButton.style.display = hasSession && !isAdmin ? "inline-flex" : "none";
+    }
+
+    const accountButton = document.getElementById("account-settings-button");
+    if (accountButton) {
+        accountButton.style.display = hasSession && !isAdmin ? "inline-flex" : "none";
+    }
+
+    const logoutButton = document.getElementById("logout-button");
+    if (logoutButton) {
+        logoutButton.style.display = hasSession ? "inline-flex" : "none";
+    }
+
+    const bannerButton = document.getElementById("banner-admin-button");
+    if (bannerButton) {
+        bannerButton.style.display = "none";
+    }
+
+    const adminApplicationsButton = document.getElementById("seller-applications-admin-button");
+    if (adminApplicationsButton) {
+        adminApplicationsButton.style.display = "none";
+    }
+
+    const applicationButton = document.getElementById("seller-application-button");
+    if (applicationButton) {
+        applicationButton.style.display = isBuyer ? "inline-flex" : "none";
+    }
+
+    const productCreateSection = document.getElementById("seller-product-create-section");
+    if (productCreateSection) {
+        productCreateSection.style.display = canSell ? "block" : "none";
+    }
+
+    for (const id of ["store-profile-button", "sales-orders-button", "my-products-button"]) {
+        const sellerButton = document.getElementById(id);
+        if (sellerButton) {
+            sellerButton.style.display = canSell ? "inline-flex" : "none";
+        }
+    }
+}
 function setSellerPendingOrderBadge(count) {
     const badge = document.getElementById("seller-pending-orders-badge");
     if (!badge) return;
@@ -4326,7 +7239,7 @@ function stopSellerOrderNotifications() {
 
 
 async function refreshSellerPendingOrderCount() {
-    const canSell = ["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole);
+    const canSell = ["VENDEDOR", "SELLER"].includes(currentUserRole);
     if (!canSell) {
         setSellerPendingOrderBadge(0);
         return;
@@ -4367,6 +7280,16 @@ function setAdminPendingBadge(id, count) {
     const value = Math.max(0, Number(count || 0));
     badge.textContent = value > 99 ? "99+" : String(value);
     badge.style.display = value > 0 ? "inline-flex" : "none";
+
+    const centralBadgeMap = {
+        "seller-applications-pending-badge": "admin-central-applications-badge",
+        "banner-proposals-pending-badge": "admin-central-banners-badge"
+    };
+    const centralBadge = document.getElementById(centralBadgeMap[id]);
+    if (centralBadge) {
+        centralBadge.textContent = value > 99 ? "99+" : String(value);
+        centralBadge.style.display = value > 0 ? "inline-flex" : "none";
+    }
 }
 
 
@@ -4436,7 +7359,7 @@ async function loadCurrentUserProfile() {
         updateAdminBannerVisibility();
         if (currentUserRole === "ADMIN") startAdminNotifications();
         else stopAdminNotifications();
-        if (["VENDEDOR", "SELLER", "ADMIN"].includes(currentUserRole)) startSellerOrderNotifications();
+        if (["VENDEDOR", "SELLER"].includes(currentUserRole)) startSellerOrderNotifications();
         else stopSellerOrderNotifications();
     } catch (error) {
         console.error("No se pudo cargar el perfil:", error);
@@ -4834,10 +7757,12 @@ async function submitSellerApplication(event) {
 
 
 function hideAllWalzWorkSections() {
+    saveCurrentMyProductDraft();
     for (const id of [
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
-        "seller-application-section", "seller-applications-admin-section", "account-settings-section"
+        "seller-application-section", "seller-applications-admin-section", "account-settings-section",
+        "admin-central-section", "institutional-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }
@@ -4852,6 +7777,7 @@ async function showSellerApplicationsAdmin() {
     hideAllWalzWorkSections();
     const section = document.getElementById("seller-applications-admin-section");
     if (section) section.style.display = "block";
+    window.scrollTo(0, 0);
     await loadSellerApplicationsAdmin();
 }
 
@@ -4953,6 +7879,11 @@ async function showPublicStore(sellerId) {
         const storeProducts = (Array.isArray(products) ? products : []).filter(
             product => String(product.seller_id) === String(sellerId) && product.is_active
         );
+
+        const avanterProducts = storeProducts.filter(
+            product => product.avanter_enabled === true
+        );
+
         window.walzProducts = storeProducts;
         window.walzStoresByOwner = { [String(sellerId)]: store };
         container.innerHTML = `
@@ -4967,6 +7898,23 @@ async function showPublicStore(sellerId) {
                             ${store.business_categories.map(category => `<span>${escapeHtml(category)}</span>`).join("")}
                         </div>
                     ` : ""}
+
+                    ${store.avanter_enabled === true ? `
+                        <div class="public-store-avanter-summary">
+                            <div>
+                                <strong>Trabajamos con Bonos Avanter</strong>
+                                <span>Consult&aacute; productos adheridos y beneficios vigentes.</span>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="document.getElementById('public-store-avanter-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                            >
+                                Ver productos con Bonos Avanter
+                            </button>
+                        </div>
+                    ` : ""}
+
                     <div class="public-store-contact">
                         ${store.city ? `<span>Ciudad: <strong>${escapeHtml(store.city)}</strong></span>` : ""}
                         ${store.phone ? `<span>Telefono: <strong>${escapeHtml(store.phone)}</strong></span>` : ""}
@@ -4974,6 +7922,84 @@ async function showPublicStore(sellerId) {
                     </div>
                 </div>
             </header>
+
+            ${store.avanter_enabled === true ? `
+                <section
+                    id="public-store-avanter-section"
+                    class="public-store-avanter"
+                >
+                    <div class="public-store-avanter-copy">
+                        <span class="public-store-avanter-kicker">Programa de beneficios</span>
+
+                        <h2>
+                            ${escapeHtml(store.avanter_title || "Bonos Avanter")}
+                        </h2>
+
+                        ${store.avanter_text ? `
+                            <p>${escapeHtml(store.avanter_text)}</p>
+                        ` : ""}
+                    </div>
+
+                    ${store.avanter_image_url ? `
+                        <div class="public-store-avanter-media">
+                            ${renderProductImage(
+                                store.avanter_image_url,
+                                store.avanter_title || "Bonos Avanter",
+                                "public-store-avanter-image"
+                            )}
+                        </div>
+                    ` : ""}
+
+                    ${avanterProducts.length ? `
+                        <div class="public-store-avanter-products">
+                            <h3>Productos asociados a Bonos Avanter</h3>
+
+                            <div class="public-store-products">
+                                ${avanterProducts.map(product => `
+                                    <article
+                                        class="public-store-product public-store-avanter-product"
+                                        onclick="openProductDetail('${escapeJs(String(product.id))}')"
+                                    >
+                                        ${renderProductImage(
+                                            product.image_url,
+                                            product.name,
+                                            "public-store-product-image"
+                                        )}
+
+                                        <div>
+                                            <span class="public-store-avanter-badge">
+                                                Producto adherido a Bonos Avanter
+                                            </span>
+
+                                            <h3>${escapeHtml(product.name || "Producto")}</h3>
+
+                                            <p class="product-price">
+                                                ${renderProductPrice(product)}
+                                            </p>
+
+                                            <small class="public-store-avanter-price-note">
+                                                El beneficio se aplica seg&uacute;n el bono vigente presentado.
+                                            </small>
+
+                                            <span>
+                                                Stock: ${Number(product.stock || 0)}
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onclick="event.stopPropagation(); openProductDetail('${escapeJs(String(product.id))}')"
+                                        >
+                                            Ver producto
+                                        </button>
+                                    </article>
+                                `).join("")}
+                            </div>
+                        </div>
+                    ` : ""}
+                </section>
+            ` : ""}
+
             <h2>Productos de ${escapeHtml(store.name || "la tienda")}</h2>
             ${storeProducts.length ? `<div class="public-store-products">${storeProducts.map(product => `
                 <article class="public-store-product" onclick="openProductDetail('${escapeJs(String(product.id))}')">
@@ -5135,6 +8161,7 @@ function renderStorePreview() {
 
 
 async function showStoreProfile() {
+    enterSellerPrivateContext();
     hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
@@ -5162,18 +8189,25 @@ async function loadStoreProfile() {
         const store = await response.json().catch(() => null);
         if (!response.ok) throw new Error(store?.detail || `HTTP ${response.status}`);
         const values = store || {};
+        window.walzMyStore = values;
         const fields = {
             "store-name": values.name || "",
             "store-logo-url": values.logo_url || "",
             "store-description": values.description || "",
             "store-phone": values.phone || "",
             "store-city": values.city || "",
-            "store-address": values.address || ""
+            "store-address": values.address || "",
+            "store-avanter-title": values.avanter_title || "",
+            "store-avanter-text": values.avanter_text || "",
+            "store-avanter-image-url": values.avanter_image_url || ""
         };
         const deliveryInput = document.getElementById("store-delivery-enabled");
         const pickupInput = document.getElementById("store-pickup-enabled");
+        const avanterInput = document.getElementById("store-avanter-enabled");
+
         if (deliveryInput) deliveryInput.checked = values.delivery_enabled !== false;
         if (pickupInput) pickupInput.checked = values.pickup_enabled !== false;
+        if (avanterInput) avanterInput.checked = values.avanter_enabled === true;
         setStoreBusinessCategoriesForm(values.business_categories || []);
         const textFields = {
         };
@@ -5246,6 +8280,12 @@ async function saveStoreProfile(event) {
                 city: value("store-city") || null,
                 address: value("store-address") || null,
                 business_categories: businessCategories,
+                avanter_enabled: Boolean(
+                    document.getElementById("store-avanter-enabled")?.checked
+                ),
+                avanter_title: value("store-avanter-title") || null,
+                avanter_text: value("store-avanter-text") || null,
+                avanter_image_url: value("store-avanter-image-url") || null,
                 delivery_enabled: deliveryEnabled,
                 pickup_enabled: pickupEnabled
             })
@@ -5296,6 +8336,7 @@ function getBannerProposalStatus(status) {
 
 
 async function showBannerProposal() {
+    enterSellerPrivateContext();
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -5431,6 +8472,7 @@ function showBannerAdmin() {
         return;
     }
 
+    document.getElementById("admin-central-section")?.style.setProperty("display", "none");
     document.getElementById("marketplace-content")?.style.setProperty("display", "none");
     document.getElementById("orders-section")?.style.setProperty("display", "none");
     document.getElementById("sales-orders-section")?.style.setProperty("display", "none");
@@ -5438,6 +8480,7 @@ function showBannerAdmin() {
     hideBannerProposalSection();
     const section = document.getElementById("banner-admin-section");
     if (section) section.style.display = "block";
+    window.scrollTo(0, 0);
     loadAdminBanners();
 }
 
@@ -5596,9 +8639,12 @@ async function toggleAdminBanner(bannerId, shouldActivate) {
 
 function showWalzNewsBarIfAllowed() {
     const bar = document.getElementById("walz-news-bar");
+    const isAdmin = currentUserRole === "ADMIN";
     const wasClosed = sessionStorage.getItem("walz_news_closed") === "1";
-    if (bar) bar.style.display = wasClosed ? "none" : "flex";
-    document.body.classList.toggle("has-walz-news-bar", !wasClosed);
+    const shouldShow = !isAdmin && !wasClosed;
+
+    if (bar) bar.style.display = shouldShow ? "flex" : "none";
+    document.body.classList.toggle("has-walz-news-bar", shouldShow);
 }
 
 
@@ -5631,6 +8677,7 @@ window.handleResetPassword = handleResetPassword;
 window.handleLogout = handleLogout;
 window.handleExpiredSession = handleExpiredSession;
 window.handleCreateProduct = handleCreateProduct;
+window.handleEditProductImageSelection = handleEditProductImageSelection;
 window.previewNewProductImage = previewNewProductImage;
 
 window.loadProducts = loadProducts;
@@ -5768,7 +8815,7 @@ async function syncVisibleWalzData(showConfirmation = false) {
         } else if (walzSectionIsVisible("sales-orders-section")) {
             if (!document.querySelector(".delivery-plan-form :focus, .delivery-responsible-form :focus") && !deliveryResponsibleFormHasDraft()) await loadReceivedOrders(true);
         } else if (walzSectionIsVisible("my-products-section")) {
-            if (!document.querySelector(".my-product-edit-form")) await loadMyProducts();
+            if (!document.querySelector(".my-product-editor")) await loadMyProducts();
         } else if (walzSectionIsVisible("marketplace-content")) {
             await loadProducts();
         }
@@ -5802,7 +8849,7 @@ document.addEventListener(
     async () => {
 
         console.log(
-            "✅ WalZ app.js cargado correctamente"
+            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ WalZ app.js cargado correctamente"
         );
 
         console.log(
@@ -5842,7 +8889,13 @@ document.addEventListener(
                 if (!directStoreResponse.ok || !directStore.owner_id) {
                     throw new Error(directStore.detail || "Tienda no encontrada.");
                 }
-                await showPublicStore(directStore.owner_id);
+                window.walzMarketplaceSellerId =
+                    directStore.owner_id;
+
+                showMarketplaceContent();
+
+                await loadProducts();
+                await loadActiveBanners();
             } catch (error) {
                 const section = document.getElementById("public-store-section");
                 const container = document.getElementById("public-store-content");
@@ -5859,16 +8912,52 @@ document.addEventListener(
             startWalzDeviceSync();
 
             showMarketplace();
+            await loadCurrentUserProfile();
             updateAdminBannerVisibility();
-            loadCurrentUserProfile();
-            loadActiveBanners();
 
-            loadProducts();
-
+            if (currentUserRole === "ADMIN") {
+                showAdminCentralPanel();
+            } else {
+                loadActiveBanners();
+                loadProducts();
+            }
         } else {
-
-            showAuth();
+            showMarketplace();
+            loadProducts();
         }
     }
+);
+
+
+// WALZ SELLER RUBRO AUTO SCROLL
+document.addEventListener(
+    "click",
+    event => {
+        const selected =
+            event.target.closest(
+                ".walz-macro-card, .walz-subcategory-chip"
+            );
+
+        if (!selected) return;
+
+        // Solo en el marketplace particular de una tienda.
+        if (
+            !document.querySelector(
+                ".walz-seller-marketplace-identity"
+            )
+        ) {
+            return;
+        }
+
+        setTimeout(() => {
+            document
+                .getElementById("product-list")
+                ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+        }, 80);
+    },
+    true
 );
 

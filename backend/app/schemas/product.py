@@ -25,6 +25,9 @@ class ProductBase(BaseModel):
     commercial_active: bool = False
     stock: int = Field(0, ge=0)
     category: Optional[str] = None
+    subcategory: Optional[str] = None
+    brand: Optional[str] = None
+    avanter_enabled: bool = False
     image_url: Optional[str] = None
 
 class ProductCreate(ProductBase):
@@ -42,6 +45,9 @@ class ProductResponse(ProductBase):
 class ProductFilter(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
+    subcategory: Optional[str] = None
+    brand: Optional[str] = None
+    avanter_enabled: Optional[bool] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
 
@@ -51,6 +57,9 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = Field(default=None, ge=0)
     description: Optional[str] = None
     category: Optional[str] = None
+    subcategory: Optional[str] = None
+    brand: Optional[str] = None
+    avanter_enabled: Optional[bool] = None
     image_url: Optional[str] = None
     offer_price: Optional[float] = Field(default=None, gt=0)
     offer_active: Optional[bool] = None

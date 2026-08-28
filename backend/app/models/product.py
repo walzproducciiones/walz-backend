@@ -92,6 +92,23 @@ class Product(Base):
         nullable=True
     )
 
+    subcategory = Column(
+        String(100),
+        nullable=True
+    )
+
+    brand = Column(
+        String(100),
+        nullable=True
+    )
+
+    avanter_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
+    )
+
     image_url = Column(
         String(500),
         nullable=True

@@ -25,6 +25,17 @@ class Store(Base):
     city = Column(String(120), nullable=True)
     address = Column(String(250), nullable=True)
     business_categories = Column(JSON, nullable=False, default=list)
+
+    avanter_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
+    )
+    avanter_title = Column(String(160), nullable=True)
+    avanter_text = Column(Text, nullable=True)
+    avanter_image_url = Column(String(500), nullable=True)
+
     delivery_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     pickup_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     is_active = Column(Boolean, nullable=False, default=True, server_default="1")

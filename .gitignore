@@ -7,3 +7,5 @@ __pycache__/
 *.fase*-backup
 walz_local.db
 cuentas_prueba_walz.local.txt
+
+*.antes-*

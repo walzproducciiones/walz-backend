@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-from backend.app.api import auth, banners, products, orders, payments, seller_applications, stores
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=ENV_FILE, override=False)
+
+from backend.app.api import auth, banners, institutional_settings, products, orders, payments, seller_applications, stores
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
@@ -12,14 +17,18 @@ from backend.app.database.schema_updates import (
     ensure_order_pickup_columns,
     ensure_product_promotion_columns,
     ensure_product_deletion_column,
+    ensure_product_subcategory_column,
+    ensure_product_brand_column,
+    ensure_product_avanter_column,
     ensure_seller_application_business_categories_column,
     ensure_store_delivery_columns,
+    ensure_store_avanter_columns,
     ensure_store_business_categories_column,
     ensure_store_slug_column,
     ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, email_change_token, user, product, order, password_reset_token, seller_application, store
+from backend.app.models import banner, email_change_token, institutional_setting, user, product, order, password_reset_token, seller_application, store
 
 
 # ============================================================
@@ -30,16 +39,21 @@ user.Base.metadata.create_all(bind=engine)
 product.Base.metadata.create_all(bind=engine)
 order.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
+institutional_setting.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
 seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
 email_change_token.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
 ensure_product_deletion_column(engine)
+ensure_product_subcategory_column(engine)
+ensure_product_brand_column(engine)
+ensure_product_avanter_column(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)
 ensure_store_delivery_columns(engine)
+ensure_store_avanter_columns(engine)
 ensure_store_business_categories_column(engine)
 ensure_seller_application_business_categories_column(engine)
 ensure_store_slug_column(engine)
@@ -91,6 +105,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(banners.router)
+app.include_router(institutional_settings.router)
 app.include_router(stores.router)
 app.include_router(seller_applications.router)
 app.include_router(products.router)

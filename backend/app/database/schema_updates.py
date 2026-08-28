@@ -52,6 +52,63 @@ def ensure_product_promotion_columns(engine):
                 f"ADD COLUMN commercial_started_at {timestamp_type}"
             ))
 
+def ensure_product_subcategory_column(engine):
+    """Add product subcategory without deleting existing product data."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "subcategory" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN subcategory VARCHAR(100)"
+            ))
+
+def ensure_product_brand_column(engine):
+    """Add product brand without deleting existing product data."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "brand" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN brand VARCHAR(100)"
+            ))
+
+
+def ensure_product_avanter_column(engine):
+    """Add Avanter product association without changing product classification."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "avanter_enabled" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products "
+                "ADD COLUMN avanter_enabled BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+
+
 def ensure_product_deletion_column(engine):
     """Add logical product deletion without removing historical data."""
     inspector = inspect(engine)
@@ -138,6 +195,33 @@ def ensure_store_slug_column(engine):
         if "slug" not in existing_columns:
             connection.execute(text("ALTER TABLE stores ADD COLUMN slug VARCHAR(180)"))
         connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_stores_slug ON stores (slug)"))
+
+def ensure_store_avanter_columns(engine):
+    """Add optional Avanter program fields without changing store categories."""
+    inspector = inspect(engine)
+
+    if "stores" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("stores")
+    }
+
+    definitions = {
+        "avanter_enabled": "BOOLEAN NOT NULL DEFAULT FALSE",
+        "avanter_title": "VARCHAR(160)",
+        "avanter_text": "TEXT",
+        "avanter_image_url": "VARCHAR(500)",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    f"ALTER TABLE stores ADD COLUMN {column_name} {definition}"
+                ))
+
 
 def ensure_store_delivery_columns(engine):
     """Add store delivery choices without changing existing behavior."""

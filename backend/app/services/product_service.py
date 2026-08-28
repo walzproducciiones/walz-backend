@@ -52,6 +52,9 @@ def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
         ),
         stock=product_data.stock,
         category=product_data.category,
+        subcategory=product_data.subcategory,
+        brand=product_data.brand,
+        avanter_enabled=product_data.avanter_enabled,
         image_url=product_data.image_url
     )
     db.add(new_product)
@@ -96,6 +99,9 @@ def create_products_bulk(db: Session, seller_id: UUID, products_data: list[Produ
                 ),
                 stock=product_data.stock,
                 category=product_data.category,
+                subcategory=product_data.subcategory,
+                brand=product_data.brand,
+                avanter_enabled=product_data.avanter_enabled,
                 image_url=product_data.image_url,
                 is_active=True,
             )
@@ -122,6 +128,8 @@ def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductF
             query = query.filter(Product.name.ilike(f"%{filters.name}%"))
         if filters.category:
             query = query.filter(Product.category == filters.category)
+        if filters.avanter_enabled is not None:
+            query = query.filter(Product.avanter_enabled == filters.avanter_enabled)
         if filters.min_price is not None:
             query = query.filter(Product.price >= filters.min_price)
         if filters.max_price is not None:

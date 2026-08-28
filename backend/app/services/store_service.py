@@ -50,7 +50,16 @@ def save_store_profile(
     if not values.get("delivery_enabled") and not values.get("pickup_enabled"):
         raise ValueError("Selecciona al menos una forma de entrega.")
 
-    for optional_field in ("logo_url", "description", "phone", "city", "address"):
+    for optional_field in (
+        "logo_url",
+        "description",
+        "phone",
+        "city",
+        "address",
+        "avanter_title",
+        "avanter_text",
+        "avanter_image_url",
+    ):
         value = values.get(optional_field)
         values[optional_field] = str(value).strip() if value else None
 
