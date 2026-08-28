@@ -57,3 +57,44 @@ class StoreResponse(StoreProfileUpdate):
 
     class Config:
         from_attributes = True
+
+class StoreAdminSellerAccountResponse(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    email: str
+    phone: Optional[str] = None
+    role: str
+    is_active: bool
+    email_verified: bool
+    terms_accepted_at: Optional[datetime] = None
+    terms_version: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class StoreAdminSellerApplicationResponse(BaseModel):
+    id: UUID
+    business_name: str
+    city: Optional[str] = None
+    reason: str
+    business_categories: list[str] = Field(default_factory=list)
+    status: str
+    admin_note: Optional[str] = None
+    reviewed_by: Optional[UUID] = None
+    reviewed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class StoreAdminSellerDetailResponse(BaseModel):
+    store: StoreResponse
+    seller: StoreAdminSellerAccountResponse
+    application: Optional[StoreAdminSellerApplicationResponse] = None

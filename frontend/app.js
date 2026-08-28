@@ -3722,22 +3722,16 @@ async function changeAdminStoreStatus(storeId, requestedStatus) {
 
 
 
-function showAdminSellerDetail(ownerId) {
+async function showAdminSellerDetail(ownerId) {
     if (currentUserRole !== "ADMIN") {
         showMessage("Se requiere una cuenta administradora.", "error");
         return;
     }
 
-    const stores = Array.isArray(window.walzAdminStores)
-        ? window.walzAdminStores
-        : [];
+    const currentToken = localStorage.getItem("walz_token");
 
-    const store = stores.find(
-        item => String(item.owner_id) === String(ownerId)
-    );
-
-    if (!store) {
-        showMessage("No se encontro el vendedor.", "error");
+    if (!currentToken) {
+        handleExpiredSession();
         return;
     }
 
@@ -3752,85 +3746,281 @@ function showAdminSellerDetail(ownerId) {
     if (toolbar) toolbar.style.display = "none";
     if (summary) summary.textContent = "Detalle administrativo del vendedor";
 
-    const categories = Array.isArray(store.business_categories)
-        ? store.business_categories.filter(Boolean)
-        : [];
-
-    const statusInfo = getAdminStoreStatusPresentation(
-        store.operational_status
-    );
-
-    const deliveryMethods = [];
-    if (store.delivery_enabled) deliveryMethods.push("Envio a domicilio");
-    if (store.pickup_enabled) deliveryMethods.push("Retiro en el local");
-
     container.innerHTML = `
-        <article class="admin-store-card">
-            <button
-                type="button"
-                class="admin-store-status-action admin-seller-detail-back"
-                onclick="showAdminStoresListFromDetail()"
-            >
-                &larr; Volver a vendedores
-            </button>
-
-            <div class="admin-store-main">
-                <div>
-                    <small>Detalle administrativo</small>
-                    <h3>${escapeHtml(store.name || "Sin nombre")}</h3>
-                    ${store.city ? `<p>${escapeHtml(store.city)}</p>` : ""}
-                </div>
-
-                <span class="admin-store-status ${statusInfo.css}">
-                    ${statusInfo.label}
-                </span>
-            </div>
-
-            <div class="admin-store-status-reason">
-                <strong>ID interno del vendedor:</strong>
-                <span>${escapeHtml(String(store.owner_id || ""))}</span>
-            </div>
-
-            <div class="admin-store-status-reason">
-                <strong>Slug de la tienda:</strong>
-                <span>${escapeHtml(store.slug || "Sin slug")}</span>
-            </div>
-
-            <div class="admin-store-status-reason">
-                <strong>Telefono comercial:</strong>
-                <span>${escapeHtml(store.phone || "No informado")}</span>
-            </div>
-
-            <div class="admin-store-status-reason">
-                <strong>Direccion:</strong>
-                <span>${escapeHtml(store.address || "No informada")}</span>
-            </div>
-
-            <div class="admin-store-status-reason">
-                <strong>Formas de entrega:</strong>
-                <span>${escapeHtml(deliveryMethods.length ? deliveryMethods.join(" / ") : "No informadas")}</span>
-            </div>
-
-            ${store.description ? `
-                <div class="admin-store-status-reason">
-                    <strong>Descripcion:</strong>
-                    <span>${escapeHtml(store.description)}</span>
-                </div>
-            ` : ""}
-
-            ${categories.length ? `
-                <div class="admin-store-categories">
-                    ${categories.map(category => `<span>${escapeHtml(category)}</span>`).join("")}
-                </div>
-            ` : ""}
-
-            <div class="admin-store-actions">
-                ${renderAdminStoreStatusActions(store)}
-            </div>
-        </article>
+        <div class="orders-state-card">
+            Cargando detalle administrativo...
+        </div>
     `;
 
-    window.scrollTo(0, 0);
+    try {
+        const response = await fetch(
+            `${API_URL}/stores/admin/seller/${encodeURIComponent(ownerId)}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "No se pudo cargar el detalle del vendedor."
+            );
+        }
+
+        const store = data.store || {};
+        const seller = data.seller || {};
+        const application = data.application || null;
+
+        const categories = Array.isArray(store.business_categories)
+            ? store.business_categories.filter(Boolean)
+            : [];
+
+        const statusInfo = getAdminStoreStatusPresentation(
+            store.operational_status
+        );
+
+        const deliveryMethods = [];
+        if (store.delivery_enabled) deliveryMethods.push("Envio a domicilio");
+        if (store.pickup_enabled) deliveryMethods.push("Retiro en el local");
+
+        const sellerName = [
+            seller.first_name,
+            seller.last_name
+        ].filter(Boolean).join(" ").trim() || "No informado";
+
+        const accountStatus = seller.is_active === true
+            ? "Activa"
+            : "Inactiva";
+
+        const emailStatus = seller.email_verified === true
+            ? "Verificado"
+            : "No verificado";
+
+        const termsStatus = seller.terms_accepted_at
+            ? `Aceptados el ${formatWalzDate(seller.terms_accepted_at)}`
+            : "Sin registro de aceptacion";
+
+        let applicationStatus = "Sin solicitud registrada";
+
+        if (application) {
+            const value = String(application.status || "").toLowerCase();
+
+            applicationStatus =
+                value === "approved" ? "Aprobada" :
+                value === "rejected" ? "Rechazada" :
+                value === "pending" ? "Pendiente" :
+                application.status || "Sin estado";
+        }
+
+        container.innerHTML = `
+            <article class="admin-store-card">
+                <button
+                    type="button"
+                    class="admin-store-status-action admin-seller-detail-back"
+                    onclick="showAdminStoresListFromDetail()"
+                >
+                    &larr; Volver a vendedores
+                </button>
+
+                <div class="admin-store-main">
+                    <div>
+                        <small>Detalle administrativo</small>
+                        <h3>${escapeHtml(store.name || "Sin nombre")}</h3>
+                        ${store.city ? `<p>${escapeHtml(store.city)}</p>` : ""}
+                    </div>
+
+                    <span class="admin-store-status ${statusInfo.css}">
+                        ${statusInfo.label}
+                    </span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Responsable:</strong>
+                    <span>${escapeHtml(sellerName)}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Email de la cuenta:</strong>
+                    <span>${escapeHtml(seller.email || "No informado")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Telefono personal:</strong>
+                    <span>${escapeHtml(seller.phone || "No informado")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Rol:</strong>
+                    <span>${escapeHtml(seller.role || "No informado")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Estado de la cuenta:</strong>
+                    <span>${escapeHtml(accountStatus)}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Email:</strong>
+                    <span>${escapeHtml(emailStatus)}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Alta de la cuenta:</strong>
+                    <span>${escapeHtml(
+                        seller.created_at
+                            ? formatWalzDate(seller.created_at)
+                            : "No registrada"
+                    )}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Ultimo acceso:</strong>
+                    <span>${escapeHtml(
+                        seller.last_login
+                            ? formatWalzDate(seller.last_login)
+                            : "Sin registro"
+                    )}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Terminos:</strong>
+                    <span>${escapeHtml(termsStatus)}</span>
+                </div>
+
+                ${seller.terms_version ? `
+                    <div class="admin-store-status-reason">
+                        <strong>Version de terminos:</strong>
+                        <span>${escapeHtml(seller.terms_version)}</span>
+                    </div>
+                ` : ""}
+
+                <div class="admin-store-status-reason">
+                    <strong>ID interno del vendedor:</strong>
+                    <span>${escapeHtml(String(store.owner_id || seller.id || ""))}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Slug de la tienda:</strong>
+                    <span>${escapeHtml(store.slug || "Sin slug")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Telefono comercial:</strong>
+                    <span>${escapeHtml(store.phone || "No informado")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Direccion:</strong>
+                    <span>${escapeHtml(store.address || "No informada")}</span>
+                </div>
+
+                <div class="admin-store-status-reason">
+                    <strong>Formas de entrega:</strong>
+                    <span>${escapeHtml(
+                        deliveryMethods.length
+                            ? deliveryMethods.join(" / ")
+                            : "No informadas"
+                    )}</span>
+                </div>
+
+                ${store.description ? `
+                    <div class="admin-store-status-reason">
+                        <strong>Descripcion:</strong>
+                        <span>${escapeHtml(store.description)}</span>
+                    </div>
+                ` : ""}
+
+                ${categories.length ? `
+                    <div class="admin-store-categories">
+                        ${categories.map(
+                            category => `<span>${escapeHtml(category)}</span>`
+                        ).join("")}
+                    </div>
+                ` : ""}
+
+                ${application ? `
+                    <div class="admin-store-status-reason">
+                        <strong>Solicitud para vender:</strong>
+                        <span>${escapeHtml(applicationStatus)}</span>
+                    </div>
+
+                    <div class="admin-store-status-reason">
+                        <strong>Negocio solicitado:</strong>
+                        <span>${escapeHtml(application.business_name || "No informado")}</span>
+                    </div>
+
+                    <div class="admin-store-status-reason">
+                        <strong>Motivo declarado:</strong>
+                        <span>${escapeHtml(application.reason || "No informado")}</span>
+                    </div>
+
+                    <div class="admin-store-status-reason">
+                        <strong>Solicitud presentada:</strong>
+                        <span>${escapeHtml(
+                            application.created_at
+                                ? formatWalzDate(application.created_at)
+                                : "No registrada"
+                        )}</span>
+                    </div>
+
+                    ${application.reviewed_at ? `
+                        <div class="admin-store-status-reason">
+                            <strong>Revision administrativa:</strong>
+                            <span>${escapeHtml(formatWalzDate(application.reviewed_at))}</span>
+                        </div>
+                    ` : ""}
+
+                    ${application.admin_note ? `
+                        <div class="admin-store-status-reason">
+                            <strong>Nota administrativa:</strong>
+                            <span>${escapeHtml(application.admin_note)}</span>
+                        </div>
+                    ` : ""}
+                ` : `
+                    <div class="admin-store-status-reason">
+                        <strong>Solicitud para vender:</strong>
+                        <span>Sin solicitud registrada</span>
+                    </div>
+                `}
+
+                ${store.status_reason ? `
+                    <div class="admin-store-status-reason">
+                        <strong>Motivo / observacion del estado:</strong>
+                        <span>${escapeHtml(store.status_reason)}</span>
+                    </div>
+                ` : ""}
+
+                <div class="admin-store-actions">
+                    ${renderAdminStoreStatusActions(store)}
+                </div>
+            </article>
+        `;
+
+        window.scrollTo(0, 0);
+
+    } catch (error) {
+        console.error(
+            "Error cargando detalle administrativo del vendedor:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                ${escapeHtml(
+                    error.message ||
+                    "No se pudo cargar el detalle del vendedor."
+                )}
+            </div>
+        `;
+    }
 }
 
 

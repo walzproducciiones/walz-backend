@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
+from backend.app.models.seller_application import SellerApplication
 from backend.app.models.user import User
 from backend.app.schemas.store import (
+    StoreAdminSellerDetailResponse,
     StoreAdminStatusUpdate,
     StoreProfileUpdate,
     StoreResponse,
@@ -122,6 +124,40 @@ def get_admin_stores(
 ):
     return get_all_stores(db)
 
+
+@router.get("/admin/seller/{seller_id}", response_model=StoreAdminSellerDetailResponse)
+def get_admin_seller_detail(
+    seller_id: UUID,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    store = get_store_by_owner(db, seller_id)
+
+    if not store:
+        raise HTTPException(
+            status_code=404,
+            detail="Tienda del vendedor no encontrada.",
+        )
+
+    seller = db.query(User).filter(User.id == seller_id).first()
+
+    if not seller:
+        raise HTTPException(
+            status_code=404,
+            detail="Cuenta vendedora no encontrada.",
+        )
+
+    application = (
+        db.query(SellerApplication)
+        .filter(SellerApplication.user_id == seller_id)
+        .first()
+    )
+
+    return {
+        "store": store,
+        "seller": seller,
+        "application": application,
+    }
 
 @router.patch("/admin/{store_id}/status", response_model=StoreResponse)
 def update_store_status_admin(
