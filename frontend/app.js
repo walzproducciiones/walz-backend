@@ -3482,6 +3482,246 @@ function filterAdminStores() {
 }
 
 
+function getAdminStoreStatusPresentation(status) {
+    const value = String(status || "ACTIVE").trim().toUpperCase();
+
+    const states = {
+        ACTIVE: {
+            label: "Activa",
+            css: "is-active"
+        },
+        PAUSED: {
+            label: "Pausada por el vendedor",
+            css: "is-paused"
+        },
+        SUSPENDED: {
+            label: "Suspendida por WalZ One",
+            css: "is-suspended"
+        },
+        UNDER_REVIEW: {
+            label: "En revision",
+            css: "is-review"
+        },
+        REACTIVATION_REQUESTED: {
+            label: "Reactivacion solicitada",
+            css: "is-requested"
+        },
+        CLOSED: {
+            label: "Cerrada",
+            css: "is-inactive"
+        }
+    };
+
+    return states[value] || {
+        label: value || "Estado desconocido",
+        css: "is-inactive"
+    };
+}
+
+
+function renderAdminStoreStatusActions(store) {
+    const status = String(
+        store.operational_status || "ACTIVE"
+    ).trim().toUpperCase();
+
+    const id = escapeHtml(String(store.id || ""));
+
+    if (!id || status === "CLOSED") {
+        return "";
+    }
+
+    const actions = [];
+
+    if (status === "ACTIVE") {
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action danger"
+                onclick="changeAdminStoreStatus('${id}', 'SUSPENDED')">
+                Suspender
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action"
+                onclick="changeAdminStoreStatus('${id}', 'UNDER_REVIEW')">
+                Poner en revision
+            </button>
+        `);
+    }
+
+    if (status === "PAUSED") {
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action success"
+                onclick="changeAdminStoreStatus('${id}', 'ACTIVE')">
+                Reactivar
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action danger"
+                onclick="changeAdminStoreStatus('${id}', 'SUSPENDED')">
+                Suspender
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action"
+                onclick="changeAdminStoreStatus('${id}', 'UNDER_REVIEW')">
+                Poner en revision
+            </button>
+        `);
+    }
+
+    if (status === "SUSPENDED") {
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action success"
+                onclick="changeAdminStoreStatus('${id}', 'ACTIVE')">
+                Reactivar
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action"
+                onclick="changeAdminStoreStatus('${id}', 'UNDER_REVIEW')">
+                Poner en revision
+            </button>
+        `);
+    }
+
+    if (status === "UNDER_REVIEW") {
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action success"
+                onclick="changeAdminStoreStatus('${id}', 'ACTIVE')">
+                Reactivar
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action danger"
+                onclick="changeAdminStoreStatus('${id}', 'SUSPENDED')">
+                Suspender
+            </button>
+        `);
+    }
+
+    if (status === "REACTIVATION_REQUESTED") {
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action success"
+                onclick="changeAdminStoreStatus('${id}', 'ACTIVE')">
+                Aprobar reactivacion
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action danger"
+                onclick="changeAdminStoreStatus('${id}', 'SUSPENDED')">
+                Mantener suspendida
+            </button>
+        `);
+
+        actions.push(`
+            <button type="button"
+                class="admin-store-status-action"
+                onclick="changeAdminStoreStatus('${id}', 'UNDER_REVIEW')">
+                Pasar a revision
+            </button>
+        `);
+    }
+
+    return actions.join("");
+}
+
+
+async function changeAdminStoreStatus(storeId, requestedStatus) {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    const status = String(requestedStatus || "").trim().toUpperCase();
+
+    let reason = "";
+
+    if (status === "SUSPENDED" || status === "UNDER_REVIEW") {
+        reason = window.prompt(
+            status === "SUSPENDED"
+                ? "Indica el motivo de la suspension:"
+                : "Indica el motivo de la revision:"
+        );
+
+        if (reason === null) return;
+
+        reason = reason.trim();
+
+        if (!reason) {
+            showMessage("Debes indicar un motivo.", "error");
+            return;
+        }
+    } else {
+        const confirmed = window.confirm(
+            status === "ACTIVE"
+                ? "?Confirmas la reactivacion de esta tienda?"
+                : "?Confirmas este cambio de estado?"
+        );
+
+        if (!confirmed) return;
+    }
+
+    const currentToken = localStorage.getItem("walz_token");
+
+    try {
+        const response = await fetch(
+            `${API_URL}/stores/admin/${encodeURIComponent(storeId)}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    Authorization: `Bearer ${currentToken}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    status,
+                    reason: reason || null
+                })
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "No se pudo cambiar el estado de la tienda."
+            );
+        }
+
+        showMessage("Estado de la tienda actualizado.", "success");
+        await loadAdminStores();
+
+    } catch (error) {
+        console.error("Error cambiando estado de tienda:", error);
+        showMessage(
+            error.message || "No se pudo cambiar el estado de la tienda.",
+            "error"
+        );
+    }
+}
+
+
+
 function renderAdminStores(stores) {
     const container = document.getElementById("admin-stores-list");
     const summary = document.getElementById("admin-stores-summary");
@@ -3514,9 +3754,9 @@ function renderAdminStores(stores) {
             ? store.business_categories.filter(Boolean)
             : [];
 
-        const statusLabel = isActive
-            ? "Activa"
-            : "No visible publicamente";
+        const statusInfo = getAdminStoreStatusPresentation(
+            store.operational_status
+        );
 
         const publicAction = isActive && store.slug
             ? `
@@ -3542,8 +3782,8 @@ function renderAdminStores(stores) {
                         ${store.city ? `<p>${escapeHtml(store.city)}</p>` : ""}
                     </div>
 
-                    <span class="admin-store-status ${isActive ? "is-active" : "is-inactive"}">
-                        ${statusLabel}
+                    <span class="admin-store-status ${statusInfo.css}">
+                        ${statusInfo.label}
                     </span>
                 </div>
 
@@ -3553,8 +3793,16 @@ function renderAdminStores(stores) {
                     </div>
                 ` : ""}
 
+                ${store.status_reason ? `
+                    <div class="admin-store-status-reason">
+                        <strong>Motivo / observacion:</strong>
+                        <span>${escapeHtml(store.status_reason)}</span>
+                    </div>
+                ` : ""}
+
                 <div class="admin-store-actions">
                     ${publicAction}
+                    ${renderAdminStoreStatusActions(store)}
                 </div>
             </article>
         `;

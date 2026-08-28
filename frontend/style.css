@@ -8072,3 +8072,80 @@ button.admin-central-card:hover {
         width: 100%;
     }
 }
+
+
+/* WALZ_ADMIN_STORE_STATUS_V1 */
+.admin-store-status.is-paused {
+    background: rgba(245, 180, 70, 0.14);
+    color: #ffd38a;
+    border: 1px solid rgba(245, 180, 70, 0.28);
+}
+
+.admin-store-status.is-suspended {
+    background: rgba(220, 75, 75, 0.15);
+    color: #ffaaaa;
+    border: 1px solid rgba(220, 75, 75, 0.30);
+}
+
+.admin-store-status.is-review {
+    background: rgba(120, 145, 255, 0.14);
+    color: #bdc9ff;
+    border: 1px solid rgba(120, 145, 255, 0.28);
+}
+
+.admin-store-status.is-requested {
+    background: rgba(255, 102, 72, 0.15);
+    color: #ffb2a2;
+    border: 1px solid rgba(255, 102, 72, 0.30);
+}
+
+.admin-store-status-reason {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #202127;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.9rem;
+}
+
+.admin-store-status-reason strong {
+    color: #ffffff;
+    font-size: 0.86rem;
+}
+
+.admin-store-status-action {
+    min-height: 42px;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    background: #202127;
+    color: #ffffff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.admin-store-status-action:hover {
+    border-color: rgba(255, 102, 72, 0.52);
+    background: #303139;
+}
+
+.admin-store-status-action.success {
+    border-color: rgba(73, 184, 111, 0.42);
+    background: rgba(73, 184, 111, 0.14);
+    color: #aee8c1;
+}
+
+.admin-store-status-action.danger {
+    border-color: rgba(220, 75, 75, 0.42);
+    background: rgba(220, 75, 75, 0.13);
+    color: #ffaaaa;
+}
+
+@media (max-width: 640px) {
+    .admin-store-status-action {
+        width: 100%;
+    }
+}
