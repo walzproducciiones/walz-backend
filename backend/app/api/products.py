@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from backend.app.database.session import SessionLocal
-from backend.app.schemas.product import ProductCreate, ProductResponse, ProductFilter, ProductUpdate
-from backend.app.services.product_service import create_product, create_products_bulk, get_products, get_products_by_seller, update_product_by_seller, soft_delete_product_by_seller
-from backend.app.api.auth import get_current_user
+from backend.app.schemas.product import ProductAdminResponse, ProductCreate, ProductResponse, ProductFilter, ProductUpdate
+from backend.app.services.product_service import count_products_for_admin, create_product, create_products_bulk, get_products, get_products_for_admin, get_products_by_seller, update_product_by_seller, soft_delete_product_by_seller
+from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.models.user import User
 from uuid import UUID
 from backend.app.services.product_image_service import upload_product_image
@@ -90,6 +90,25 @@ def list_products(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/count")
+def count_products_admin(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    return {"total": count_products_for_admin(db)}
+
+
+@router.get("/admin", response_model=list[ProductAdminResponse])
+def list_products_admin(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    return get_products_for_admin(db, skip, limit)
+
 
 @router.get("/mine", response_model=list[ProductResponse])
 def list_my_products(

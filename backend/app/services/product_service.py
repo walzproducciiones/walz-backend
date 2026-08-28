@@ -3,6 +3,7 @@ from sqlalchemy import and_, case
 from backend.app.models.product import Product
 from backend.app.models.banner import Banner
 from backend.app.models.store import Store
+from backend.app.models.user import User
 from backend.app.schemas.product import ProductCreate, ProductFilter, ProductUpdate
 from uuid import UUID
 from datetime import datetime, timezone
@@ -169,6 +170,95 @@ def get_product(db: Session, product_id: UUID):
         )
         .first()
     )
+
+
+def count_products_for_admin(db: Session):
+    return (
+        db.query(Product)
+        .filter(Product.is_deleted == False)
+        .count()
+    )
+
+
+def get_products_for_admin(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+):
+    products = (
+        db.query(Product)
+        .filter(Product.is_deleted == False)
+        .order_by(Product.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    seller_ids = {
+        product.seller_id
+        for product in products
+        if product.seller_id is not None
+    }
+
+    sellers = (
+        db.query(User)
+        .filter(User.id.in_(seller_ids))
+        .all()
+        if seller_ids
+        else []
+    )
+
+    stores = (
+        db.query(Store)
+        .filter(Store.owner_id.in_(seller_ids))
+        .all()
+        if seller_ids
+        else []
+    )
+
+    sellers_by_id = {
+        seller.id: seller
+        for seller in sellers
+    }
+
+    stores_by_owner = {
+        store.owner_id: store
+        for store in stores
+    }
+
+    result = []
+
+    for product in products:
+        seller = sellers_by_id.get(product.seller_id)
+        store = stores_by_owner.get(product.seller_id)
+
+        result.append({
+            "product": product,
+            "seller": (
+                {
+                    "id": seller.id,
+                    "first_name": seller.first_name,
+                    "last_name": seller.last_name,
+                    "email": seller.email,
+                    "role": seller.role,
+                    "is_active": seller.is_active,
+                }
+                if seller
+                else None
+            ),
+            "store": (
+                {
+                    "seller_id": store.owner_id,
+                    "name": store.name,
+                    "slug": store.slug,
+                }
+                if store
+                else None
+            ),
+        })
+
+    return result
+
 
 def get_products_by_seller(db: Session, seller_id: UUID):
     return (

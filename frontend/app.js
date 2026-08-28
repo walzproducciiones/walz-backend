@@ -6367,6 +6367,578 @@ function clearReceivedOrdersFilters() {
 
 
 
+
+// =====================================================
+// ETAPA 4B - SUPERVISION CENTRAL DE PRODUCTOS
+// SOLO LECTURA
+// =====================================================
+
+window.walzAdminProductsPage = 0;
+window.walzAdminProductsPageSize = 10;
+window.walzAdminProductsHasNext = false;
+window.walzAdminProductsTotal = 0;
+window.walzAdminProductsTotalPages = 1;
+
+
+async function showAdminProducts() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById("admin-products-section");
+
+    if (!section) {
+        console.error("No existe la seccion Productos Central.");
+        return;
+    }
+
+    window.walzAdminProductsPage = 0;
+
+    section.style.display = "block";
+    scrollPageToTop();
+
+    await loadAdminProducts();
+}
+
+
+async function loadAdminProducts() {
+    const container = document.getElementById("admin-products-content");
+    const counter = document.getElementById("admin-products-results-count");
+    const pageLabel = document.getElementById("admin-products-page-label");
+    const prevButton = document.getElementById("admin-products-prev");
+    const nextButton = document.getElementById("admin-products-next");
+    const lastButton = document.getElementById("admin-products-last");
+
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!container) return;
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    let page = Math.max(
+        0,
+        Number(window.walzAdminProductsPage || 0)
+    );
+
+    const pageSize = Number(
+        window.walzAdminProductsPageSize || 10
+    );
+
+    container.innerHTML = `
+        <div class="orders-state-card orders-loading">
+            Cargando productos...
+        </div>
+    `;
+
+    if (counter) counter.textContent = "";
+
+    try {
+        const headers = {
+            Authorization: `Bearer ${currentToken}`
+        };
+
+        const countResponse = await fetch(
+            `${API_URL}/products/admin/count`,
+            { headers }
+        );
+
+        if (countResponse.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const countData = await countResponse
+            .json()
+            .catch(() => ({}));
+
+        if (!countResponse.ok) {
+            throw new Error(
+                countData.detail || `HTTP ${countResponse.status}`
+            );
+        }
+
+        const total = Math.max(
+            0,
+            Number(countData.total || 0)
+        );
+
+        const totalPages = Math.max(
+            1,
+            Math.ceil(total / pageSize)
+        );
+
+        if (page >= totalPages) {
+            page = totalPages - 1;
+            window.walzAdminProductsPage = page;
+        }
+
+        const skip = page * pageSize;
+
+        const response = await fetch(
+            `${API_URL}/products/admin?skip=${skip}&limit=${pageSize}`,
+            { headers }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ([]));
+
+        if (!response.ok) {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+
+        const entries = Array.isArray(data) ? data : [];
+
+        window.walzAdminProducts = entries;
+        window.walzAdminProductsTotal = total;
+        window.walzAdminProductsTotalPages = totalPages;
+        window.walzAdminProductsHasNext =
+            page < totalPages - 1;
+
+        if (counter) {
+            if (total === 0) {
+                counter.textContent = "No hay productos registrados";
+            } else {
+                const firstNumber = skip + 1;
+                const lastNumber = Math.min(
+                    skip + entries.length,
+                    total
+                );
+
+                counter.textContent =
+                    `Productos ${firstNumber} a ${lastNumber} de ${total}`;
+            }
+        }
+
+        if (pageLabel) {
+            pageLabel.textContent =
+                `Pagina ${page + 1} de ${totalPages}`;
+        }
+
+        if (prevButton) {
+            prevButton.disabled = page <= 0;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = page >= totalPages - 1;
+        }
+
+        if (lastButton) {
+            lastButton.disabled = page >= totalPages - 1;
+        }
+
+        renderAdminProductPageNumbers(
+            page,
+            totalPages
+        );
+
+        renderAdminProducts(entries);
+
+    } catch (error) {
+        console.error(
+            "Error cargando Productos Central:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                ${escapeHtml(
+                    error.message ||
+                    "No se pudieron cargar los productos."
+                )}
+            </div>
+        `;
+
+        if (prevButton) prevButton.disabled = page <= 0;
+        if (nextButton) nextButton.disabled = true;
+        if (lastButton) lastButton.disabled = true;
+    }
+}
+
+function renderAdminProductPageNumbers(
+    currentPage,
+    totalPages
+) {
+    const container = document.getElementById(
+        "admin-products-page-numbers"
+    );
+
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = `
+            <button
+                type="button"
+                class="admin-products-page-button is-current"
+                disabled
+            >1</button>
+        `;
+        return;
+    }
+
+    let startPage = Math.max(
+        0,
+        currentPage - 1
+    );
+
+    let endPage = Math.min(
+        totalPages - 1,
+        startPage + 2
+    );
+
+    startPage = Math.max(
+        0,
+        endPage - 2
+    );
+
+    const buttons = [];
+
+    for (
+        let pageIndex = startPage;
+        pageIndex <= endPage;
+        pageIndex += 1
+    ) {
+        const isCurrent = pageIndex === currentPage;
+
+        buttons.push(`
+            <button
+                type="button"
+                class="admin-products-page-button ${
+                    isCurrent ? "is-current" : ""
+                }"
+                onclick="goToAdminProductsPage(${pageIndex})"
+                ${isCurrent ? "disabled" : ""}
+            >
+                ${pageIndex + 1}
+            </button>
+        `);
+    }
+
+    container.innerHTML = buttons.join("");
+}
+
+
+async function goToAdminProductsPage(pageIndex) {
+    const totalPages = Math.max(
+        1,
+        Number(window.walzAdminProductsTotalPages || 1)
+    );
+
+    const targetPage = Math.min(
+        totalPages - 1,
+        Math.max(0, Number(pageIndex || 0))
+    );
+
+    if (
+        targetPage ===
+        Number(window.walzAdminProductsPage || 0)
+    ) {
+        return;
+    }
+
+    window.walzAdminProductsPage = targetPage;
+
+    await loadAdminProducts();
+    scrollPageToTop();
+}
+
+
+async function goToLastAdminProductsPage() {
+    const totalPages = Math.max(
+        1,
+        Number(window.walzAdminProductsTotalPages || 1)
+    );
+
+    await goToAdminProductsPage(
+        totalPages - 1
+    );
+}
+
+
+async function changeAdminProductsPage(direction) {
+    const currentPage = Math.max(
+        0,
+        Number(window.walzAdminProductsPage || 0)
+    );
+
+    const delta = Number(direction || 0);
+
+    if (delta > 0 && !window.walzAdminProductsHasNext) {
+        return;
+    }
+
+    const nextPage = Math.max(0, currentPage + delta);
+
+    if (nextPage === currentPage) return;
+
+    window.walzAdminProductsPage = nextPage;
+
+    await loadAdminProducts();
+    scrollPageToTop();
+}
+
+
+function formatAdminProductMoney(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return "-";
+    }
+
+    return number.toLocaleString("es-AR", {
+        style: "currency",
+        currency: "ARS",
+        maximumFractionDigits: 2
+    });
+}
+
+
+function formatAdminProductDate(value) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "-";
+    }
+
+    return date.toLocaleString("es-AR");
+}
+
+
+function renderAdminProducts(entries) {
+    const container =
+        document.getElementById("admin-products-content");
+
+    if (!container) return;
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card orders-empty">
+                <h3>No hay productos para mostrar</h3>
+                <p>Los productos registrados apareceran aqui.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="admin-products-list">
+            ${entries.map(entry => {
+                const product = entry?.product || {};
+                const seller = entry?.seller || {};
+                const store = entry?.store || null;
+
+                const sellerName = [
+                    seller.first_name,
+                    seller.last_name
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .trim();
+
+                const storeName =
+                    store?.name || "Sin tienda asociada";
+
+                const categoryParts = [
+                    product.category,
+                    product.subcategory
+                ].filter(Boolean);
+
+                const categoryLabel =
+                    categoryParts.length
+                        ? categoryParts.join(" / ")
+                        : "Sin categoria";
+
+                const brandLabel =
+                    product.brand || "Sin marca";
+
+                const activeLabel =
+                    product.is_active
+                        ? "Activo"
+                        : "Pausado";
+
+                const activeClass =
+                    product.is_active
+                        ? "active"
+                        : "paused";
+
+                const offerLabel =
+                    product.offer_active &&
+                    product.offer_price != null
+                        ? formatAdminProductMoney(
+                            product.offer_price
+                        )
+                        : "Sin oferta activa";
+
+                let commercialLabel =
+                    "Sin propuesta comercial activa";
+
+                if (
+                    product.commercial_active &&
+                    product.commercial_type
+                ) {
+                    commercialLabel =
+                        product.commercial_type;
+
+                    if (product.commercial_text) {
+                        commercialLabel +=
+                            ` - ${product.commercial_text}`;
+                    }
+                }
+
+                return `
+                    <article class="admin-product-card">
+
+                        <div class="admin-product-media">
+                            ${renderProductImage(
+                                product.image_url,
+                                product.name || "Producto",
+                                "admin-product-image"
+                            )}
+                        </div>
+
+                        <div class="admin-product-body">
+
+                            <div class="admin-product-heading">
+                                <div>
+                                    <span class="admin-product-store">
+                                        ${escapeHtml(storeName)}
+                                    </span>
+
+                                    <h3>
+                                        ${escapeHtml(
+                                            product.name ||
+                                            "Producto sin nombre"
+                                        )}
+                                    </h3>
+                                </div>
+
+                                <span class="my-product-state ${activeClass}">
+                                    ${activeLabel}
+                                </span>
+                            </div>
+
+                            <div class="admin-product-seller">
+                                <strong>Vendedor:</strong>
+                                ${escapeHtml(
+                                    sellerName ||
+                                    "Vendedor sin nombre"
+                                )}
+
+                                ${
+                                    seller.email
+                                        ? `<span>${escapeHtml(
+                                            seller.email
+                                        )}</span>`
+                                        : ""
+                                }
+                            </div>
+
+                            <div class="admin-product-data-grid">
+
+                                <div>
+                                    <span>Precio</span>
+                                    <strong>
+                                        ${formatAdminProductMoney(
+                                            product.price
+                                        )}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Stock</span>
+                                    <strong>
+                                        ${escapeHtml(
+                                            String(
+                                                product.stock ?? 0
+                                            )
+                                        )}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Categoria</span>
+                                    <strong>
+                                        ${escapeHtml(categoryLabel)}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Marca</span>
+                                    <strong>
+                                        ${escapeHtml(brandLabel)}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Oferta</span>
+                                    <strong>
+                                        ${escapeHtml(offerLabel)}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Propuesta comercial</span>
+                                    <strong>
+                                        ${escapeHtml(commercialLabel)}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Avanter</span>
+                                    <strong>
+                                        ${
+                                            product.avanter_enabled
+                                                ? "Habilitado"
+                                                : "No habilitado"
+                                        }
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>Creado</span>
+                                    <strong>
+                                        ${escapeHtml(
+                                            formatAdminProductDate(
+                                                product.created_at
+                                            )
+                                        )}
+                                    </strong>
+                                </div>
+
+                            </div>
+
+                            ${
+                                product.description
+                                    ? `
+                                        <p class="admin-product-description">
+                                            ${escapeHtml(
+                                                product.description
+                                            )}
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
+
 // =====================================================
 // ETAPA 4A - SUPERVISION CENTRAL DE PEDIDOS
 // =====================================================
@@ -8895,7 +9467,7 @@ function hideAllWalzWorkSections() {
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
-        "admin-central-section", "admin-stores-section", "admin-orders-section", "institutional-settings-section"
+        "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "institutional-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }

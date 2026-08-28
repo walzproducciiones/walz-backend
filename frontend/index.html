@@ -372,6 +372,12 @@
                 <small>Supervisar pedidos de todos los vendedores sin intervenir en la operacion.</small>
             </button>
 
+            <button type="button" class="admin-central-card" onclick="showAdminProducts()">
+                <span class="admin-central-icon">&#127991;</span>
+                <strong>Productos Central</strong>
+                <small>Supervisar productos de todos los vendedores sin modificar el catalogo.</small>
+            </button>
+
             <button type="button" class="admin-central-card" onclick="showBannerAdmin()">
                 <span class="admin-central-icon">&#128226;</span>
                 <strong>Publicidad Central</strong>
@@ -503,6 +509,74 @@
         </div>
     </div>
 </section>
+
+<!-- WALZ_ADMIN_PRODUCTS_V1 -->
+<section id="admin-products-section" class="admin-central-section" style="display:none;">
+    <div class="admin-central-shell">
+
+        <button type="button" onclick="showAdminCentralPanel()">
+            &larr; Volver a Administracion Central
+        </button>
+
+        <div class="admin-central-heading">
+            <span class="admin-central-kicker">WalZ One Central</span>
+            <h2>Productos Central</h2>
+            <p>Supervision general del catalogo de todos los vendedores. Esta vista es solo informativa.</p>
+        </div>
+
+        <div class="admin-products-summary">
+            <span id="admin-products-results-count"></span>
+        </div>
+
+        <div id="admin-products-content">
+            <div class="orders-state-card">Cargando productos...</div>
+        </div>
+
+        <div class="admin-products-pagination" aria-label="Paginacion de productos">
+            <button
+                type="button"
+                id="admin-products-prev"
+                onclick="changeAdminProductsPage(-1)"
+                disabled
+            >
+                &larr; Anterior
+            </button>
+
+            <div
+                id="admin-products-page-numbers"
+                class="admin-products-page-numbers"
+                aria-label="Paginas"
+            ></div>
+
+            <button
+                type="button"
+                id="admin-products-next"
+                onclick="changeAdminProductsPage(1)"
+                disabled
+            >
+                Siguiente &rarr;
+            </button>
+
+            <button
+                type="button"
+                id="admin-products-last"
+                onclick="goToLastAdminProductsPage()"
+                disabled
+            >
+                Ultima &raquo;
+            </button>
+        </div>
+
+        <div
+            id="admin-products-page-label"
+            class="admin-products-page-label"
+        >
+            Pagina 1
+        </div>
+
+    </div>
+</section>
+
 
 <!-- WALZ_INSTITUTIONAL_SETTINGS_V1 -->
 <section id="institutional-settings-section" class="institutional-settings-section" style="display:none;">

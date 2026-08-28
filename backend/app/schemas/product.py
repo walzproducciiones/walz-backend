@@ -42,6 +42,28 @@ class ProductResponse(ProductBase):
     class Config:
         from_attributes = True
 
+
+class ProductAdminStoreResponse(BaseModel):
+    seller_id: UUID
+    name: str
+    slug: Optional[str] = None
+
+
+class ProductAdminSellerResponse(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    email: str
+    role: str
+    is_active: bool
+
+
+class ProductAdminResponse(BaseModel):
+    product: ProductResponse
+    seller: Optional[ProductAdminSellerResponse] = None
+    store: Optional[ProductAdminStoreResponse] = None
+
+
 class ProductFilter(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
