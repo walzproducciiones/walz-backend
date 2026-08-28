@@ -3,11 +3,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from backend.app.api.auth import get_current_user
+from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.store import StoreProfileUpdate, StoreResponse
-from backend.app.services.store_service import get_active_stores, get_store_by_owner, get_store_by_slug, save_store_profile
+from backend.app.services.store_service import (
+    get_active_stores,
+    get_all_stores,
+    get_store_by_owner,
+    get_store_by_slug,
+    save_store_profile,
+)
 from backend.app.services.product_image_service import upload_store_logo
 
 
@@ -65,6 +71,15 @@ def update_my_store(
         return save_store_profile(db, current_user.id, data)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+
+@router.get("/admin", response_model=list[StoreResponse])
+def get_admin_stores(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    return get_all_stores(db)
 
 
 @router.get("/public", response_model=list[StoreResponse])

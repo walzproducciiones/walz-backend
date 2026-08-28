@@ -360,6 +360,12 @@
                 <span id="admin-central-applications-badge" class="admin-pending-badge" style="display:none;">0</span>
             </button>
 
+            <button type="button" class="admin-central-card" onclick="showAdminStores()">
+                <span class="admin-central-icon">&#127968;</span>
+                <strong>Vendedores y tiendas</strong>
+                <small>Buscar comercios, revisar su estado y abrir su tienda publica.</small>
+            </button>
+
             <button type="button" class="admin-central-card" onclick="showBannerAdmin()">
                 <span class="admin-central-icon">&#128226;</span>
                 <strong>Publicidad Central</strong>
@@ -385,6 +391,35 @@
                 <small>Datos y contactos oficiales de WalZ One Central.</small>
             </button>
         </div>
+    </div>
+</section>
+
+<!-- WALZ_ADMIN_STORES_V1 -->
+<section id="admin-stores-section" class="admin-central-section" style="display:none;">
+    <div class="admin-central-shell">
+        <button type="button" onclick="showAdminCentralPanel()">
+            &larr; Volver a Administracion Central
+        </button>
+
+        <div class="admin-central-heading">
+            <span class="admin-central-kicker">WalZ One Central</span>
+            <h2>Vendedores y tiendas</h2>
+            <p>Busca un comercio y revisa rapidamente su presencia en WalZ One.</p>
+        </div>
+
+        <div class="admin-stores-toolbar">
+            <label for="admin-stores-search">Buscar vendedor o tienda</label>
+            <input
+                id="admin-stores-search"
+                type="search"
+                placeholder="Nombre, ciudad o rubro..."
+                autocomplete="off"
+                oninput="filterAdminStores()"
+            >
+        </div>
+
+        <div id="admin-stores-summary" class="admin-stores-summary"></div>
+        <div id="admin-stores-list" class="admin-stores-list"></div>
     </div>
 </section>
 

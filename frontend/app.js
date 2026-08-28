@@ -1189,6 +1189,15 @@ async function loadProducts() {
         if (directStoreMarketplaceButton) {
             directStoreMarketplaceButton.style.display =
                 sellerMarketplace ? "inline-flex" : "none";
+
+            if (sellerMarketplace) {
+                const openedFromAdmin =
+                    new URLSearchParams(window.location.search).get("from") === "admin";
+
+                directStoreMarketplaceButton.textContent = openedFromAdmin
+                    ? "← Volver a Administracion Central"
+                    : "← Marketplace";
+            }
         }
 
         const visibleProducts = sellerMarketplace
@@ -3372,6 +3381,188 @@ function showAdminCentralPanel() {
 }
 
 
+async function showAdminStores() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage("Se requiere una cuenta administradora.", "error");
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById("admin-stores-section");
+    if (section) section.style.display = "block";
+
+    const search = document.getElementById("admin-stores-search");
+    if (search) search.value = "";
+
+    window.scrollTo(0, 0);
+    await loadAdminStores();
+}
+
+
+async function loadAdminStores() {
+    const container = document.getElementById("admin-stores-list");
+    const summary = document.getElementById("admin-stores-summary");
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!container) return;
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    container.innerHTML = '<div class="orders-state-card">Cargando vendedores y tiendas...</div>';
+    if (summary) summary.textContent = "";
+
+    try {
+        const response = await fetch(`${API_URL}/stores/admin`, {
+            headers: {
+                Authorization: `Bearer ${currentToken}`
+            }
+        });
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data = await response.json().catch(() => ([]));
+
+        if (!response.ok) {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+
+        window.walzAdminStores = Array.isArray(data) ? data : [];
+        renderAdminStores(window.walzAdminStores);
+
+    } catch (error) {
+        console.error("Error cargando tiendas para administracion:", error);
+        if (summary) summary.textContent = "";
+        container.innerHTML = `
+            <div class="orders-state-card">
+                No se pudieron cargar los vendedores y tiendas.
+            </div>
+        `;
+    }
+}
+
+
+function filterAdminStores() {
+    const search = document.getElementById("admin-stores-search");
+    const query = String(search?.value || "").trim().toLocaleLowerCase("es");
+
+    const stores = Array.isArray(window.walzAdminStores)
+        ? window.walzAdminStores
+        : [];
+
+    if (!query) {
+        renderAdminStores(stores);
+        return;
+    }
+
+    const filtered = stores.filter(store => {
+        const categories = Array.isArray(store.business_categories)
+            ? store.business_categories.join(" ")
+            : "";
+
+        const searchable = [
+            store.name,
+            store.city,
+            categories
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLocaleLowerCase("es");
+
+        return searchable.includes(query);
+    });
+
+    renderAdminStores(filtered);
+}
+
+
+function renderAdminStores(stores) {
+    const container = document.getElementById("admin-stores-list");
+    const summary = document.getElementById("admin-stores-summary");
+
+    if (!container) return;
+
+    const list = Array.isArray(stores) ? stores : [];
+    const totalStores = Array.isArray(window.walzAdminStores)
+        ? window.walzAdminStores.length
+        : list.length;
+
+    if (summary) {
+        summary.textContent = list.length === totalStores
+            ? `${totalStores} tienda${totalStores === 1 ? "" : "s"} registrada${totalStores === 1 ? "" : "s"}`
+            : `${list.length} de ${totalStores} tiendas`;
+    }
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card">
+                No encontramos tiendas con esa busqueda.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = list.map(store => {
+        const isActive = store.is_active === true;
+        const categories = Array.isArray(store.business_categories)
+            ? store.business_categories.filter(Boolean)
+            : [];
+
+        const statusLabel = isActive
+            ? "Activa"
+            : "No visible publicamente";
+
+        const publicAction = isActive && store.slug
+            ? `
+                <a
+                    class="admin-store-public-link"
+                    href="/${encodeURIComponent(String(store.slug))}?from=admin"
+                >
+                    Ver tienda publica
+                </a>
+            `
+            : `
+                <span class="admin-store-public-disabled">
+                    No visible publicamente
+                </span>
+            `;
+
+        return `
+            <article class="admin-store-card">
+                <div class="admin-store-main">
+                    <div>
+                        <small>Tienda</small>
+                        <h3>${escapeHtml(store.name || "Sin nombre")}</h3>
+                        ${store.city ? `<p>${escapeHtml(store.city)}</p>` : ""}
+                    </div>
+
+                    <span class="admin-store-status ${isActive ? "is-active" : "is-inactive"}">
+                        ${statusLabel}
+                    </span>
+                </div>
+
+                ${categories.length ? `
+                    <div class="admin-store-categories">
+                        ${categories.map(category => `<span>${escapeHtml(category)}</span>`).join("")}
+                    </div>
+                ` : ""}
+
+                <div class="admin-store-actions">
+                    ${publicAction}
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
+
+
 async function showInstitutionalSettings() {
     if (currentUserRole !== "ADMIN") {
         showMessage("Se requiere una cuenta administradora.", "error");
@@ -5042,16 +5233,17 @@ function enterSellerPrivateContext() {
             .join("/")
             .toLowerCase();
 
-    const isDirectStorePath =
-        ["farmacia-federico", "mayludstore"]
-            .includes(currentPath);
+    const hasPublicStoreContext = Boolean(
+        window.walzMarketplaceSellerId ||
+        window.walzPublicStoreSellerId
+    );
 
     // El panel privado nunca debe conservar
     // el contexto de una tienda publica.
     window.walzMarketplaceSellerId = null;
     window.walzPublicStoreSellerId = null;
 
-    if (isDirectStorePath) {
+    if (currentPath && hasPublicStoreContext) {
         window.history.replaceState(
             {},
             document.title,
@@ -7762,7 +7954,7 @@ function hideAllWalzWorkSections() {
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
-        "admin-central-section", "institutional-settings-section"
+        "admin-central-section", "admin-stores-section", "institutional-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }
@@ -7852,7 +8044,7 @@ async function showPublicStore(sellerId) {
     if (!section || !container) return;
 
     const directStorePath = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
-    const directStoreEntry = ["farmacia-federico", "mayludstore"].includes(directStorePath);
+    const directStoreEntry = Boolean(directStorePath);
     const backButton = section.querySelector("button");
     if (backButton) backButton.style.display = directStoreEntry ? "none" : "";
 
@@ -8878,10 +9070,14 @@ document.addEventListener(
         } else if (resetTokenFromUrl) {
             showAuth();
             showResetPassword();
-        } else if (["farmacia-federico", "mayludstore"].includes(
-            window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase()
-        )) {
-            const directStoreSlug = window.location.pathname.split("/").filter(Boolean).join("/").toLowerCase();
+        } else if (
+            window.location.pathname.split("/").filter(Boolean).length === 1
+        ) {
+            const directStoreSlug = window.location.pathname
+                .split("/")
+                .filter(Boolean)
+                .join("/")
+                .toLowerCase();
             showMarketplace();
             try {
                 const directStoreResponse = await fetch(API_URL + "/stores/slug/" + encodeURIComponent(directStoreSlug));

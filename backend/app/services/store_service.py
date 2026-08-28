@@ -27,6 +27,15 @@ def build_unique_store_slug(db: Session, name: str, owner_id: UUID) -> str:
         counter += 1
     return candidate
 
+def get_all_stores(db: Session):
+    return (
+        db.query(Store)
+        .order_by(Store.name.asc())
+        .all()
+    )
+
+
+
 def get_active_stores(db: Session):
     return (
         db.query(Store)

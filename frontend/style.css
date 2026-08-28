@@ -7901,3 +7901,174 @@ button.admin-central-card:hover {
         box-sizing: border-box;
     }
 }
+
+
+/* WALZ_ADMIN_STORES_V1 */
+.admin-stores-toolbar {
+    margin: 0 0 22px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    background: #2a2b31;
+}
+
+.admin-stores-toolbar label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.admin-stores-toolbar input {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    background: #202127;
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.admin-stores-toolbar input::placeholder {
+    color: rgba(255, 255, 255, 0.52);
+}
+
+.admin-stores-toolbar input:focus {
+    outline: 2px solid rgba(255, 102, 72, 0.48);
+    outline-offset: 2px;
+}
+
+.admin-stores-summary {
+    margin: 0 0 14px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.94rem;
+    font-weight: 700;
+}
+
+.admin-stores-list {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-store-card {
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    background: #2a2b31;
+    color: #ffffff;
+}
+
+.admin-store-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.admin-store-main small {
+    display: block;
+    margin-bottom: 5px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.admin-store-main h3 {
+    margin: 0 0 5px;
+    color: #ffffff;
+    font-size: 1.18rem;
+}
+
+.admin-store-main p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+.admin-store-status {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.admin-store-status.is-active {
+    background: rgba(73, 184, 111, 0.16);
+    color: #9be2b3;
+    border: 1px solid rgba(73, 184, 111, 0.28);
+}
+
+.admin-store-status.is-inactive {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.admin-store-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 16px;
+}
+
+.admin-store-categories span {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #202127;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.82rem;
+}
+
+.admin-store-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.admin-store-public-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 9px 15px;
+    border: 1px solid rgba(255, 102, 72, 0.55);
+    border-radius: 12px;
+    background: #ff6648;
+    color: #ffffff;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.admin-store-public-link:hover {
+    background: #f15c3f;
+    color: #ffffff;
+}
+
+.admin-store-public-disabled {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 9px 15px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .admin-store-main {
+        flex-direction: column;
+    }
+
+    .admin-store-status {
+        align-self: flex-start;
+    }
+
+    .admin-store-public-link,
+    .admin-store-public-disabled {
+        width: 100%;
+    }
+}
