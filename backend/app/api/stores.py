@@ -6,8 +6,15 @@ from sqlalchemy.orm import Session
 from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.schemas.store import StoreProfileUpdate, StoreResponse
+from backend.app.schemas.store import (
+    StoreAdminStatusUpdate,
+    StoreProfileUpdate,
+    StoreResponse,
+    StoreSellerStatusUpdate,
+)
 from backend.app.services.store_service import (
+    change_store_status_by_admin,
+    change_store_status_by_seller,
     get_active_stores,
     get_all_stores,
     get_store_by_owner,
@@ -36,6 +43,19 @@ def require_store_manager(current_user: User = Depends(get_current_user)):
             detail="Se requiere una cuenta vendedora.",
         )
     return current_user
+
+
+def require_seller_user(current_user: User = Depends(get_current_user)):
+    role = str(current_user.role or "").upper()
+
+    if role not in {"VENDEDOR", "SELLER"}:
+        raise HTTPException(
+            status_code=403,
+            detail="Se requiere una cuenta vendedora.",
+        )
+
+    return current_user
+
 
 
 @router.get("/mine", response_model=StoreResponse | None)
@@ -74,12 +94,55 @@ def update_my_store(
 
 
 
+@router.patch("/mine/status", response_model=StoreResponse)
+def update_my_store_status(
+    data: StoreSellerStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_seller_user),
+):
+    try:
+        return change_store_status_by_seller(
+            db,
+            current_user.id,
+            data.status,
+            data.reason,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+
+
 @router.get("/admin", response_model=list[StoreResponse])
 def get_admin_stores(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin_user),
 ):
     return get_all_stores(db)
+
+
+@router.patch("/admin/{store_id}/status", response_model=StoreResponse)
+def update_store_status_admin(
+    store_id: UUID,
+    data: StoreAdminStatusUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    try:
+        return change_store_status_by_admin(
+            db,
+            store_id,
+            data.status,
+            data.reason,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
 
 
 @router.get("/public", response_model=list[StoreResponse])
