@@ -239,6 +239,39 @@ def ensure_store_delivery_columns(engine):
                 "ALTER TABLE stores ADD COLUMN pickup_enabled BOOLEAN NOT NULL DEFAULT TRUE"
             ))
 
+def ensure_store_operational_status_columns(engine):
+    """Add store operational status fields without changing existing store data."""
+    inspector = inspect(engine)
+
+    if "stores" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("stores")
+    }
+
+    timestamp_type = (
+        "TIMESTAMP WITH TIME ZONE"
+        if engine.dialect.name == "postgresql"
+        else "DATETIME"
+    )
+
+    definitions = {
+        "operational_status": "VARCHAR(40) NOT NULL DEFAULT 'ACTIVE'",
+        "status_reason": "TEXT",
+        "status_changed_at": timestamp_type,
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    f"ALTER TABLE stores ADD COLUMN {column_name} {definition}"
+                ))
+
+
+
 def ensure_store_business_categories_column(engine):
     """Add multiple business categories to stores without deleting existing data."""
     inspector = inspect(engine)

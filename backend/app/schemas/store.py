@@ -27,6 +27,11 @@ class StoreResponse(StoreProfileUpdate):
     slug: Optional[str] = Field(default=None, max_length=180)
     id: UUID
     owner_id: UUID
+
+    operational_status: str = Field(default="ACTIVE", max_length=40)
+    status_reason: Optional[str] = None
+    status_changed_at: Optional[datetime] = None
+
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None

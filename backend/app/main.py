@@ -23,6 +23,7 @@ from backend.app.database.schema_updates import (
     ensure_seller_application_business_categories_column,
     ensure_store_delivery_columns,
     ensure_store_avanter_columns,
+    ensure_store_operational_status_columns,
     ensure_store_business_categories_column,
     ensure_store_slug_column,
     ensure_user_terms_columns,
@@ -54,6 +55,7 @@ ensure_banner_proposal_columns(engine)
 ensure_user_terms_columns(engine)
 ensure_store_delivery_columns(engine)
 ensure_store_avanter_columns(engine)
+ensure_store_operational_status_columns(engine)
 ensure_store_business_categories_column(engine)
 ensure_seller_application_business_categories_column(engine)
 ensure_store_slug_column(engine)

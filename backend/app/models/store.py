@@ -38,6 +38,16 @@ class Store(Base):
 
     delivery_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
     pickup_enabled = Column(Boolean, nullable=False, default=True, server_default="1")
+
+    operational_status = Column(
+        String(40),
+        nullable=False,
+        default="ACTIVE",
+        server_default="ACTIVE",
+    )
+    status_reason = Column(Text, nullable=True)
+    status_changed_at = Column(DateTime(timezone=True), nullable=True)
+
     is_active = Column(Boolean, nullable=False, default=True, server_default="1")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
