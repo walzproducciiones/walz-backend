@@ -22,7 +22,7 @@ from backend.app.database.session import Base
 class OrderStatus(str, enum.Enum):
 
     PENDING = "pending"
-    PAID = "paid"
+    CONFIRMED = "confirmed"
     SHIPPED = "shipped"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"

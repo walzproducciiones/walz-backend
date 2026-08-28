@@ -569,7 +569,7 @@ def schedule_delivery_by_seller(
             db.rollback()
             return None, "Este pedido utiliza retiro en el local y no necesita programar un envio."
 
-        if order.status != OrderStatus.PAID:
+        if order.status != OrderStatus.CONFIRMED:
             db.rollback()
             return None, "La programacion se realiza despues de confirmar el pedido y antes de enviarlo."
 
@@ -649,7 +649,7 @@ def assign_delivery_responsible_by_seller(
         if not order or not seller_owns_order(db, order_id, seller_id):
             db.rollback()
             return None, "not_found"
-        if order.status != OrderStatus.PAID or order.delivery_plan_status != "coordinated":
+        if order.status != OrderStatus.CONFIRMED or order.delivery_plan_status != "coordinated":
             db.rollback()
             return None, "Primero debe quedar coordinada la fecha de entrega."
         if "retiro en el local" in str(order.shipping_address or "").lower():

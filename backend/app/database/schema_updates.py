@@ -361,3 +361,45 @@ def ensure_seller_application_business_categories_column(engine):
                 "ALTER TABLE seller_applications "
                 "ADD COLUMN business_categories TEXT NOT NULL DEFAULT '[]'"
             ))
+
+
+def ensure_order_confirmed_status(engine):
+    """
+    Rename the historical commercial order status PAID to CONFIRMED.
+
+    PAID was previously used to mean that the seller had confirmed
+    the order. Real financial payment status is handled separately.
+    Existing orders are preserved.
+    """
+    inspector = inspect(engine)
+
+    if "orders" not in inspector.get_table_names():
+        return
+
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as connection:
+            labels = {
+                row[0]
+                for row in connection.execute(text("""
+                    SELECT e.enumlabel
+                    FROM pg_type t
+                    JOIN pg_enum e
+                      ON t.oid = e.enumtypid
+                    WHERE t.typname = 'orderstatus'
+                """))
+            }
+
+            if "PAID" in labels and "CONFIRMED" not in labels:
+                connection.execute(text(
+                    "ALTER TYPE orderstatus "
+                    "RENAME VALUE 'PAID' TO 'CONFIRMED'"
+                ))
+
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text(
+            "UPDATE orders "
+            "SET status = 'CONFIRMED' "
+            "WHERE status = 'PAID'"
+        ))

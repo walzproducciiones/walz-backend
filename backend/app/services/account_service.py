@@ -5,7 +5,7 @@ from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.models.user import User
 
-ACTIVE_ORDER_STATUSES = [OrderStatus.PENDING, OrderStatus.PAID, OrderStatus.SHIPPED]
+ACTIVE_ORDER_STATUSES = [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.SHIPPED]
 
 def close_user_account(db: Session, user: User):
     if str(user.role or "").upper() == "ADMIN":

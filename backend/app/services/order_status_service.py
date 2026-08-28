@@ -3,10 +3,10 @@ from backend.app.models.order import OrderStatus
 
 ALLOWED_ORDER_STATUS_TRANSITIONS = {
     OrderStatus.PENDING: {
-        OrderStatus.PAID,
+        OrderStatus.CONFIRMED,
         OrderStatus.CANCELLED,
     },
-    OrderStatus.PAID: {
+    OrderStatus.CONFIRMED: {
         OrderStatus.SHIPPED,
         OrderStatus.DELIVERED,
         OrderStatus.CANCELLED,

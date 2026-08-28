@@ -984,7 +984,7 @@ button[onclick="toggleCart()"] {
     color: #ffe49a;
 }
 
-.order-status-paid,
+.order-status-confirmed,
 .order-status-shipped {
     background: #193f5a;
     color: #a9ddff;

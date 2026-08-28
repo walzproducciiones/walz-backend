@@ -4533,9 +4533,9 @@ function getOrderStatusInfo(status) {
             label: "Pendiente",
             className: "order-status-pending"
         },
-        paid: {
+        confirmed: {
             label: "Confirmado",
-            className: "order-status-paid"
+            className: "order-status-confirmed"
         },
         shipped: {
             label: "Enviado / listo para retirar",
@@ -4632,7 +4632,7 @@ function renderOrderTimeline(order) {
 function orderMatchesWorkStatus(order, selectedStatus) {
     const status = String(order?.status || "").toLowerCase();
     if (!selectedStatus) return true;
-    if (selectedStatus === "active") return ["pending", "paid", "shipped"].includes(status);
+    if (selectedStatus === "active") return ["pending", "confirmed", "shipped"].includes(status);
     return status === selectedStatus;
 }
 
@@ -6194,7 +6194,7 @@ function renderSellerOrderActions(order) {
             <div class="seller-order-actions">
                 <button
                     type="button"
-                    onclick="updateSellerOrderStatus('${orderId}', 'paid', 'Confirmar pedido')"
+                    onclick="updateSellerOrderStatus('${orderId}', 'confirmed', 'Confirmar pedido')"
                 >
                     Confirmar pedido
                 </button>
@@ -6209,7 +6209,7 @@ function renderSellerOrderActions(order) {
         `;
     }
 
-    if (status === "paid") {
+    if (status === "confirmed") {
         if (!isPickup && !order.delivery_estimated_date) return `${renderDeliveryPlanForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
         if (!isPickup && String(order.delivery_plan_status) === "seller_proposed") return `${renderDeliveryPlan(order, false)}<div class="delivery-waiting-card">Esperando la respuesta del comprador.</div>`;
         if (!isPickup && String(order.delivery_plan_status) === "coordinated" && !deliveryResponsibleIsComplete(order)) return `${renderDeliveryPlan(order, false)}${renderDeliveryResponsibleForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
