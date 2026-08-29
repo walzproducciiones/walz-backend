@@ -39,6 +39,20 @@ class StorePaymentMethodsResponse(BaseModel):
 
 
 
+
+class BuyerStorePaymentMethodResponse(BaseModel):
+    method: str
+    label: str
+    allow_pay_on_pickup: bool
+
+
+class BuyerStorePaymentMethodsResponse(BaseModel):
+    store_id: UUID
+    store_name: str
+    methods: list[BuyerStorePaymentMethodResponse]
+
+
+
 class PaymentCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

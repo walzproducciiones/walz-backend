@@ -631,6 +631,80 @@ def _serialize_store_payment_methods(store, rows):
     }
 
 
+def get_store_payment_methods_for_buyer(
+    db: Session,
+    store_id: UUID,
+):
+    """
+    Return only payment methods that a buyer can actually
+    select for an active store.
+
+    Seller configuration remains private in /methods/mine.
+    """
+    store = (
+        db.query(Store)
+        .filter(
+            Store.id == store_id,
+            Store.is_active.is_(True),
+            Store.operational_status == "ACTIVE",
+        )
+        .first()
+    )
+
+    if not store:
+        raise ValueError("Tienda no encontrada.")
+
+    rows = (
+        db.query(StorePaymentMethod)
+        .filter(
+            StorePaymentMethod.store_id == store.id,
+            StorePaymentMethod.enabled.is_(True),
+        )
+        .all()
+    )
+
+    serialized = _serialize_store_payment_methods(
+        store,
+        rows,
+    )
+
+    usable_methods = []
+
+    for item in serialized["methods"]:
+        if not item["enabled"]:
+            continue
+
+        method = str(
+            item["method"] or ""
+        ).strip().upper()
+
+        # La integracion online real continua deshabilitada.
+        if method == "MERCADO_PAGO" and not PAYMENTS_ENABLED:
+            continue
+
+        # En V1 el efectivo existe solamente al retirar.
+        if method == "CASH":
+            if not store.pickup_enabled:
+                continue
+
+            if not item["allow_pay_on_pickup"]:
+                continue
+
+        usable_methods.append({
+            "method": method,
+            "label": item["label"],
+            "allow_pay_on_pickup": (
+                item["allow_pay_on_pickup"]
+            ),
+        })
+
+    return {
+        "store_id": store.id,
+        "store_name": store.name,
+        "methods": usable_methods,
+    }
+
+
 def get_store_payment_methods_by_owner(
     db: Session,
     owner_id: UUID,

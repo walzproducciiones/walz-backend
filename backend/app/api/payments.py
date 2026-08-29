@@ -7,6 +7,7 @@ from backend.app.api.auth import get_current_user, require_admin_user
 from backend.app.database.session import SessionLocal
 from backend.app.models.user import User
 from backend.app.schemas.payment import (
+    BuyerStorePaymentMethodsResponse,
     PaymentCreateRequest,
     PaymentResponse,
     PaymentSellerStatusUpdate,
@@ -20,6 +21,7 @@ from backend.app.services.payment_service import (
     get_payments_by_seller,
     get_payments_for_admin,
     get_store_payment_methods_by_owner,
+    get_store_payment_methods_for_buyer,
     report_payment_by_buyer,
     review_payment_by_seller,
     save_store_payment_methods,
@@ -138,6 +140,30 @@ def update_my_payment_methods(
 # ============================================================
 # PAYMENT - COMPRADOR
 # ============================================================
+
+@router.get(
+    "/stores/{store_id}/methods",
+    response_model=BuyerStorePaymentMethodsResponse,
+)
+def get_buyer_store_payment_methods(
+    store_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_payment_buyer
+    ),
+):
+    try:
+        return get_store_payment_methods_for_buyer(
+            db,
+            store_id,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
 
 @router.post(
     "/orders/{order_id}",

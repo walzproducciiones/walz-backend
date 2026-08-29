@@ -1,4 +1,5 @@
 ﻿from datetime import date, datetime
+from decimal import Decimal
 from typing import List, Literal, Optional
 from uuid import UUID
 
@@ -52,6 +53,17 @@ class OrderResponse(OrderBase):
     seller_display_name: Optional[str] = None
     seller_account_email: Optional[str] = None
     total_amount: float
+
+    # Snapshot financiero de pedidos nuevos.
+    # Los pedidos historicos permanecen en NULL.
+    store_id: Optional[UUID] = None
+    fulfillment_method: Optional[str] = None
+    items_subtotal: Optional[Decimal] = None
+    shipping_amount: Optional[Decimal] = None
+    discount_amount: Optional[Decimal] = None
+    payable_amount: Optional[Decimal] = None
+    currency: Optional[str] = None
+
     status: str
     pickup_status: Optional[str] = None
     pickup_ready_at: Optional[datetime] = None
