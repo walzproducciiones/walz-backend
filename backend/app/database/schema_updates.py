@@ -164,6 +164,7 @@ def ensure_banner_proposal_columns(engine):
         "approval_status": "VARCHAR(20) NOT NULL DEFAULT 'approved'",
         "reviewed_by": "UUID",
         "reviewed_at": "TIMESTAMP",
+        "review_note": "TEXT",
     }
 
     with engine.begin() as connection:

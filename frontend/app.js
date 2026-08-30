@@ -4544,8 +4544,10 @@ function showMarketplaceContent(loadCentralAdvertising = true) {
 
     if (loadCentralAdvertising) {
         loadActiveBanners("CENTRAL_MARKETPLACE");
+        loadSellerSponsoredBanners();
     } else {
         hideMarketplaceBanners();
+        hideSellerSponsoredBanners();
     }
 
     loadPublicInstitutionalContact();
@@ -11340,8 +11342,8 @@ function bannerMatchesCurrentAudience(banner) {
         return ["VENDEDOR", "SELLER"].includes(role);
     }
 
-    // PUBLIC = visitante o comprador.
-    return !["ADMIN", "VENDEDOR", "SELLER"].includes(role);
+    // PUBLIC = cualquier persona que este viendo el Marketplace general.
+    return true;
 }
 
 
@@ -11412,6 +11414,235 @@ async function loadActiveBanners(
         );
 
         hideMarketplaceBanners();
+    }
+}
+
+
+function stopSellerSponsoredBannerRotation() {
+    if (window.walzSellerSponsoredTimer) {
+        clearInterval(window.walzSellerSponsoredTimer);
+        window.walzSellerSponsoredTimer = null;
+    }
+}
+
+
+function startSellerSponsoredBannerRotation() {
+    stopSellerSponsoredBannerRotation();
+
+    const banners = Array.isArray(window.walzSellerSponsoredBanners)
+        ? window.walzSellerSponsoredBanners
+        : [];
+
+    if (banners.length <= 1) return;
+
+    window.walzSellerSponsoredTimer = setInterval(() => {
+        moveSellerSponsoredBanner(1, false);
+    }, 6500);
+}
+
+
+function moveSellerSponsoredBanner(direction, restart = true) {
+    const banners = Array.isArray(window.walzSellerSponsoredBanners)
+        ? window.walzSellerSponsoredBanners
+        : [];
+
+    if (banners.length <= 1) return;
+
+    const current = Number(window.walzSellerSponsoredIndex || 0);
+
+    window.walzSellerSponsoredIndex =
+        (current + Number(direction || 0) + banners.length)
+        % banners.length;
+
+    renderSellerSponsoredBanner();
+
+    if (restart) {
+        startSellerSponsoredBannerRotation();
+    }
+}
+
+
+function renderSellerSponsoredBanner() {
+    const container =
+        document.getElementById("seller-sponsored-banners");
+
+    const banners = Array.isArray(window.walzSellerSponsoredBanners)
+        ? window.walzSellerSponsoredBanners
+        : [];
+
+    if (!container || banners.length === 0) return;
+
+    const index = Math.max(
+        0,
+        Math.min(
+            Number(window.walzSellerSponsoredIndex || 0),
+            banners.length - 1
+        )
+    );
+
+    window.walzSellerSponsoredIndex = index;
+
+    const banner = banners[index];
+
+    const bannerImageUrl =
+        getProductImageUrl(banner.image_url);
+
+    const bannerHasImage = Boolean(bannerImageUrl);
+
+    const bannerImage = bannerHasImage
+        ? `<img
+            class="marketplace-banner-image"
+            src="${escapeHtml(bannerImageUrl)}"
+            alt="${escapeHtml(banner.title || "Publicidad patrocinada")}"
+            loading="lazy"
+            onerror="const card=this.closest('.marketplace-banner-card');if(card)card.classList.add('marketplace-banner-card-no-image');this.remove();"
+        >`
+        : "";
+
+    const link = getSafeBannerLink(banner.link_url);
+
+    const productButton = banner.product_id
+        ? `<button
+            type="button"
+            onclick="openPromotedProduct('${escapeJs(String(banner.product_id))}')"
+        >${escapeHtml(banner.button_text || "Ver producto")}</button>`
+        : "";
+
+    container.innerHTML = `
+        <article
+            class="marketplace-banner-card${bannerHasImage ? "" : " marketplace-banner-card-no-image"}"
+            data-style-variant="STANDARD"
+            data-motion-variant="STATIC"
+        >
+            ${bannerImage}
+
+            <div class="marketplace-banner-copy">
+                <span class="marketplace-banner-label">
+                    Publicidad patrocinada
+                </span>
+
+                <h2>${escapeHtml(banner.title || "")}</h2>
+
+                ${banner.subtitle
+                    ? `<p>${escapeHtml(banner.subtitle)}</p>`
+                    : ""
+                }
+
+                ${link
+                    ? `<a
+                        href="${escapeHtml(link)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >${escapeHtml(banner.button_text || "Ver mas")}</a>`
+                    : ""
+                }
+
+                ${productButton}
+            </div>
+
+            ${banners.length > 1 ? `
+                <button
+                    type="button"
+                    class="banner-carousel-arrow previous"
+                    onclick="moveSellerSponsoredBanner(-1)"
+                    aria-label="Publicidad patrocinada anterior"
+                >&#10094;</button>
+
+                <button
+                    type="button"
+                    class="banner-carousel-arrow next"
+                    onclick="moveSellerSponsoredBanner(1)"
+                    aria-label="Publicidad patrocinada siguiente"
+                >&#10095;</button>
+            ` : ""}
+        </article>
+    `;
+}
+
+
+function hideSellerSponsoredBanners() {
+    const container =
+        document.getElementById("seller-sponsored-banners");
+
+    window.walzSellerSponsoredLoadToken =
+        Number(window.walzSellerSponsoredLoadToken || 0) + 1;
+
+    stopSellerSponsoredBannerRotation();
+
+    window.walzSellerSponsoredBanners = [];
+    window.walzSellerSponsoredIndex = 0;
+
+    if (container) {
+        container.style.display = "none";
+        container.innerHTML = "";
+    }
+}
+
+
+async function loadSellerSponsoredBanners() {
+    const container =
+        document.getElementById("seller-sponsored-banners");
+
+    if (!container) return;
+
+    const requestToken =
+        Number(window.walzSellerSponsoredLoadToken || 0) + 1;
+
+    window.walzSellerSponsoredLoadToken = requestToken;
+
+    try {
+        const response = await fetch(
+            `${API_URL}/banners/active?placement=SELLER_SPONSORED`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const received = await response.json();
+
+        if (
+            requestToken
+            !== Number(window.walzSellerSponsoredLoadToken || 0)
+        ) {
+            return;
+        }
+
+        const banners = Array.isArray(received)
+            ? received.filter(bannerMatchesCurrentAudience)
+            : [];
+
+        if (banners.length === 0) {
+            hideSellerSponsoredBanners();
+            return;
+        }
+
+        window.walzSellerSponsoredBanners = banners;
+        window.walzSellerSponsoredIndex = 0;
+
+        renderSellerSponsoredBanner();
+
+        container.style.display = "block";
+        container.onmouseenter =
+            stopSellerSponsoredBannerRotation;
+        container.onmouseleave =
+            startSellerSponsoredBannerRotation;
+
+        startSellerSponsoredBannerRotation();
+    } catch (error) {
+        if (
+            requestToken
+            !== Number(window.walzSellerSponsoredLoadToken || 0)
+        ) {
+            return;
+        }
+
+        console.error(
+            "No se pudo cargar la publicidad patrocinada:",
+            error
+        );
+
+        hideSellerSponsoredBanners();
     }
 }
 
@@ -12762,10 +12993,25 @@ function hideBannerProposalSection() {
 }
 
 
-function getBannerProposalStatus(status) {
+function getBannerProposalStatus(status, isActive = null) {
     const value = String(status || "pending").toLowerCase();
-    if (value === "approved") return { label: "Aprobada", css: "approved" };
-    if (value === "rejected") return { label: "Rechazada", css: "rejected" };
+
+    if (value === "approved") {
+        if (isActive === true) {
+            return { label: "Aprobada y publicada", css: "approved" };
+        }
+
+        if (isActive === false) {
+            return { label: "Aprobada - pausada", css: "pending" };
+        }
+
+        return { label: "Aprobada", css: "approved" };
+    }
+
+    if (value === "rejected") {
+        return { label: "Rechazada", css: "rejected" };
+    }
+
     return { label: "Pendiente de revision", css: "pending" };
 }
 
@@ -12885,11 +13131,24 @@ async function loadMyBannerProposals() {
             return;
         }
         container.innerHTML = `<div class="banner-admin-list">${proposals.map(proposal => {
-            const state = getBannerProposalStatus(proposal.approval_status);
+            const state = getBannerProposalStatus(
+                proposal.approval_status,
+                proposal.is_active
+            );
             return `<article class="banner-admin-card banner-proposal-card">
                 ${renderProductImage(proposal.image_url, proposal.title, "banner-admin-image")}
-                <div><h3>${escapeHtml(proposal.title || "")}</h3><p>${escapeHtml(proposal.subtitle || "Sin texto adicional")}</p>
-                <span class="banner-review-state ${state.css}">${state.label}</span></div>
+                <div>
+                    <h3>${escapeHtml(proposal.title || "")}</h3>
+                    <p>${escapeHtml(proposal.subtitle || "Sin texto adicional")}</p>
+                    <span class="banner-review-state ${state.css}">${state.label}</span>
+
+                    ${proposal.review_note ? `
+                        <p class="banner-review-note">
+                            <strong>Observacion de WalZ One:</strong>
+                            ${escapeHtml(proposal.review_note)}
+                        </p>
+                    ` : ""}
+                </div>
             </article>`;
         }).join("")}</div>`;
     } catch (error) {
@@ -13273,6 +13532,18 @@ function renderAdminBannerCard(banner) {
                 sellerApprovalStatus === "pending"
                     ? `
                         <div class="banner-review-actions">
+                            <textarea
+                                id="banner-review-note-${escapeHtml(String(banner.id))}"
+                                maxlength="1200"
+                                placeholder="Observacion para el vendedor (opcional al aprobar)"
+                            ></textarea>
+
+                            <p
+                                id="banner-review-error-${escapeHtml(String(banner.id))}"
+                                class="delivery-error"
+                                role="alert"
+                            ></p>
+
                             <button
                                 type="button"
                                 onclick="reviewBannerProposal(
@@ -13350,6 +13621,23 @@ function renderAdminBannerCard(banner) {
                         banner.subtitle || "Sin texto adicional"
                     )}
                 </p>
+
+                ${isSellerBanner ? `
+                    <p>
+                        <strong>Tienda:</strong>
+                        ${escapeHtml(banner.store_name || "Sin tienda identificada")}
+                        &middot;
+                        <strong>Vendedor:</strong>
+                        ${escapeHtml(banner.seller_name || banner.seller_email || "Sin identificar")}
+                    </p>
+                    <p>
+                        <strong>Producto:</strong>
+                        ${escapeHtml(
+                            banner.product_name
+                            || (banner.product_id ? "Producto no disponible" : "Publicidad anterior sin producto asociado")
+                        )}
+                    </p>
+                ` : ""}
 
                 <p>
                     <strong>Ubicacion:</strong>
@@ -13524,13 +13812,33 @@ async function loadAdminBanners() {
 
 async function reviewBannerProposal(bannerId, status) {
     const action = status === "approved" ? "aprobar" : "rechazar";
+    const reviewNote =
+        document.getElementById(`banner-review-note-${bannerId}`)
+            ?.value.trim() || "";
+
+    const reviewError =
+        document.getElementById(`banner-review-error-${bannerId}`);
+
+    if (reviewError) reviewError.textContent = "";
+
+    if (status === "rejected" && !reviewNote) {
+        if (reviewError) {
+            reviewError.textContent =
+                "Escribi el motivo del rechazo para que el vendedor pueda corregir la propuesta.";
+        }
+        return;
+    }
+
     if (!confirm(`Confirmas que queres ${action} esta publicidad?`)) return;
     const currentToken = localStorage.getItem("walz_token");
     try {
         const response = await fetch(`${API_URL}/banners/${bannerId}/review`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({
+                status,
+                review_note: reviewNote || null
+            })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
@@ -13988,12 +14296,14 @@ document.addEventListener(
                 showAdminCentralPanel();
             } else {
                 loadActiveBanners();
+                loadSellerSponsoredBanners();
                 loadProducts();
             }
         } else {
             showMarketplace();
             loadProducts();
             loadActiveBanners("CENTRAL_MARKETPLACE");
+            loadSellerSponsoredBanners();
         }
     }
 );

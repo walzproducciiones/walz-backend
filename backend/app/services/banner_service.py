@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.banner import Banner
 from backend.app.models.product import Product
+from backend.app.models.store import Store
+from backend.app.models.user import User
 from backend.app.schemas.banner import (
     BannerCreate,
     BannerProposalCreate,
@@ -83,11 +85,97 @@ def get_active_banners(
 
 
 def get_all_banners(db: Session):
-    return (
+    banners = (
         db.query(Banner)
         .order_by(Banner.display_order.asc(), Banner.created_at.desc())
         .all()
     )
+
+    seller_ids = {
+        banner.seller_id
+        for banner in banners
+        if banner.seller_id is not None
+    }
+
+    product_ids = {
+        banner.product_id
+        for banner in banners
+        if banner.product_id is not None
+    }
+
+    sellers = (
+        db.query(User)
+        .filter(User.id.in_(seller_ids))
+        .all()
+        if seller_ids
+        else []
+    )
+
+    stores = (
+        db.query(Store)
+        .filter(Store.owner_id.in_(seller_ids))
+        .all()
+        if seller_ids
+        else []
+    )
+
+    products = (
+        db.query(Product)
+        .filter(Product.id.in_(product_ids))
+        .all()
+        if product_ids
+        else []
+    )
+
+    sellers_by_id = {
+        seller.id: seller
+        for seller in sellers
+    }
+
+    stores_by_owner = {
+        store.owner_id: store
+        for store in stores
+    }
+
+    products_by_id = {
+        product.id: product
+        for product in products
+    }
+
+    result = []
+
+    for banner in banners:
+        seller = sellers_by_id.get(banner.seller_id)
+        store = stores_by_owner.get(banner.seller_id)
+        product = products_by_id.get(banner.product_id)
+
+        row = {
+            column.name: getattr(banner, column.name)
+            for column in Banner.__table__.columns
+        }
+
+        if seller:
+            seller_name = " ".join(
+                part
+                for part in [
+                    str(seller.first_name or "").strip(),
+                    str(seller.last_name or "").strip(),
+                ]
+                if part
+            )
+            row["seller_name"] = seller_name or None
+            row["seller_email"] = seller.email
+
+        if store:
+            row["store_name"] = store.name
+            row["store_slug"] = store.slug
+
+        if product:
+            row["product_name"] = product.name
+
+        result.append(row)
+
+    return result
 
 
 def create_banner(db: Session, admin_id: UUID, data: BannerCreate):
@@ -232,6 +320,7 @@ def review_banner_proposal(
     banner_id: UUID,
     admin_id: UUID,
     requested_status: str,
+    review_note: str | None = None,
 ):
     banner = (
         db.query(Banner)
@@ -253,6 +342,7 @@ def review_banner_proposal(
     banner.is_active = requested_status == "approved"
     banner.reviewed_by = admin_id
     banner.reviewed_at = datetime.now(timezone.utc)
+    banner.review_note = str(review_note or "").strip() or None
     db.commit()
     db.refresh(banner)
     return banner

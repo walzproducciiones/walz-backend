@@ -111,6 +111,7 @@ def review_existing_banner_proposal(
             banner_id,
             admin.id,
             data.status,
+            data.review_note,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))

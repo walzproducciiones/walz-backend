@@ -78,6 +78,12 @@ class BannerResponse(BannerBase):
     approval_status: str = "approved"
     reviewed_by: Optional[UUID] = None
     reviewed_at: Optional[datetime] = None
+    review_note: Optional[str] = None
+    seller_name: Optional[str] = None
+    seller_email: Optional[str] = None
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
+    product_name: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -93,3 +99,4 @@ class BannerProposalCreate(BaseModel):
 
 class BannerReviewUpdate(BaseModel):
     status: Literal["approved", "rejected"]
+    review_note: Optional[str] = Field(default=None, max_length=1200)
