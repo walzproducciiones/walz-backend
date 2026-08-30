@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.app.models.order import Order, OrderStatus
@@ -11,6 +12,9 @@ from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.models.store_payment_method import StorePaymentMethod
 from backend.app.services.store_service import get_store_by_owner
+from backend.app.services.economic_ledger_service import (
+    consolidate_order_economy,
+)
 
 
 PAYMENTS_ENABLED = False
@@ -53,6 +57,8 @@ def change_payment_status(
     db: Session,
     payment_id: UUID,
     requested_status,
+    *,
+    commit: bool = True,
 ):
     payment = (
         db.query(Payment)
@@ -105,8 +111,11 @@ def change_payment_status(
     elif target_status == PaymentStatus.CANCELLED:
         payment.cancelled_at = now
 
-    db.commit()
-    db.refresh(payment)
+    if commit:
+        db.commit()
+        db.refresh(payment)
+    else:
+        db.flush()
 
     return payment
 
@@ -624,11 +633,28 @@ def review_payment_by_seller(
             "el pago antes de que el vendedor pueda revisarlo."
         )
 
-    return change_payment_status(
-        db,
-        payment.id,
-        target_status,
-    )
+    try:
+        payment = change_payment_status(
+            db,
+            payment.id,
+            target_status,
+            commit=False,
+        )
+
+        if target_status == PaymentStatus.APPROVED:
+            consolidate_order_economy(
+                db,
+                payment.order_id,
+            )
+
+        db.commit()
+        db.refresh(payment)
+
+        return payment
+
+    except (ValueError, SQLAlchemyError):
+        db.rollback()
+        raise
 
 
 PAYMENT_METHOD_DEFINITIONS = {

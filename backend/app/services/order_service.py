@@ -16,6 +16,9 @@ from backend.app.services.platform_economy_service import (
 )
 from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate
 from backend.app.services.order_status_service import can_transition_order_status
+from backend.app.services.economic_ledger_service import (
+    consolidate_order_economy,
+)
 
 
 def get_orders_by_buyer(db: Session, buyer_id: UUID):
@@ -627,16 +630,31 @@ def update_order_status_by_seller(
             )
 
         order.status = new_status
+
+        if new_status == OrderStatus.DELIVERED:
+            consolidate_order_economy(
+                db,
+                order.id,
+            )
+
         if is_pickup and new_status == OrderStatus.SHIPPED:
             order.pickup_status = "ready"
             if not order.pickup_ready_at:
                 order.pickup_ready_at = datetime.now(timezone.utc)
+
         db.commit()
 
         return {
             "id": str(order.id),
             "status": order.status.value,
         }, None
+
+    except ValueError:
+        db.rollback()
+        return (
+            None,
+            "No se pudo consolidar la economia del pedido.",
+        )
 
     except SQLAlchemyError:
         db.rollback()
@@ -663,11 +681,23 @@ def update_pickup_status_by_buyer(db: Session, order_id: UUID, buyer_id: UUID, a
             order.pickup_status = "completed"
             order.pickup_buyer_received_at = datetime.now(timezone.utc)
             order.status = OrderStatus.DELIVERED
+
+            consolidate_order_economy(
+                db,
+                order.id,
+            )
         else:
             db.rollback()
             return None, "Esa confirmacion no corresponde al momento actual del retiro."
         db.commit()
         return get_order_by_id(db, order.id, buyer_id), None
+    except ValueError:
+        db.rollback()
+        return (
+            None,
+            "No se pudo consolidar la economia del pedido.",
+        )
+
     except SQLAlchemyError:
         db.rollback()
         raise
