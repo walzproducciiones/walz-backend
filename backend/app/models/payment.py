@@ -56,6 +56,34 @@ class Payment(Base):
         nullable=False,
     )
 
+    # Snapshot inmutable del destino de pago utilizado al crear
+    # este Payment. Cambios futuros en la configuracion de la
+    # tienda no deben alterar pedidos ya existentes.
+    destination_account_holder = Column(
+        String(160),
+        nullable=True,
+    )
+
+    destination_account_alias = Column(
+        String(120),
+        nullable=True,
+    )
+
+    destination_account_cbu_cvu = Column(
+        String(40),
+        nullable=True,
+    )
+
+    destination_bank_name = Column(
+        String(120),
+        nullable=True,
+    )
+
+    destination_instructions = Column(
+        String(500),
+        nullable=True,
+    )
+
     status = Column(
         SqlEnum(
             PaymentStatus,

@@ -137,6 +137,11 @@ def _payment_money(value, field_name: str) -> Decimal:
     )
 
 
+def _normalized_optional_text(value):
+    normalized = str(value or "").strip()
+    return normalized or None
+
+
 def create_payment_for_order(
     db: Session,
     order_id: UUID,
@@ -264,6 +269,32 @@ def create_payment_for_order(
 
     provider = definition["provider"]
 
+    destination_account_holder = _normalized_optional_text(
+        configured_method.account_holder
+    )
+    destination_account_alias = _normalized_optional_text(
+        configured_method.account_alias
+    )
+    destination_account_cbu_cvu = _normalized_optional_text(
+        configured_method.account_cbu_cvu
+    )
+    destination_bank_name = _normalized_optional_text(
+        configured_method.bank_name
+    )
+    destination_instructions = _normalized_optional_text(
+        configured_method.instructions
+    )
+
+    if (
+        method == "BANK_TRANSFER"
+        and not destination_account_alias
+        and not destination_account_cbu_cvu
+    ):
+        raise ValueError(
+            "La tienda todavia no completo un Alias o CBU/CVU "
+            "para recibir transferencias."
+        )
+
     if method == "MERCADO_PAGO":
         if not PAYMENTS_ENABLED:
             raise ValueError(
@@ -389,6 +420,13 @@ def create_payment_for_order(
         store_id=store.id,
         method=method,
         provider=provider,
+
+        destination_account_holder=destination_account_holder,
+        destination_account_alias=destination_account_alias,
+        destination_account_cbu_cvu=destination_account_cbu_cvu,
+        destination_bank_name=destination_bank_name,
+        destination_instructions=destination_instructions,
+
         status=PaymentStatus.PENDING,
         amount=payable_amount,
         currency=currency,
@@ -565,6 +603,27 @@ def review_payment_by_seller(
             "o rechazar un pago."
         )
 
+    current_status = normalize_payment_status(
+        payment.status
+    )
+
+    # Mantener idempotencia si se repite el estado terminal actual.
+    if target_status == current_status:
+        return payment
+
+    payment_method = str(
+        payment.method or ""
+    ).strip().upper()
+
+    if (
+        payment_method in BUYER_REPORTABLE_PAYMENT_METHODS
+        and current_status != PaymentStatus.REPORTED
+    ):
+        raise ValueError(
+            "El comprador primero debe informar que realizo "
+            "el pago antes de que el vendedor pueda revisarlo."
+        )
+
     return change_payment_status(
         db,
         payment.id,
@@ -622,6 +681,31 @@ def _serialize_store_payment_methods(store, rows):
                 if row
                 else False
             ),
+            "account_holder": (
+                str(row.account_holder or "").strip()
+                if row
+                else ""
+            ) or None,
+            "account_alias": (
+                str(row.account_alias or "").strip()
+                if row
+                else ""
+            ) or None,
+            "account_cbu_cvu": (
+                str(row.account_cbu_cvu or "").strip()
+                if row
+                else ""
+            ) or None,
+            "bank_name": (
+                str(row.bank_name or "").strip()
+                if row
+                else ""
+            ) or None,
+            "instructions": (
+                str(row.instructions or "").strip()
+                if row
+                else ""
+            ) or None,
         })
 
     return {
@@ -690,12 +774,26 @@ def get_store_payment_methods_for_buyer(
             if not item["allow_pay_on_pickup"]:
                 continue
 
+        # Una transferencia solo puede ofrecerse cuando el
+        # vendedor configuro un destino utilizable.
+        if method == "BANK_TRANSFER":
+            if not (
+                item["account_alias"]
+                or item["account_cbu_cvu"]
+            ):
+                continue
+
         usable_methods.append({
             "method": method,
             "label": item["label"],
             "allow_pay_on_pickup": (
                 item["allow_pay_on_pickup"]
             ),
+            "account_holder": item["account_holder"],
+            "account_alias": item["account_alias"],
+            "account_cbu_cvu": item["account_cbu_cvu"],
+            "bank_name": item["bank_name"],
+            "instructions": item["instructions"],
         })
 
     return {
@@ -751,6 +849,39 @@ def save_store_payment_methods(
         enabled = bool(item.enabled)
         allow_pay_on_pickup = bool(item.allow_pay_on_pickup)
 
+        account_holder = str(
+            item.account_holder or ""
+        ).strip() or None
+
+        account_alias = str(
+            item.account_alias or ""
+        ).strip() or None
+
+        account_cbu_cvu = str(
+            item.account_cbu_cvu or ""
+        ).strip() or None
+
+        bank_name = str(
+            item.bank_name or ""
+        ).strip() or None
+
+        instructions = str(
+            item.instructions or ""
+        ).strip() or None
+
+        if (
+            method == "BANK_TRANSFER"
+            and enabled
+            and not (
+                account_alias
+                or account_cbu_cvu
+            )
+        ):
+            raise ValueError(
+                "Para habilitar Transferencia bancaria "
+                "completa al menos Alias o CBU/CVU."
+            )
+
         if allow_pay_on_pickup and not enabled:
             raise ValueError(
                 "No se puede permitir pago al retirar "
@@ -765,6 +896,11 @@ def save_store_payment_methods(
         normalized[method] = {
             "enabled": enabled,
             "allow_pay_on_pickup": allow_pay_on_pickup,
+            "account_holder": account_holder,
+            "account_alias": account_alias,
+            "account_cbu_cvu": account_cbu_cvu,
+            "bank_name": bank_name,
+            "instructions": instructions,
         }
 
     if not any(
@@ -790,6 +926,11 @@ def save_store_payment_methods(
         values = normalized.get(method, {
             "enabled": False,
             "allow_pay_on_pickup": False,
+            "account_holder": None,
+            "account_alias": None,
+            "account_cbu_cvu": None,
+            "bank_name": None,
+            "instructions": None,
         })
 
         row = existing_by_method.get(method)
@@ -800,6 +941,11 @@ def save_store_payment_methods(
             row.allow_pay_on_pickup = (
                 values["allow_pay_on_pickup"]
             )
+            row.account_holder = values["account_holder"]
+            row.account_alias = values["account_alias"]
+            row.account_cbu_cvu = values["account_cbu_cvu"]
+            row.bank_name = values["bank_name"]
+            row.instructions = values["instructions"]
         else:
             db.add(StorePaymentMethod(
                 store_id=store.id,
@@ -809,6 +955,11 @@ def save_store_payment_methods(
                 allow_pay_on_pickup=(
                     values["allow_pay_on_pickup"]
                 ),
+                account_holder=values["account_holder"],
+                account_alias=values["account_alias"],
+                account_cbu_cvu=values["account_cbu_cvu"],
+                bank_name=values["bank_name"],
+                instructions=values["instructions"],
             ))
 
     db.commit()

@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
 from backend.app.models.order import Order, OrderItem, OrderStatus
+from backend.app.models.payment import Payment, PaymentStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
@@ -336,6 +337,7 @@ def create_orders_by_seller(
                 # Snapshot financiero/comercial nuevo.
                 store_id=store.id,
                 fulfillment_method=delivery_choice.method,
+                payment_required=True,
                 items_subtotal=items_subtotal,
                 shipping_amount=shipping_amount,
                 discount_amount=discount_amount,
@@ -435,6 +437,60 @@ def update_order_status_by_seller(
 
         current_status = order.status
         is_pickup = "metodo: retiro en el local" in str(order.shipping_address or "").lower()
+
+        # Los medios que requieren aviso del comprador deben estar
+        # verificados por el vendedor antes de despachar.
+        if new_status == OrderStatus.SHIPPED:
+            payment = (
+                db.query(Payment)
+                .filter(Payment.order_id == order.id)
+                .order_by(Payment.created_at.desc())
+                .with_for_update()
+                .first()
+            )
+
+            if bool(getattr(order, "payment_required", False)) and not payment:
+                db.rollback()
+                return (
+                    None,
+                    "Este pedido requiere un pago registrado antes de poder despacharse.",
+                )
+
+            if not is_pickup and payment:
+                payment_method = str(
+                    payment.method or ""
+                ).strip().upper()
+
+                if payment_method in {
+                    "BANK_TRANSFER",
+                    "CUENTA_DNI",
+                }:
+                    payment_status = payment.status
+
+                    if not isinstance(
+                        payment_status,
+                        PaymentStatus,
+                    ):
+                        try:
+                            payment_status = PaymentStatus(
+                                str(payment_status or "")
+                                .strip()
+                                .lower()
+                            )
+                        except ValueError:
+                            db.rollback()
+                            return (
+                                None,
+                                "El estado del pago no es valido.",
+                            )
+
+                    if payment_status != PaymentStatus.APPROVED:
+                        db.rollback()
+                        return (
+                            None,
+                            "Debes verificar y aprobar el pago "
+                            "antes de despachar este pedido.",
+                        )
 
         if (
             not is_pickup

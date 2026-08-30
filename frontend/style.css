@@ -1449,8 +1449,11 @@ button[onclick="toggleCart()"] {
     width: 100%;
     height: 170px;
     border-radius: 10px;
-    object-fit: cover;
     background: #ededed;
+}
+
+.product-card-image {
+    object-fit: contain;
 }
 
 .product-image-placeholder {
@@ -3179,6 +3182,76 @@ body {
 
 .store-payment-settings .store-payment-pickup-option input:disabled + span {
     opacity: 0.5;
+}
+
+.store-payment-details {
+    display: grid;
+    gap: 12px;
+    margin-top: 4px;
+    padding: 14px;
+    background: #f4faf9;
+    border: 1px solid #b9d8d4;
+    border-radius: 9px;
+    color: #173f47;
+}
+
+.store-payment-details-heading {
+    display: grid;
+    gap: 5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #cfe2df;
+}
+
+.store-payment-details-heading strong {
+    color: #173f47;
+    font-size: 15px;
+}
+
+.store-payment-details-heading p {
+    margin: 0;
+    color: #284e55;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.store-payment-details-heading small {
+    color: #536c72;
+}
+
+.store-payment-details label {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    color: #173f47;
+    font-weight: 700;
+}
+
+.store-payment-details label > span {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+    color: #173f47;
+}
+
+.store-payment-details input,
+.store-payment-details textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.store-payment-details .payment-field-note,
+.store-payment-details .payment-field-required {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.store-payment-details .payment-field-note {
+    color: #64767b;
+}
+
+.store-payment-details .payment-field-required {
+    color: #9a4b19;
 }
 
 .store-payment-methods-message {
@@ -7540,6 +7613,111 @@ body {
 }
 
 
+/* La etiqueta PUBLICIDAD se renderiza dentro de cada banner.
+   Se desactiva la etiqueta editorial antigua del contenedor. */
+.marketplace-banners::before {
+    display: none;
+}
+
+
+/* Banner textual: sin placeholder de imagen.
+   El contenido utiliza toda la superficie disponible. */
+.marketplace-banner-card.marketplace-banner-card-no-image {
+    min-height: 205px;
+}
+
+.marketplace-banner-card.marketplace-banner-card-no-image .marketplace-banner-copy {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    background:
+        radial-gradient(
+            circle at 88% 22%,
+            rgba(255, 90, 54, 0.10),
+            transparent 30%
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255, 247, 243, 0.99) 0%,
+            rgba(255, 247, 243, 0.96) 58%,
+            rgba(255, 247, 243, 0.90) 100%
+        );
+}
+
+
+/* Variantes controladas desde Administracion Central.
+   No se admite CSS libre desde el panel. */
+
+.marketplace-banner-card[data-style-variant="STANDARD"] {
+    background: #fff7f3;
+    border-color: rgba(255, 90, 54, 0.20);
+}
+
+.marketplace-banner-card[data-style-variant="INFO"] {
+    background: #eef8f7;
+    border-color: rgba(34, 116, 116, 0.24);
+}
+
+.marketplace-banner-card[data-style-variant="INFO"] .marketplace-banner-copy {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(238, 248, 247, 0.98) 0%,
+            rgba(238, 248, 247, 0.90) 40%,
+            rgba(77, 169, 166, 0.15) 68%,
+            rgba(77, 169, 166, 0) 100%
+        );
+}
+
+.marketplace-banner-card[data-style-variant="INFO"] .marketplace-banner-label {
+    background: rgba(34, 116, 116, 0.12);
+    color: var(--walz-petrol-dark);
+}
+
+.marketplace-banner-card[data-style-variant="PROMO"] {
+    background: #fff1eb;
+    border-color: rgba(217, 79, 52, 0.34);
+    box-shadow: 0 16px 36px rgba(96, 43, 31, 0.12);
+}
+
+.marketplace-banner-card[data-style-variant="PROMO"] .marketplace-banner-copy {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 241, 235, 0.98) 0%,
+            rgba(255, 241, 235, 0.90) 40%,
+            rgba(217, 79, 52, 0.20) 68%,
+            rgba(217, 79, 52, 0) 100%
+        );
+}
+
+.marketplace-banner-card[data-style-variant="PROMO"] .marketplace-banner-label {
+    background: #d94f34;
+    color: #ffffff;
+}
+
+.marketplace-banner-card[data-style-variant="NOTICE"] {
+    background: #f3f3f1;
+    border-color: rgba(38, 38, 38, 0.22);
+}
+
+.marketplace-banner-card[data-style-variant="NOTICE"] .marketplace-banner-copy {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(243, 243, 241, 0.98) 0%,
+            rgba(243, 243, 241, 0.91) 40%,
+            rgba(38, 38, 38, 0.13) 68%,
+            rgba(38, 38, 38, 0) 100%
+        );
+}
+
+.marketplace-banner-card[data-style-variant="NOTICE"] .marketplace-banner-label {
+    background: #262626;
+    color: #ffffff;
+}
+
+
 
 /* =========================================================
    WALZ_NEWS_CORAL_V1
@@ -8595,4 +8773,150 @@ button.admin-central-card:hover {
 
 .store-payment-settings .store-payment-method-main {
     color: #173f47;
+}
+
+/* 4C.1C.2 - FORMAS DE PAGO DEL COMPRADOR */
+
+.buyer-payment-methods-preview {
+    display: grid;
+    gap: 9px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #446166;
+    border-radius: 10px;
+    background: #1f3033;
+    color: #f5fbfa;
+}
+
+.buyer-payment-methods-preview > strong {
+    color: #ffffff;
+}
+
+.buyer-payment-methods-list {
+    display: grid;
+    gap: 8px;
+}
+
+.buyer-payment-method-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #4c686d;
+    border-radius: 8px;
+    background: #31474b;
+    cursor: pointer;
+}
+
+.buyer-payment-method-option input {
+    width: auto;
+    margin: 3px 0 0;
+}
+
+.buyer-payment-method-option-content {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.buyer-payment-method-option-content strong {
+    color: #ffffff;
+}
+
+.buyer-payment-method-option-content small {
+    color: #c9dddd;
+}
+
+.buyer-payment-method-option.is-selected {
+    border-color: #9bd8d2;
+    background: #36565a;
+}
+
+.buyer-payment-method-option.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.buyer-payment-methods-loading,
+.buyer-payment-methods-empty {
+    color: #c9dddd;
+}
+
+.buyer-payment-methods-error {
+    color: #ffb0b0;
+    font-weight: 600;
+}
+
+.checkout-store-payment-summary {
+    font-weight: 700;
+}
+
+
+/* WALZ_BOTTOM_BAR_VARIANTS_V1
+   Plantillas seguras administrables desde WalZ One Central.
+   No se permite CSS libre desde el panel.
+========================================================= */
+
+.walz-news-bar[data-style-variant="STANDARD"] {
+    background: #d94f34;
+    border-top-color: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+.walz-news-bar[data-style-variant="INFO"] {
+    background: var(--walz-petrol-dark);
+    border-top-color: var(--walz-turquoise);
+    color: #ffffff;
+}
+
+.walz-news-bar[data-style-variant="PROMO"] {
+    background: linear-gradient(
+        90deg,
+        #d94f34 0%,
+        #b6402b 100%
+    );
+    border-top-color: rgba(255, 255, 255, 0.30);
+    color: #ffffff;
+}
+
+.walz-news-bar[data-style-variant="NOTICE"] {
+    background: #262626;
+    border-top-color: #d94f34;
+    color: #ffffff;
+}
+
+.walz-news-bar[data-style-variant="STANDARD"] button,
+.walz-news-bar[data-style-variant="PROMO"] button {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.30);
+}
+
+.walz-news-bar[data-style-variant="INFO"] button {
+    background: var(--walz-turquoise);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.walz-news-bar[data-style-variant="NOTICE"] button {
+    background: #d94f34;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+
+/* WALZ_ADMIN_BANNER_NO_IMAGE_V1 */
+.banner-admin-card.banner-admin-card-no-image {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.banner-admin-card.banner-admin-card-no-image > div {
+    min-width: 0;
+}
+
+@media (max-width: 700px) {
+    .banner-admin-card.banner-admin-card-no-image {
+        grid-template-columns: 1fr;
+    }
 }

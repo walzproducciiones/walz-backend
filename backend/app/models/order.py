@@ -12,6 +12,7 @@ from sqlalchemy import (
     Enum,
     DateTime,
     Date,
+    Boolean,
 )
 
 from sqlalchemy.orm import relationship
@@ -62,6 +63,15 @@ class Order(Base):
     fulfillment_method = Column(
         String(20),
         nullable=True
+    )
+
+    # Los pedidos creados por el checkout actual deben tener
+    # un Payment asociado. Los historicos permanecen en False.
+    payment_required = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
 
     items_subtotal = Column(

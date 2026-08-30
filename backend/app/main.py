@@ -14,9 +14,11 @@ from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
     ensure_banner_proposal_columns,
+    ensure_banner_targeting_columns,
     ensure_order_confirmed_status,
     ensure_order_financial_snapshot_columns,
     ensure_order_pickup_columns,
+    ensure_payment_destination_snapshot_columns,
     ensure_product_promotion_columns,
     ensure_product_deletion_column,
     ensure_product_subcategory_column,
@@ -27,6 +29,7 @@ from backend.app.database.schema_updates import (
     ensure_store_avanter_columns,
     ensure_store_operational_status_columns,
     ensure_store_business_categories_column,
+    ensure_store_payment_method_detail_columns,
     ensure_store_slug_column,
     ensure_user_terms_columns,
 )
@@ -56,15 +59,18 @@ ensure_product_brand_column(engine)
 ensure_product_avanter_column(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
+ensure_banner_targeting_columns(engine)
 ensure_user_terms_columns(engine)
 ensure_store_delivery_columns(engine)
 ensure_store_avanter_columns(engine)
 ensure_store_operational_status_columns(engine)
 ensure_store_business_categories_column(engine)
+ensure_store_payment_method_detail_columns(engine)
 ensure_seller_application_business_categories_column(engine)
 ensure_store_slug_column(engine)
 ensure_order_pickup_columns(engine)
 ensure_order_financial_snapshot_columns(engine)
+ensure_payment_destination_snapshot_columns(engine)
 ensure_order_confirmed_status(engine)
 
 

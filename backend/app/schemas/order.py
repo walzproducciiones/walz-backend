@@ -58,6 +58,7 @@ class OrderResponse(OrderBase):
     # Los pedidos historicos permanecen en NULL.
     store_id: Optional[UUID] = None
     fulfillment_method: Optional[str] = None
+    payment_required: bool = False
     items_subtotal: Optional[Decimal] = None
     shipping_amount: Optional[Decimal] = None
     discount_amount: Optional[Decimal] = None

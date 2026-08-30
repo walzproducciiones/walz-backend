@@ -173,6 +173,57 @@ def ensure_banner_proposal_columns(engine):
                     f"ALTER TABLE banners ADD COLUMN {column_name} {definition}"
                 ))
 
+
+
+def ensure_banner_targeting_columns(engine):
+    """Add banner placement and presentation fields safely."""
+    inspector = inspect(engine)
+
+    if "banners" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("banners")
+    }
+
+    definitions = {
+        "placement": (
+            "VARCHAR(40) NOT NULL "
+            "DEFAULT 'CENTRAL_MARKETPLACE'"
+        ),
+        "audience": (
+            "VARCHAR(40) NOT NULL "
+            "DEFAULT 'PUBLIC'"
+        ),
+        "style_variant": (
+            "VARCHAR(40) NOT NULL "
+            "DEFAULT 'STANDARD'"
+        ),
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(
+                    text(
+                        f"ALTER TABLE banners "
+                        f"ADD COLUMN {column_name} {definition}"
+                    )
+                )
+
+        # Existing seller proposals must not inherit
+        # WalZ One Central advertising inventory.
+        if "placement" not in existing_columns:
+            connection.execute(
+                text(
+                    "UPDATE banners "
+                    "SET placement = 'SELLER_SPONSORED' "
+                    "WHERE seller_id IS NOT NULL"
+                )
+            )
+
+
 def ensure_user_terms_columns(engine):
     """Add terms acceptance evidence without changing existing accounts."""
     inspector = inspect(engine)
@@ -432,6 +483,7 @@ def ensure_order_financial_snapshot_columns(engine):
     definitions = {
         "store_id": "UUID",
         "fulfillment_method": "VARCHAR(20)",
+        "payment_required": "BOOLEAN NOT NULL DEFAULT false",
         "items_subtotal": "NUMERIC(14, 2)",
         "shipping_amount": "NUMERIC(14, 2)",
         "discount_amount": "NUMERIC(14, 2)",
@@ -478,3 +530,68 @@ def ensure_order_financial_snapshot_columns(engine):
             "FOREIGN KEY (store_id) "
             "REFERENCES stores(id)"
         ))
+
+def ensure_store_payment_method_detail_columns(engine):
+    """
+    Add seller-specific payment instructions without deleting
+    or modifying existing payment-method configuration.
+    """
+    inspector = inspect(engine)
+
+    if "store_payment_methods" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("store_payment_methods")
+    }
+
+    definitions = {
+        "account_holder": "VARCHAR(160)",
+        "account_alias": "VARCHAR(120)",
+        "account_cbu_cvu": "VARCHAR(40)",
+        "bank_name": "VARCHAR(120)",
+        "instructions": "VARCHAR(500)",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    "ALTER TABLE store_payment_methods "
+                    f"ADD COLUMN {column_name} {definition}"
+                ))
+
+def ensure_payment_destination_snapshot_columns(engine):
+    """
+    Add immutable payment-destination snapshot fields.
+
+    Existing payments are intentionally preserved with NULL
+    values. Historical bank data is not inferred from the
+    current store configuration.
+    """
+    inspector = inspect(engine)
+
+    if "payments" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("payments")
+    }
+
+    definitions = {
+        "destination_account_holder": "VARCHAR(160)",
+        "destination_account_alias": "VARCHAR(120)",
+        "destination_account_cbu_cvu": "VARCHAR(40)",
+        "destination_bank_name": "VARCHAR(120)",
+        "destination_instructions": "VARCHAR(500)",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in definitions.items():
+            if column_name not in existing_columns:
+                connection.execute(text(
+                    "ALTER TABLE payments "
+                    f"ADD COLUMN {column_name} {definition}"
+                ))

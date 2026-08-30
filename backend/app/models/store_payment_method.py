@@ -62,6 +62,31 @@ class StorePaymentMethod(Base):
         server_default="false",
     )
 
+    account_holder = Column(
+        String(160),
+        nullable=True,
+    )
+
+    account_alias = Column(
+        String(120),
+        nullable=True,
+    )
+
+    account_cbu_cvu = Column(
+        String(40),
+        nullable=True,
+    )
+
+    bank_name = Column(
+        String(120),
+        nullable=True,
+    )
+
+    instructions = Column(
+        String(500),
+        nullable=True,
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

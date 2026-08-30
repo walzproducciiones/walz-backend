@@ -8,6 +8,7 @@ from backend.app.database.session import SessionLocal
 from backend.app.models.seller_application import SellerApplication
 from backend.app.models.user import User
 from backend.app.schemas.store import (
+    StoreAdminAvanterUpdate,
     StoreAdminSellerDetailResponse,
     StoreAdminStatusUpdate,
     StoreProfileUpdate,
@@ -15,6 +16,7 @@ from backend.app.schemas.store import (
     StoreSellerStatusUpdate,
 )
 from backend.app.services.store_service import (
+    change_store_avanter_by_admin,
     change_store_status_by_admin,
     change_store_status_by_seller,
     get_active_stores,
@@ -179,6 +181,29 @@ def update_store_status_admin(
             detail=str(error),
         )
 
+
+
+@router.patch(
+    "/admin/{store_id}/avanter",
+    response_model=StoreResponse,
+)
+def update_store_avanter_admin(
+    store_id: UUID,
+    data: StoreAdminAvanterUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    try:
+        return change_store_avanter_by_admin(
+            db,
+            store_id,
+            data.enabled,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
 
 
 @router.get("/public", response_model=list[StoreResponse])

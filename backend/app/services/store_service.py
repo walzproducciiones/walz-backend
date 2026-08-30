@@ -201,6 +201,27 @@ def change_store_status_by_admin(
 
 
 
+def change_store_avanter_by_admin(
+    db: Session,
+    store_id: UUID,
+    enabled: bool,
+):
+    store = get_store_by_id(db, store_id)
+
+    if not store:
+        raise ValueError("Tienda no encontrada.")
+
+    store.avanter_enabled = bool(enabled)
+
+    try:
+        db.commit()
+        db.refresh(store)
+        return store
+    except Exception:
+        db.rollback()
+        raise
+
+
 def save_store_profile(
     db: Session,
     owner_id: UUID,
@@ -208,6 +229,34 @@ def save_store_profile(
 ):
     store = get_store_by_owner(db, owner_id)
     values = data.model_dump()
+
+    # La adhesion a Avanter es administrada exclusivamente
+    # por WalZ One Central. El vendedor no puede activarse
+    # ni desactivarse desde su perfil o mediante una peticion
+    # manipulada.
+    current_avanter_enabled = (
+        bool(store.avanter_enabled)
+        if store
+        else False
+    )
+
+    values["avanter_enabled"] = current_avanter_enabled
+
+    # Una tienda no adherida tampoco puede modificar datos
+    # internos del programa. Se preserva cualquier informacion
+    # historica que pudiera existir.
+    if not current_avanter_enabled:
+        for avanter_field in (
+            "avanter_title",
+            "avanter_text",
+            "avanter_image_url",
+        ):
+            values[avanter_field] = (
+                getattr(store, avanter_field, None)
+                if store
+                else None
+            )
+
     if not values.get("delivery_enabled") and not values.get("pickup_enabled"):
         raise ValueError("Selecciona al menos una forma de entrega.")
 

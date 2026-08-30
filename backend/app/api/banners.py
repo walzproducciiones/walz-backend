@@ -1,4 +1,5 @@
-﻿from uuid import UUID
+﻿from typing import Literal, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -38,8 +39,20 @@ def get_db():
 
 
 @router.get("/active", response_model=list[BannerResponse])
-def list_active_banners(db: Session = Depends(get_db)):
-    return get_active_banners(db)
+def list_active_banners(
+    placement: Optional[
+        Literal[
+            "CENTRAL_MARKETPLACE",
+            "SELLER_SPONSORED",
+            "BOTTOM_BAR",
+        ]
+    ] = "CENTRAL_MARKETPLACE",
+    db: Session = Depends(get_db),
+):
+    return get_active_banners(
+        db,
+        placement=placement,
+    )
 
 
 @router.get("/admin", response_model=list[BannerResponse])
@@ -92,7 +105,16 @@ def review_existing_banner_proposal(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin_user),
 ):
-    banner = review_banner_proposal(db, banner_id, admin.id, data.status)
+    try:
+        banner = review_banner_proposal(
+            db,
+            banner_id,
+            admin.id,
+            data.status,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
     if not banner:
         raise HTTPException(status_code=404, detail="Propuesta no encontrada.")
     return banner

@@ -8,13 +8,29 @@ from pydantic import BaseModel, Field
 class BannerBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=160)
     subtitle: Optional[str] = Field(default=None, max_length=500)
-    image_url: str = Field(..., min_length=1, max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=500)
     link_url: Optional[str] = Field(default=None, max_length=500)
     button_text: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = True
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     display_order: int = Field(default=0, ge=0)
+    placement: Literal[
+        "CENTRAL_MARKETPLACE",
+        "SELLER_SPONSORED",
+        "BOTTOM_BAR",
+    ] = "CENTRAL_MARKETPLACE"
+    audience: Literal[
+        "PUBLIC",
+        "BUYER",
+        "SELLER",
+    ] = "PUBLIC"
+    style_variant: Literal[
+        "STANDARD",
+        "INFO",
+        "PROMO",
+        "NOTICE",
+    ] = "STANDARD"
 
 
 class BannerCreate(BannerBase):
@@ -31,6 +47,19 @@ class BannerUpdate(BaseModel):
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     display_order: Optional[int] = Field(default=None, ge=0)
+    placement: Optional[
+        Literal[
+            "CENTRAL_MARKETPLACE",
+            "SELLER_SPONSORED",
+            "BOTTOM_BAR",
+        ]
+    ] = None
+    audience: Optional[
+        Literal["PUBLIC", "BUYER", "SELLER"]
+    ] = None
+    style_variant: Optional[
+        Literal["STANDARD", "INFO", "PROMO", "NOTICE"]
+    ] = None
 
 
 class BannerResponse(BannerBase):

@@ -41,6 +41,10 @@ class StoreAdminStatusUpdate(BaseModel):
     reason: Optional[str] = Field(default=None, max_length=1000)
 
 
+class StoreAdminAvanterUpdate(BaseModel):
+    enabled: bool
+
+
 
 class StoreResponse(StoreProfileUpdate):
     slug: Optional[str] = Field(default=None, max_length=180)

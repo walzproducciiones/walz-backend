@@ -4,24 +4,24 @@ let token = localStorage.getItem("walz_token");
 let currentUserId = localStorage.getItem("walz_user_id");
 let currentUserRole = localStorage.getItem("walz_user_role") || "";
 
+const GUEST_CART_STORAGE_KEY = "walz_cart_guest";
+
 let cart = loadCart();
 let pendingCheckout = null;
 
 function getCartStorageKey() {
-    return currentUserId
+    const hasSession = Boolean(
+        localStorage.getItem("walz_token")
+    );
+
+    return hasSession && currentUserId
         ? `walz_cart_${currentUserId}`
-        : null;
+        : GUEST_CART_STORAGE_KEY;
 }
 
-function loadCart() {
+function loadCart(storageKey = getCartStorageKey()) {
     try {
-        const cartStorageKey = getCartStorageKey();
-
-        if (!cartStorageKey) {
-            return [];
-        }
-
-        const savedCart = localStorage.getItem(cartStorageKey);
+        const savedCart = localStorage.getItem(storageKey);
 
         if (!savedCart) {
             return [];
@@ -41,14 +41,8 @@ function loadCart() {
 
 function saveCart() {
     try {
-        const cartStorageKey = getCartStorageKey();
-
-        if (!cartStorageKey) {
-            return;
-        }
-
         localStorage.setItem(
-            cartStorageKey,
+            getCartStorageKey(),
             JSON.stringify(cart)
         );
     } catch (error) {
@@ -57,15 +51,95 @@ function saveCart() {
 }
 
 function clearCartStorage() {
-    const cartStorageKey = getCartStorageKey();
+    localStorage.removeItem(
+        getCartStorageKey()
+    );
+}
 
-    if (cartStorageKey) {
-        localStorage.removeItem(cartStorageKey);
+function mergeGuestCartIntoBuyerCart() {
+    if (!currentUserId) {
+        return loadCart();
     }
+
+    const buyerCartKey =
+        `walz_cart_${currentUserId}`;
+
+    const buyerCart =
+        loadCart(buyerCartKey);
+
+    const guestCart =
+        loadCart(GUEST_CART_STORAGE_KEY);
+
+    const mergedCart =
+        buyerCart.map(item => ({ ...item }));
+
+    for (const guestItem of guestCart) {
+        const existing = mergedCart.find(
+            item =>
+                String(item.id) ===
+                String(guestItem.id)
+        );
+
+        if (!existing) {
+            mergedCart.push({ ...guestItem });
+            continue;
+        }
+
+        const buyerQty =
+            Math.max(1, Number(existing.qty) || 1);
+
+        const guestQty =
+            Math.max(1, Number(guestItem.qty) || 1);
+
+        const stockCandidates = [
+            Number(existing.stock),
+            Number(guestItem.stock),
+        ].filter(
+            value =>
+                Number.isFinite(value) &&
+                value > 0
+        );
+
+        const safeStock =
+            stockCandidates.length
+                ? Math.min(...stockCandidates)
+                : Math.max(buyerQty, guestQty);
+
+        existing.qty = Math.min(
+            Math.max(buyerQty, guestQty),
+            safeStock
+        );
+
+        existing.stock = safeStock;
+
+        if (guestItem.name) {
+            existing.name = guestItem.name;
+        }
+
+        if (
+            Number.isFinite(
+                Number(guestItem.price)
+            )
+        ) {
+            existing.price =
+                Number(guestItem.price);
+        }
+    }
+
+    localStorage.setItem(
+        buyerCartKey,
+        JSON.stringify(mergedCart)
+    );
+
+    localStorage.removeItem(
+        GUEST_CART_STORAGE_KEY
+    );
+
+    return mergedCart;
 }
 
 // =====================================================
-// AUTENTICACIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œN
+// AUTENTICACION
 // =====================================================
 
 function openTermsModal(){const modal=document.getElementById("terms-modal");if(modal)modal.style.display="flex"}
@@ -108,7 +182,7 @@ async function handleRegister() {
         const data = await res.json();
 
         if (res.ok) {
-            showMessage("Cuenta creada. Inicia sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.", "success");
+            showMessage("Cuenta creada. Inicia sesión.", "success");
             showLogin();
         } else {
             showMessage(
@@ -119,7 +193,7 @@ async function handleRegister() {
 
     } catch (e) {
         console.error("Error registro:", e);
-        showMessage("Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.", "error");
+        showMessage("Error de conexión.", "error");
     }
 }
 
@@ -328,7 +402,7 @@ async function handleLogin() {
     const password = document.getElementById("login-password").value;
 
     if (!email || !password) {
-        showMessage("Ingresa correo y contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a.", "error");
+        showMessage("Ingresa correo y contraseña.", "error");
         return;
     }
 
@@ -365,7 +439,12 @@ async function handleLogin() {
             localStorage.setItem("walz_user_role", currentUserRole);
             updateAdminBannerVisibility();
             await loadCurrentUserProfile();
-            cart = loadCart();
+
+            cart =
+                currentUserRole === "COMPRADOR"
+                    ? mergeGuestCartIntoBuyerCart()
+                    : loadCart();
+
             pendingCheckout = null;
             updateCartUI();
 
@@ -407,12 +486,12 @@ async function handleLogin() {
     } catch (e) {
 
         console.error(
-            "Error al iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n:",
+            "Error al iniciar sesion:",
             e
         );
 
         showMessage(
-            "Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
+            "Error de conexión.",
             "error"
         );
     }
@@ -437,7 +516,7 @@ function handleLogout() {
     stopSellerOrderNotifications();
     stopWalzDeviceSync();
 
-    cart = [];
+    cart = loadCart();
 
     updateCartUI();
 
@@ -512,6 +591,7 @@ function handleExpiredSession() {
     handleLogout();
 
     cart = savedCart;
+    saveCart();
     updateCartUI();
 
     showMessage(
@@ -924,7 +1004,7 @@ async function handleCreateProduct() {
 
     if (!token) {
         showMessage(
-            "Debes iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
+            "Debes iniciar sesión.",
             "error"
         );
         return;
@@ -1052,7 +1132,7 @@ async function handleCreateProduct() {
         const text = await res.text();
 
         console.log(
-            "Respuesta creaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n producto:",
+            "Respuesta creacion producto:",
             text
         );
 
@@ -1128,7 +1208,7 @@ async function handleCreateProduct() {
         );
 
         showMessage(
-            "Error de conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.",
+            "Error de conexión.",
             "error"
         );
     }
@@ -3045,7 +3125,7 @@ function clearProductFilters() {
 function openProductDetail(productId) {
 
     console.log(
-        "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â½ FICHA PRODUCTO:",
+        "FICHA PRODUCTO:",
         productId
     );
 
@@ -3181,7 +3261,7 @@ function addToCart(
     stock
 ) {
 
-    console.log("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ AGREGAR PRESIONADO");
+    console.log("AGREGAR PRESIONADO");
     console.log("ID:", id);
     console.log("Nombre:", name);
     console.log("Precio:", price);
@@ -3215,7 +3295,7 @@ function addToCart(
         ) {
 
             showMessage(
-                `No puedes agregar mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de ${existing.stock} unidades.`,
+                `No puedes agregar más de ${existing.stock} unidades.`,
                 "error"
             );
 
@@ -3236,19 +3316,19 @@ function addToCart(
     }
 
     console.log(
-        "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ CARRITO ACTUAL:",
+        "CARRITO ACTUAL:",
         cart
     );
 
     showMessage(
-        `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${name} (x${qty}) agregado`,
+        `${name} (x${qty}) agregado`,
         "success"
     );
     saveCart();
 
     updateCartUI();
 
-    // Si el carrito estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ abierto,
+    // Si el carrito esta abierto,
     // actualizarlo inmediatamente.
     const cartSection =
         document.getElementById(
@@ -3269,6 +3349,28 @@ function addToCart(
 // =====================================================
 
 function updateCartUI() {
+
+    const cartButton =
+        document.querySelector(".cart-button");
+
+    const cartRestricted =
+        ["ADMIN", "VENDEDOR", "SELLER"].includes(currentUserRole);
+
+    if (cartButton) {
+        cartButton.style.display =
+            cartRestricted ? "none" : "inline-flex";
+    }
+
+    if (cartRestricted) {
+        const cartSection =
+            document.getElementById("cart-section");
+
+        if (cartSection) {
+            cartSection.style.display = "none";
+        }
+
+        document.body.classList.remove("cart-panel-open");
+    }
 
     const count =
         document.getElementById(
@@ -3334,6 +3436,8 @@ function toggleCart() {
 // =====================================================
 
 function showMyOrders() {
+    window.walzOrderDetailOpen = false;
+
     hideAllWalzWorkSections();
     hideSellerApplicationSections();
     hidePublicStoreSection();
@@ -3347,7 +3451,7 @@ function showMyOrders() {
         document.getElementById("orders-section");
 
     if (!marketplaceContent || !ordersSection) {
-        console.error("No existe la secciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de pedidos.");
+        console.error("No existe la seccion de pedidos.");
         return;
     }
 
@@ -3670,8 +3774,8 @@ async function changeAdminStoreStatus(storeId, requestedStatus) {
     } else {
         const confirmed = window.confirm(
             status === "ACTIVE"
-                ? "?Confirmas la reactivacion de esta tienda?"
-                : "?Confirmas este cambio de estado?"
+                ? "¿Confirmás la reactivación de esta tienda?"
+                : "¿Confirmás este cambio de estado?"
         );
 
         if (!confirmed) return;
@@ -4401,7 +4505,9 @@ async function loadPublicInstitutionalContact() {
 }
 
 
-function showMarketplaceContent() {
+function showMarketplaceContent(loadCentralAdvertising = true) {
+    window.walzOrderSuccessOpen = false;
+
     hideSellerApplicationSections();
     hidePublicStoreSection();
     hideStoreProfileSection();
@@ -4435,12 +4541,43 @@ function showMarketplaceContent() {
     hideBannerAdminSection();
     hideBannerProposalSection();
     loadProducts();
-    loadActiveBanners();
+
+    if (loadCentralAdvertising) {
+        loadActiveBanners("CENTRAL_MARKETPLACE");
+    } else {
+        hideMarketplaceBanners();
+    }
+
     loadPublicInstitutionalContact();
 }
 
 
-async function loadMyOrders(silent = false) {
+async function loadMyOrders(silent = false, force = false) {
+
+    if (
+        window.walzOrderSuccessOpen
+        && silent
+        && !force
+    ) {
+        return;
+    }
+
+    if (!silent || force) {
+        window.walzOrderSuccessOpen = false;
+    }
+
+    if (
+        window.walzOrderDetailOpen
+        && !force
+    ) {
+        return;
+    }
+
+    window.walzOrdersViewToken =
+        Number(window.walzOrdersViewToken || 0) + 1;
+
+    const requestToken =
+        window.walzOrdersViewToken;
 
     const container =
         document.getElementById("orders-content");
@@ -4472,6 +4609,13 @@ async function loadMyOrders(silent = false) {
             }
         });
 
+        if (
+            requestToken
+            !== window.walzOrdersViewToken
+        ) {
+            return;
+        }
+
         if (res.status === 401) {
             renderOrdersSessionExpired();
             return;
@@ -4483,10 +4627,26 @@ async function loadMyOrders(silent = false) {
         }
 
         const orders = await res.json();
+
+        if (
+            requestToken
+            !== window.walzOrdersViewToken
+        ) {
+            return;
+        }
+
         window.walzMyOrders = Array.isArray(orders) ? orders : [];
         applyMyOrdersFilters();
 
     } catch (ordersError) {
+
+        if (
+            requestToken
+            !== window.walzOrdersViewToken
+        ) {
+            return;
+        }
+
         console.error("Error cargando pedidos:", ordersError);
 
         container.innerHTML = `
@@ -4756,9 +4916,14 @@ async function openOrderDetail(orderId) {
     token = localStorage.getItem("walz_token");
 
     if (!container || !token) {
-        showMessage("Debes iniciar sesiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n para ver el pedido.", "error");
+        showMessage("Debes iniciar sesión para ver el pedido.", "error");
         return;
     }
+
+    window.walzOrderDetailOpen = true;
+
+    window.walzOrdersViewToken =
+        Number(window.walzOrdersViewToken || 0) + 1;
 
     container.innerHTML =
         '<p class="orders-loading">Cargando detalle del pedido...</p>';
@@ -4789,6 +4954,44 @@ async function openOrderDetail(orderId) {
         const order = await res.json();
         const items = Array.isArray(order.items) ? order.items : [];
 
+        try {
+            const buyerPayment =
+                await loadBuyerPaymentForOrder(
+                    order.id,
+                    token
+                );
+
+            cacheBuyerPaymentForOrder(
+                order.id,
+                buyerPayment
+            );
+
+            // Los datos para pagar pertenecen al snapshot del
+            // Payment. Nunca se vuelve a consultar la configuracion
+            // actual de la tienda para un pedido ya creado.
+
+        } catch (buyerPaymentError) {
+            if (
+                buyerPaymentError.message
+                === "SESSION_EXPIRED"
+            ) {
+                renderOrdersSessionExpired();
+                return;
+            }
+
+            console.error(
+                "Error cargando pago del comprador:",
+                buyerPaymentError
+            );
+
+            cacheBuyerPaymentForOrder(
+                order.id,
+                null,
+                buyerPaymentError.message
+                || "No se pudo consultar el pago."
+            );
+        }
+
         renderOrderDetail(order, items);
 
     } catch (e) {
@@ -4797,7 +5000,7 @@ async function openOrderDetail(orderId) {
 
         container.innerHTML = `
             <p class="orders-error">
-                No se pudo cargar el detalle. VerificÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ tu conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n e intentÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ nuevamente.
+                No se pudo cargar el detalle. Verificá tu conexión e intentá nuevamente.
             </p>
             <button type="button" onclick="openOrderDetail('${escapeJs(String(orderId))}')">
                 Reintentar
@@ -4806,6 +5009,435 @@ async function openOrderDetail(orderId) {
                 Volver a mis compras
             </button>
         `;
+    }
+}
+
+
+function backToMyOrders() {
+    window.walzOrderDetailOpen = false;
+    loadMyOrders(false, true);
+}
+
+
+function normalizeBuyerPaymentOrderId(value) {
+    return String(value || "")
+        .replace(/-/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+
+function getBuyerPaymentMethodLabel(method) {
+    const labels = {
+        CASH: "Efectivo",
+        BANK_TRANSFER: "Transferencia bancaria",
+        CUENTA_DNI: "Cuenta DNI",
+        MERCADO_PAGO: "Mercado Pago"
+    };
+
+    const normalized = String(method || "")
+        .trim()
+        .toUpperCase();
+
+    return labels[normalized]
+        || normalized
+        || "No informado";
+}
+
+
+function getBuyerPaymentStatusPresentation(status) {
+    const normalized = String(status || "")
+        .trim()
+        .toLowerCase();
+
+    const states = {
+        pending: {
+            label: "Pendiente",
+            css: "order-status-pending"
+        },
+        reported: {
+            label: "Informado al vendedor",
+            css: "order-status-confirmed"
+        },
+        approved: {
+            label: "Pago confirmado",
+            css: "order-status-delivered"
+        },
+        rejected: {
+            label: "Pago rechazado",
+            css: "order-status-cancelled"
+        },
+        cancelled: {
+            label: "Pago cancelado",
+            css: "order-status-cancelled"
+        }
+    };
+
+    return states[normalized] || {
+        label: normalized || "Sin estado",
+        css: "order-status-unknown"
+    };
+}
+
+
+async function loadBuyerPaymentForOrder(
+    orderId,
+    currentToken
+) {
+    const targetOrderId =
+        normalizeBuyerPaymentOrderId(orderId);
+
+    const pageSize = 200;
+    let offset = 0;
+
+    while (true) {
+        const response = await fetch(
+            `${API_URL}/payments/mine?limit=${pageSize}&offset=${offset}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ([]));
+
+        if (response.status === 401) {
+            throw new Error("SESSION_EXPIRED");
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || `HTTP ${response.status}`
+            );
+        }
+
+        const rows = Array.isArray(data)
+            ? data
+            : [];
+
+        const payment = rows.find(
+            row =>
+                normalizeBuyerPaymentOrderId(
+                    row?.order_id
+                ) === targetOrderId
+        );
+
+        if (payment) {
+            return payment;
+        }
+
+        if (rows.length < pageSize) {
+            return null;
+        }
+
+        offset += pageSize;
+    }
+}
+
+
+function cacheBuyerPaymentForOrder(
+    orderId,
+    payment,
+    errorMessage = ""
+) {
+    const key =
+        normalizeBuyerPaymentOrderId(orderId);
+
+    window.walzBuyerPaymentByOrderId =
+        window.walzBuyerPaymentByOrderId || {};
+
+    window.walzBuyerPaymentLoadErrors =
+        window.walzBuyerPaymentLoadErrors || {};
+
+    if (payment) {
+        window.walzBuyerPaymentByOrderId[key] =
+            payment;
+    } else {
+        delete window.walzBuyerPaymentByOrderId[key];
+    }
+
+    if (errorMessage) {
+        window.walzBuyerPaymentLoadErrors[key] =
+            errorMessage;
+    } else {
+        delete window.walzBuyerPaymentLoadErrors[key];
+    }
+}
+
+
+function renderBuyerPaymentBlock(order) {
+    const key =
+        normalizeBuyerPaymentOrderId(order?.id);
+
+    const payment =
+        window.walzBuyerPaymentByOrderId?.[key]
+        || null;
+
+    const loadError =
+        window.walzBuyerPaymentLoadErrors?.[key]
+        || "";
+
+    if (loadError) {
+        return `
+            <section class="pickup-progress-card">
+                <strong>Pago</strong>
+                <p>
+                    No se pudo consultar el estado del pago.
+                </p>
+            </section>
+        `;
+    }
+
+    if (!payment) {
+        return `
+            <section class="pickup-progress-card">
+                <strong>Pago</strong>
+                <p>Pago no registrado.</p>
+            </section>
+        `;
+    }
+
+    const method = String(
+        payment.method || ""
+    ).trim().toUpperCase();
+
+    const status = String(
+        payment.status || ""
+    ).trim().toLowerCase();
+
+    const statusInfo =
+        getBuyerPaymentStatusPresentation(status);
+
+    const amount = Number(
+        payment.amount || 0
+    );
+
+    const currency = String(
+        payment.currency || "ARS"
+    ).trim().toUpperCase();
+
+    const paymentId = escapeJs(
+        String(payment.id || "")
+    );
+
+    const orderId = escapeJs(
+        String(order?.id || "")
+    );
+
+    const reportable =
+        method === "BANK_TRANSFER"
+        || method === "CUENTA_DNI";
+
+    const paymentDetails = {
+        account_holder:
+            payment.destination_account_holder || null,
+        account_alias:
+            payment.destination_account_alias || null,
+        account_cbu_cvu:
+            payment.destination_account_cbu_cvu || null,
+        bank_name:
+            payment.destination_bank_name || null,
+        instructions:
+            payment.destination_instructions || null
+    };
+
+    const hasBankDestination =
+        method !== "BANK_TRANSFER"
+        || Boolean(
+            paymentDetails.account_alias
+            || paymentDetails.account_cbu_cvu
+        );
+
+    let bankDetailsHtml = "";
+
+    if (method === "BANK_TRANSFER") {
+        if (hasBankDestination) {
+            bankDetailsHtml = `
+                <div class="pickup-progress-card">
+                    <strong>Datos para transferir</strong>
+
+                    ${paymentDetails?.account_holder ? `
+                        <p>
+                            <strong>Titular:</strong>
+                            ${escapeHtml(paymentDetails.account_holder)}
+                        </p>
+                    ` : ""}
+
+                    ${paymentDetails?.account_alias ? `
+                        <p>
+                            <strong>Alias:</strong>
+                            ${escapeHtml(paymentDetails.account_alias)}
+                        </p>
+                    ` : ""}
+
+                    ${paymentDetails?.account_cbu_cvu ? `
+                        <p>
+                            <strong>CBU / CVU:</strong>
+                            ${escapeHtml(paymentDetails.account_cbu_cvu)}
+                        </p>
+                    ` : ""}
+
+                    ${paymentDetails?.bank_name ? `
+                        <p>
+                            <strong>Banco:</strong>
+                            ${escapeHtml(paymentDetails.bank_name)}
+                        </p>
+                    ` : ""}
+
+                    ${paymentDetails?.instructions ? `
+                        <p>
+                            ${escapeHtml(paymentDetails.instructions)}
+                        </p>
+                    ` : ""}
+                </div>
+            `;
+        } else {
+            bankDetailsHtml = `
+                <p>
+                    Este pago no tiene un destino de transferencia
+                    guardado en su registro original.
+                </p>
+            `;
+        }
+    }
+
+    let action = "";
+
+    if (
+        status === "pending"
+        && reportable
+        && hasBankDestination
+    ) {
+        const label =
+            method === "BANK_TRANSFER"
+                ? "Informar transferencia realizada"
+                : "Informar pago realizado";
+
+        action = `
+            <div class="seller-order-actions">
+                <button
+                    type="button"
+                    onclick="reportBuyerPayment(
+                        '${paymentId}',
+                        '${orderId}'
+                    )"
+                >
+                    ${label}
+                </button>
+            </div>
+        `;
+    }
+
+    let explanation = "";
+
+    if (status === "reported") {
+        explanation = `
+            <p>
+                Pago informado. Esperando verificacion
+                del vendedor.
+            </p>
+        `;
+    }
+
+    return `
+        <section class="pickup-progress-card">
+            <strong>Pago</strong>
+
+            <p>
+                ${escapeHtml(
+                    getBuyerPaymentMethodLabel(method)
+                )}
+                - $${amount.toFixed(2)}
+                ${escapeHtml(currency)}
+            </p>
+
+            <span class="order-status ${statusInfo.css}">
+                ${escapeHtml(statusInfo.label)}
+            </span>
+
+            ${bankDetailsHtml}
+            ${explanation}
+            ${action}
+        </section>
+    `;
+}
+
+
+async function reportBuyerPayment(
+    paymentId,
+    orderId
+) {
+    const currentToken =
+        localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Confirma que ya realizaste este pago. "
+        + "El vendedor debera verificarlo."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/payments/${encodeURIComponent(paymentId)}/report`,
+            {
+                method: "PATCH",
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ({}));
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || `HTTP ${response.status}`
+            );
+        }
+
+        cacheBuyerPaymentForOrder(
+            orderId,
+            data
+        );
+
+        showMessage(
+            "Pago informado al vendedor.",
+            "success"
+        );
+
+        await openOrderDetail(orderId);
+
+    } catch (error) {
+        console.error(
+            "Error informando pago:",
+            error
+        );
+
+        showMessage(
+            error.message
+            || "No se pudo informar el pago.",
+            "error"
+        );
     }
 }
 
@@ -4821,7 +5453,7 @@ function renderOrderDetail(order, items) {
     const createdAt = formatWalzDate(order.created_at);
     const pickupTimeline = renderOrderTimeline(order);
 
-    const address = order.shipping_address || "DirecciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n no disponible";
+    const address = order.shipping_address || "Dirección no disponible";
 
     const canCancel = String(order.status || '').toLowerCase() === 'pending';
     const isPickup = String(order.shipping_address || '').toLowerCase().includes('retiro en el local');
@@ -4833,8 +5465,8 @@ function renderOrderDetail(order, items) {
     if (isPickup && pickupStatus === 'seller_handed') pickupActions = `<button type="button" onclick="updateBuyerPickupStatus('${escapeJs(String(order.id))}', 'buyer_received')">Producto retirado y recibido</button>`;
 
     container.innerHTML = `
-        <button type="button" onclick="loadMyOrders()">
-            ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Ãƒâ€šÃ‚Â Volver a mis compras
+        <button type="button" onclick="backToMyOrders()">
+            ← Volver a mis compras
         </button>
         <article class="order-detail-card">
             <h3>Pedido #${escapeHtml(String(order.id))}</h3>
@@ -4843,7 +5475,7 @@ function renderOrderDetail(order, items) {
                 <div><dt>Compra realizada</dt><dd>${escapeHtml(createdAt)}</dd></div>
                 <div><dt>Vendido por</dt><dd>${escapeHtml(order.seller_display_name || "Vendedor sin nombre")}</dd></div>
                 <div><dt>Cuenta vendedora</dt><dd>${escapeHtml(order.seller_account_email || "No disponible")}</dd></div>
-                <div><dt>DirecciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de envÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­o</dt><dd>${escapeHtml(address)}</dd></div>
+                <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
             </dl>
             <h4>Productos</h4>
             <div class="order-detail-items">
@@ -4860,9 +5492,12 @@ function renderOrderDetail(order, items) {
                             <strong>Subtotal: $${subtotal.toFixed(2)}</strong>
                         </article>
                     `;
-                }).join("") || "<p>Este pedido no tiene artÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­culos.</p>"}
+                }).join("") || "<p>Este pedido no tiene artículos.</p>"}
             </div>
             <h3 class="order-total">Total: $${Number(order.total_amount || 0).toFixed(2)}</h3>
+
+            ${renderBuyerPaymentBlock(order)}
+
             ${isPickup ? pickupTimeline : renderDeliveryPlan(order) + renderDeliveryResponsible(order)}
             ${isPickup && pickupStatus ? `<div class="pickup-progress-card"><strong>${escapeHtml(pickupLabels[pickupStatus] || pickupStatus)}</strong><div class="seller-order-actions">${pickupActions}</div></div>` : ""}
             ${canCancel ? `
@@ -4921,7 +5556,7 @@ async function cancelPendingOrder(orderId) {
     }
 
     const confirmed = window.confirm(
-        "ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿Confirmas la cancelacion del pedido? Las unidades volveran al stock."
+        "¿Confirmas la cancelación del pedido? Las unidades volverán al stock."
     );
 
     if (!confirmed) {
@@ -4967,8 +5602,8 @@ function renderOrderNotFound() {
     }
 
     container.innerHTML = `
-        <p class="orders-empty">El pedido solicitado no existe o ya no estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ disponible.</p>
-        <button type="button" onclick="loadMyOrders()">
+        <p class="orders-empty">El pedido solicitado no existe o ya no está disponible.</p>
+        <button type="button" onclick="backToMyOrders()">
             Volver a mis compras
         </button>
     `;
@@ -5006,14 +5641,14 @@ function renderCart() {
 
 
     // -------------------------------------------------
-    // CARRITO VACÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂO
+    // CARRITO VACIO
     // -------------------------------------------------
 
     if (cart.length === 0) {
 
         container.innerHTML = `
             <div class="cart-empty">
-                ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Carrito vacÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­o.
+                Carrito vacío.
             </div>
         `;
 
@@ -5064,7 +5699,7 @@ function renderCart() {
                             type="button"
                             onclick="decreaseCartItem(${index})"
                         >
-                            ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
+                            -
                         </button>
 
 
@@ -5091,7 +5726,7 @@ function renderCart() {
                             onclick="removeFromCart(${index})"
                             class="cart-remove"
                         >
-                            ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â
+                            Quitar
                         </button>
 
                     </div>
@@ -5133,7 +5768,7 @@ function increaseCartItem(index) {
     if (item.qty >= item.stock) {
 
         showMessage(
-            `No puedes agregar mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de ${item.stock} unidades de ${item.name}.`,
+            `No puedes agregar más de ${item.stock} unidades de ${item.name}.`,
             "error"
         );
 
@@ -5203,7 +5838,7 @@ function removeFromCart(index) {
     saveCart();
 
     showMessage(
-        `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â ${item.name} eliminado del carrito.`,
+        `${item.name} eliminado del carrito.`,
         "success"
     );
 
@@ -5232,6 +5867,484 @@ function getCheckoutSellerGroups() {
     }
     return Array.from(groups.values());
 }
+
+
+function getBuyerCheckoutPaymentDeliveryMethod(
+    storeId
+) {
+    const normalizedStoreId = String(
+        storeId || ""
+    );
+
+    const group = getCheckoutSellerGroups().find(
+        item =>
+            String(item?.store?.id || "")
+            === normalizedStoreId
+    );
+
+    if (!group) {
+        return "";
+    }
+
+    return document.querySelector(
+        `input[data-seller-delivery="${group.sellerId}"]:checked`
+    )?.value || "";
+}
+
+
+function isBuyerCheckoutPaymentMethodAvailable(
+    method,
+    deliveryMethod
+) {
+    const normalizedMethod = String(
+        method || ""
+    ).trim().toUpperCase();
+
+    if (normalizedMethod === "CASH") {
+        return deliveryMethod === "pickup";
+    }
+
+    return true;
+}
+
+
+function setBuyerCheckoutPaymentMethod(
+    storeId,
+    method
+) {
+    const normalizedStoreId = String(
+        storeId || ""
+    );
+
+    const normalizedMethod = String(
+        method || ""
+    ).trim().toUpperCase();
+
+    if (
+        !normalizedStoreId
+        || !normalizedMethod
+    ) {
+        return;
+    }
+
+    window.walzBuyerCheckoutPaymentSelections =
+        window.walzBuyerCheckoutPaymentSelections
+        || {};
+
+    const cache =
+        window.walzBuyerCheckoutPaymentMethodsCache
+        || {};
+
+    const data =
+        cache[normalizedStoreId]?.data;
+
+    const methods = Array.isArray(data?.methods)
+        ? data.methods
+        : [];
+
+    const exists = methods.some(
+        item =>
+            String(item?.method || "")
+                .trim()
+                .toUpperCase()
+            === normalizedMethod
+    );
+
+    if (!exists) {
+        return;
+    }
+
+    const deliveryMethod =
+        getBuyerCheckoutPaymentDeliveryMethod(
+            normalizedStoreId
+        );
+
+    if (
+        !isBuyerCheckoutPaymentMethodAvailable(
+            normalizedMethod,
+            deliveryMethod
+        )
+    ) {
+        return;
+    }
+
+    window.walzBuyerCheckoutPaymentSelections[
+        normalizedStoreId
+    ] = normalizedMethod;
+
+    const deliveryError =
+        document.getElementById(
+            "delivery-error"
+        );
+
+    if (deliveryError) {
+        deliveryError.textContent = "";
+    }
+}
+
+
+function renderBuyerCheckoutPaymentMethodsPreview(
+    sellerId,
+    data = null,
+    errorMessage = ""
+) {
+    const container = document.querySelector(
+        `[data-buyer-payment-methods="${sellerId}"]`
+    );
+
+    if (!container) {
+        return;
+    }
+
+    if (errorMessage) {
+        container.innerHTML = `
+            <strong>Forma de pago</strong>
+            <span class="buyer-payment-methods-error">
+                ${escapeHtml(errorMessage)}
+            </span>
+        `;
+        return;
+    }
+
+    const storeId = String(
+        data?.store_id || ""
+    );
+
+    if (!storeId) {
+        container.innerHTML = `
+            <strong>Forma de pago</strong>
+            <span class="buyer-payment-methods-error">
+                No se pudo identificar la tienda.
+            </span>
+        `;
+        return;
+    }
+
+    const methods = Array.isArray(data?.methods)
+        ? data.methods
+        : [];
+
+    if (methods.length === 0) {
+        container.innerHTML = `
+            <strong>Forma de pago</strong>
+            <span class="buyer-payment-methods-empty">
+                Esta tienda no tiene formas de pago disponibles.
+            </span>
+        `;
+        return;
+    }
+
+    window.walzBuyerCheckoutPaymentSelections =
+        window.walzBuyerCheckoutPaymentSelections
+        || {};
+
+    const selections =
+        window.walzBuyerCheckoutPaymentSelections;
+
+    const deliveryMethod =
+        getBuyerCheckoutPaymentDeliveryMethod(
+            storeId
+        );
+
+    let selectedMethod = String(
+        selections[storeId] || ""
+    ).trim().toUpperCase();
+
+    const selectedStillAvailable = methods.some(
+        item => {
+            const method = String(
+                item?.method || ""
+            ).trim().toUpperCase();
+
+            return (
+                method === selectedMethod
+                && isBuyerCheckoutPaymentMethodAvailable(
+                    method,
+                    deliveryMethod
+                )
+            );
+        }
+    );
+
+    if (
+        selectedMethod
+        && !selectedStillAvailable
+    ) {
+        delete selections[storeId];
+        selectedMethod = "";
+    }
+
+    container.innerHTML = `
+        <strong>Eleg&iacute; una forma de pago</strong>
+
+        <div class="buyer-payment-methods-list">
+            ${methods.map(item => {
+                const method = String(
+                    item?.method || ""
+                ).trim().toUpperCase();
+
+                const label = String(
+                    item?.label
+                    || method
+                    || "Forma de pago"
+                );
+
+                const available =
+                    isBuyerCheckoutPaymentMethodAvailable(
+                        method,
+                        deliveryMethod
+                    );
+
+                const selected =
+                    available
+                    && selectedMethod === method;
+
+                const pickupNote =
+                    item.allow_pay_on_pickup === true
+                        ? (
+                            method === "CASH"
+                                ? "Se abona al retirar."
+                                : "Tambi&eacute;n puede abonarse al retirar."
+                        )
+                        : "";
+
+                const unavailableNote =
+                    method === "CASH"
+                    && !available
+                        ? "Disponible solamente con retiro en el local."
+                        : "";
+
+                return `
+                    <label
+                        class="
+                            buyer-payment-method-option
+                            ${selected ? "is-selected" : ""}
+                            ${available ? "" : "is-disabled"}
+                        "
+                    >
+                        <input
+                            type="radio"
+                            name="buyer-payment-method-${escapeHtml(storeId)}"
+                            value="${escapeHtml(method)}"
+                            data-buyer-payment-choice="true"
+                            data-buyer-payment-store="${escapeHtml(storeId)}"
+                            ${selected ? "checked" : ""}
+                            ${available ? "" : "disabled"}
+                        >
+
+                        <span class="buyer-payment-method-option-content">
+                            <strong>
+                                ${escapeHtml(label)}
+                            </strong>
+
+                            ${pickupNote
+                                ? `
+                                    <small>
+                                        ${escapeHtml(pickupNote)}
+                                    </small>
+                                `
+                                : ""
+                            }
+
+                            ${unavailableNote
+                                ? `
+                                    <small>
+                                        ${escapeHtml(unavailableNote)}
+                                    </small>
+                                `
+                                : ""
+                            }
+                        </span>
+                    </label>
+                `;
+            }).join("")}
+        </div>
+    `;
+
+    container
+        .querySelectorAll(
+            'input[data-buyer-payment-choice]'
+        )
+        .forEach(input => {
+            input.addEventListener(
+                "change",
+                () => {
+                    if (!input.checked) {
+                        return;
+                    }
+
+                    setBuyerCheckoutPaymentMethod(
+                        input.getAttribute(
+                            "data-buyer-payment-store"
+                        ),
+                        input.value
+                    );
+
+                    renderBuyerCheckoutPaymentMethodsPreview(
+                        sellerId,
+                        data
+                    );
+                }
+            );
+        });
+}
+
+
+function refreshBuyerCheckoutPaymentMethodsFromCache() {
+    const cache =
+        window.walzBuyerCheckoutPaymentMethodsCache
+        || {};
+
+    const groups =
+        getCheckoutSellerGroups();
+
+    for (const group of groups) {
+        const sellerId = String(
+            group?.sellerId || ""
+        );
+
+        const storeId = String(
+            group?.store?.id || ""
+        );
+
+        if (
+            !sellerId
+            || !storeId
+        ) {
+            continue;
+        }
+
+        const cached =
+            cache[storeId];
+
+        if (!cached?.data) {
+            continue;
+        }
+
+        renderBuyerCheckoutPaymentMethodsPreview(
+            sellerId,
+            cached.data
+        );
+    }
+}
+
+
+async function loadBuyerCheckoutPaymentMethodsPreview(groups) {
+    const token = localStorage.getItem("walz_token");
+
+    if (!token) {
+        return;
+    }
+
+    const rows = Array.isArray(groups)
+        ? groups
+        : [];
+
+    window.walzBuyerCheckoutPaymentMethodsCache =
+        window.walzBuyerCheckoutPaymentMethodsCache || {};
+
+    const cache =
+        window.walzBuyerCheckoutPaymentMethodsCache;
+
+    await Promise.all(
+        rows.map(async group => {
+            const sellerId = String(
+                group?.sellerId || ""
+            );
+
+            const storeId = String(
+                group?.store?.id || ""
+            );
+
+            if (!sellerId) {
+                return;
+            }
+
+            if (!storeId) {
+                renderBuyerCheckoutPaymentMethodsPreview(
+                    sellerId,
+                    null,
+                    "No se pudo identificar la tienda."
+                );
+                return;
+            }
+
+            const cached = cache[storeId];
+
+            if (
+                cached
+                && cached.data
+                && (
+                    Date.now()
+                    - Number(cached.loadedAt || 0)
+                ) < 30000
+            ) {
+                renderBuyerCheckoutPaymentMethodsPreview(
+                    sellerId,
+                    cached.data
+                );
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/payments/stores/${encodeURIComponent(storeId)}/methods`,
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (response.status === 401) {
+                    handleExpiredSession();
+
+                    renderBuyerCheckoutPaymentMethodsPreview(
+                        sellerId,
+                        null,
+                        "Tu sesion vencio."
+                    );
+
+                    return;
+                }
+
+                const data =
+                    await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail
+                        || "No se pudieron cargar las formas de pago."
+                    );
+                }
+
+                cache[storeId] = {
+                    data,
+                    loadedAt: Date.now()
+                };
+
+                renderBuyerCheckoutPaymentMethodsPreview(
+                    sellerId,
+                    data
+                );
+
+            } catch (error) {
+                console.error(
+                    "Error cargando formas de pago para checkout:",
+                    error
+                );
+
+                renderBuyerCheckoutPaymentMethodsPreview(
+                    sellerId,
+                    null,
+                    error.message
+                    || "No se pudieron cargar las formas de pago."
+                );
+            }
+        })
+    );
+}
+
 
 function renderSellerDeliveryOptions() {
     const container = document.getElementById("seller-delivery-methods");
@@ -5267,7 +6380,50 @@ function renderSellerDeliveryOptions() {
             </section>`;
     }).join("");
     window.walzSellerDeliverySelections = previous;
+
+    for (const group of groups) {
+        const sellerId = String(
+            group?.sellerId || ""
+        );
+
+        const deliveryInput = container.querySelector(
+            `input[data-seller-delivery="${sellerId}"]`
+        );
+
+        const card = deliveryInput?.closest(
+            ".seller-delivery-card"
+        );
+
+        if (!card) {
+            continue;
+        }
+
+        const paymentPreview =
+            document.createElement("div");
+
+        paymentPreview.className =
+            "buyer-payment-methods-preview";
+
+        paymentPreview.setAttribute(
+            "data-buyer-payment-methods",
+            sellerId
+        );
+
+        paymentPreview.innerHTML = `
+            <strong>Formas de pago disponibles</strong>
+            <span class="buyer-payment-methods-loading">
+                Cargando...
+            </span>
+        `;
+
+        card.appendChild(paymentPreview);
+    }
+
     updateDeliveryMethod();
+
+    loadBuyerCheckoutPaymentMethodsPreview(
+        groups
+    );
 }
 
 function setSellerDeliveryMethod(sellerId, method) {
@@ -5296,6 +6452,8 @@ function updateDeliveryMethod() {
             dateInput.min = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,"0")}-${String(tomorrow.getDate()).padStart(2,"0")}`;
         }
     });
+    refreshBuyerCheckoutPaymentMethodsFromCache();
+
     const deliveryError = document.getElementById("delivery-error");
     if (deliveryError) deliveryError.textContent = "";
 }
@@ -5311,15 +6469,90 @@ function checkout() {
     const deliveryPhone = document.getElementById("delivery-phone")?.value.trim() || "";
     const deliveryNotes = document.getElementById("delivery-notes")?.value.trim() || "";
     const deliveryError = document.getElementById("delivery-error");
-    const choices = groups.map(group => ({
-        sellerId: group.sellerId,
-        storeName: group.store?.name || "Vendedor WalZ",
-        method: document.querySelector(`input[data-seller-delivery="${group.sellerId}"]:checked`)?.value || "",
-        requestedDate: document.querySelector(`[data-requested-date="${group.sellerId}"]`)?.value || "",
-        requestedTimeWindow: document.querySelector(`[data-requested-window="${group.sellerId}"]`)?.value || ""
-    }));
+    const paymentSelections =
+        window.walzBuyerCheckoutPaymentSelections
+        || {};
+
+    const paymentCache =
+        window.walzBuyerCheckoutPaymentMethodsCache
+        || {};
+
+    const choices = groups.map(group => {
+        const storeId = String(
+            group?.store?.id || ""
+        );
+
+        const deliveryMethod =
+            document.querySelector(
+                `input[data-seller-delivery="${group.sellerId}"]:checked`
+            )?.value || "";
+
+        const paymentMethod = String(
+            paymentSelections[storeId] || ""
+        ).trim().toUpperCase();
+
+        const availablePayments = Array.isArray(
+            paymentCache[storeId]?.data?.methods
+        )
+            ? paymentCache[storeId].data.methods
+            : [];
+
+        const paymentOption =
+            availablePayments.find(
+                item =>
+                    String(item?.method || "")
+                        .trim()
+                        .toUpperCase()
+                    === paymentMethod
+            );
+
+        const paymentValid = Boolean(
+            paymentOption
+            && isBuyerCheckoutPaymentMethodAvailable(
+                paymentMethod,
+                deliveryMethod
+            )
+        );
+
+        return {
+            sellerId: group.sellerId,
+            storeId,
+            storeName:
+                group.store?.name
+                || "Vendedor WalZ",
+            method: deliveryMethod,
+            paymentMethod,
+            paymentLabel:
+                paymentOption?.label
+                || paymentMethod,
+            paymentValid,
+            requestedDate:
+                document.querySelector(
+                    `[data-requested-date="${group.sellerId}"]`
+                )?.value || "",
+            requestedTimeWindow:
+                document.querySelector(
+                    `[data-requested-window="${group.sellerId}"]`
+                )?.value || ""
+        };
+    });
     if (choices.some(choice => !choice.method)) {
         if (deliveryError) deliveryError.textContent = "Selecciona una forma de entrega para cada tienda.";
+        return;
+    }
+
+    if (
+        choices.some(
+            choice =>
+                !choice.storeId
+                || !choice.paymentMethod
+                || !choice.paymentValid
+        )
+    ) {
+        if (deliveryError) {
+            deliveryError.textContent =
+                "Selecciona una forma de pago valida para cada tienda.";
+        }
         return;
     }
     const needsAddress = choices.some(choice => choice.method === "delivery");
@@ -5347,12 +6580,43 @@ function checkout() {
         ].filter(Boolean).join(" | ");
         return { seller_id: choice.sellerId, store_name: choice.storeName, method: choice.method, shipping_address: shippingAddress, requested_date: choice.method === "delivery" ? choice.requestedDate : null, requested_time_window: choice.method === "delivery" ? choice.requestedTimeWindow : null };
     });
-    const uniqueMethods = new Set(deliveries.map(delivery => delivery.method));
+    const payments = choices.map(choice => ({
+        store_id: choice.storeId,
+        seller_id: choice.sellerId,
+        store_name: choice.storeName,
+        method: choice.paymentMethod,
+        label: choice.paymentLabel
+    }));
+
+    const uniqueMethods =
+        new Set(
+            deliveries.map(
+                delivery => delivery.method
+            )
+        );
+
     pendingCheckout = {
-        items: cart.map(item => ({ product_id: item.id, quantity: item.qty })),
+        items: cart.map(item => ({
+            product_id: item.id,
+            quantity: item.qty
+        })),
         deliveries,
-        delivery: { method: uniqueMethods.size > 1 ? "mixed" : deliveries[0]?.method || "delivery", name: deliveryName, address: deliveryAddress, city: deliveryCity, phone: deliveryPhone, notes: deliveryNotes },
-        cart: cart.map(item => ({ ...item }))
+        payments,
+        delivery: {
+            method:
+                uniqueMethods.size > 1
+                    ? "mixed"
+                    : deliveries[0]?.method
+                        || "delivery",
+            name: deliveryName,
+            address: deliveryAddress,
+            city: deliveryCity,
+            phone: deliveryPhone,
+            notes: deliveryNotes
+        },
+        cart: cart.map(item => ({
+            ...item
+        }))
     };
     renderCheckoutConfirmation();
 }
@@ -5375,6 +6639,15 @@ function renderCheckoutConfirmation() {
     if (!modal || !content) {
         return;
     }
+
+    const paymentBySeller = Object.fromEntries(
+        (pendingCheckout.payments || []).map(
+            payment => [
+                String(payment.seller_id || ""),
+                payment
+            ]
+        )
+    );
 
     const total = pendingCheckout.cart.reduce(
         (sum, item) =>
@@ -5403,13 +6676,55 @@ function renderCheckoutConfirmation() {
 
         <div class="checkout-confirmation-delivery">
             <h3>Entrega por tienda</h3>
-            ${pendingCheckout.deliveries.map(delivery => `
-                <div class="checkout-store-delivery-summary">
-                    <strong>${escapeHtml(delivery.store_name)}</strong>
-                    <span>${delivery.method === "pickup" ? "Retiro en el local" : "Envio a domicilio"}</span>
-                    ${delivery.method === "delivery" ? `<small>Preferencia: ${escapeHtml(formatDeliveryDateOnly(delivery.requested_date))} | ${escapeHtml(delivery.requested_time_window || "")}</small>` : ""}
-                </div>
-            `).join("")}
+            ${pendingCheckout.deliveries.map(delivery => {
+                const payment =
+                    paymentBySeller[
+                        String(delivery.seller_id || "")
+                    ] || {};
+
+                return `
+                    <div class="checkout-store-delivery-summary">
+                        <strong>
+                            ${escapeHtml(delivery.store_name)}
+                        </strong>
+
+                        <span>
+                            ${delivery.method === "pickup"
+                                ? "Retiro en el local"
+                                : "Envio a domicilio"
+                            }
+                        </span>
+
+                        ${delivery.method === "delivery"
+                            ? `
+                                <small>
+                                    Preferencia:
+                                    ${escapeHtml(
+                                        formatDeliveryDateOnly(
+                                            delivery.requested_date
+                                        )
+                                    )}
+                                    |
+                                    ${escapeHtml(
+                                        delivery.requested_time_window
+                                        || ""
+                                    )}
+                                </small>
+                            `
+                            : ""
+                        }
+
+                        <small class="checkout-store-payment-summary">
+                            Pago:
+                            ${escapeHtml(
+                                payment.label
+                                || payment.method
+                                || "Sin seleccionar"
+                            )}
+                        </small>
+                    </div>
+                `;
+            }).join("")}
             <p><strong>Nombre:</strong> ${escapeHtml(pendingCheckout.delivery.name)}</p>
             ${pendingCheckout.delivery.address ? `<p><strong>Direccion:</strong> ${escapeHtml(pendingCheckout.delivery.address)} - ${escapeHtml(pendingCheckout.delivery.city)}</p>` : ""}
             <p><strong>Telefono:</strong> ${escapeHtml(pendingCheckout.delivery.phone)}</p>
@@ -5435,6 +6750,228 @@ function closeCheckoutConfirmation() {
     }
 
     pendingCheckout = null;
+}
+
+
+
+async function createBuyerPaymentsForCheckout(
+    orders,
+    paymentSelections,
+    token
+) {
+    const rows =
+        Array.isArray(paymentSelections)
+            ? paymentSelections
+            : [];
+
+    const paymentByStoreId = new Map();
+    const duplicateStoreIds = new Set();
+
+    for (const selection of rows) {
+        const storeId = String(
+            selection?.store_id || ""
+        ).trim();
+
+        const method = String(
+            selection?.method || ""
+        ).trim().toUpperCase();
+
+        if (!storeId || !method) {
+            continue;
+        }
+
+        if (paymentByStoreId.has(storeId)) {
+            duplicateStoreIds.add(storeId);
+        }
+
+        paymentByStoreId.set(
+            storeId,
+            {
+                ...selection,
+                store_id: storeId,
+                method
+            }
+        );
+    }
+
+    const created = [];
+    const failures = [];
+
+    for (
+        const order of (
+            Array.isArray(orders)
+                ? orders
+                : []
+        )
+    ) {
+        const orderId = String(
+            order?.id || ""
+        ).trim();
+
+        const storeId = String(
+            order?.store_id || ""
+        ).trim();
+
+        const sellerId = String(
+            order?.seller_id || ""
+        ).trim();
+
+        const selection =
+            paymentByStoreId.get(storeId)
+            || null;
+
+        const storeName = String(
+            selection?.store_name
+            || "Tienda"
+        ).trim();
+
+        if (!orderId || !storeId) {
+            failures.push({
+                order_id: orderId || null,
+                store_id: storeId || null,
+                store_name: storeName,
+                method: selection?.method || null,
+                detail:
+                    "El pedido fue creado pero no devolvio "
+                    + "los identificadores necesarios para registrar el pago."
+            });
+
+            continue;
+        }
+
+        if (duplicateStoreIds.has(storeId)) {
+            failures.push({
+                order_id: orderId,
+                store_id: storeId,
+                store_name: storeName,
+                method: selection?.method || null,
+                detail:
+                    "Hay mas de una seleccion de pago "
+                    + "para la misma tienda."
+            });
+
+            continue;
+        }
+
+        if (!selection?.method) {
+            failures.push({
+                order_id: orderId,
+                store_id: storeId,
+                store_name: storeName,
+                method: null,
+                detail:
+                    "No se encontro la forma de pago "
+                    + "seleccionada para esta tienda."
+            });
+
+            continue;
+        }
+
+        const selectedSellerId = String(
+            selection.seller_id || ""
+        ).trim();
+
+        if (
+            selectedSellerId
+            && sellerId
+            && selectedSellerId !== sellerId
+        ) {
+            failures.push({
+                order_id: orderId,
+                store_id: storeId,
+                store_name: storeName,
+                method: selection.method,
+                detail:
+                    "La tienda del pedido no coincide "
+                    + "con la seleccion de pago."
+            });
+
+            continue;
+        }
+
+        try {
+            const response = await fetch(
+                `${API_URL}/payments/orders/${encodeURIComponent(orderId)}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        method: selection.method
+                    })
+                }
+            );
+
+            const responseText =
+                await response.text();
+
+            if (!response.ok) {
+                let detail =
+                    "No se pudo registrar la forma de pago.";
+
+                try {
+                    const data =
+                        JSON.parse(responseText);
+
+                    detail =
+                        data.detail
+                        || detail;
+                } catch (_) {}
+
+                failures.push({
+                    order_id: orderId,
+                    store_id: storeId,
+                    store_name: storeName,
+                    method: selection.method,
+                    detail
+                });
+
+                continue;
+            }
+
+            let payment = null;
+
+            if (responseText) {
+                try {
+                    payment =
+                        JSON.parse(responseText);
+                } catch (_) {
+                    payment = null;
+                }
+            }
+
+            created.push({
+                order_id: orderId,
+                store_id: storeId,
+                store_name: storeName,
+                method: selection.method,
+                payment
+            });
+
+        } catch (paymentError) {
+            console.error(
+                "Error creando Payment para pedido:",
+                orderId,
+                paymentError
+            );
+
+            failures.push({
+                order_id: orderId,
+                store_id: storeId,
+                store_name: storeName,
+                method: selection.method,
+                detail:
+                    "No se pudo conectar con el servicio de pagos."
+            });
+        }
+    }
+
+    return {
+        created,
+        failures
+    };
 }
 
 
@@ -5510,6 +7047,42 @@ async function confirmCheckout() {
             throw new Error("El servidor no devolvio los pedidos creados.");
         }
 
+        let paymentOutcome = {
+            created: [],
+            failures: []
+        };
+
+        try {
+            paymentOutcome =
+                await createBuyerPaymentsForCheckout(
+                    orders,
+                    orderData.payments,
+                    token
+                );
+        } catch (paymentError) {
+            console.error(
+                "Error inesperado registrando Payments:",
+                paymentError
+            );
+
+            paymentOutcome = {
+                created: [],
+                failures: orders.map(
+                    order => ({
+                        order_id:
+                            String(order?.id || "") || null,
+                        store_id:
+                            String(order?.store_id || "") || null,
+                        store_name: "Tienda",
+                        method: null,
+                        detail:
+                            "El pedido fue creado, pero no se pudo "
+                            + "registrar su forma de pago."
+                    })
+                )
+            };
+        }
+
         pendingCheckout = null;
 
         const modal =
@@ -5565,6 +7138,39 @@ async function confirmCheckout() {
 
         renderOrderSuccess(orders, orderData.delivery);
 
+        if (paymentOutcome.failures.length > 0) {
+            const affectedStores = [
+                ...new Set(
+                    paymentOutcome.failures
+                        .map(
+                            item =>
+                                String(
+                                    item.store_name || "Tienda"
+                                ).trim()
+                        )
+                        .filter(Boolean)
+                )
+            ];
+
+            console.warn(
+                "Pedidos creados con Payments pendientes:",
+                paymentOutcome.failures
+            );
+
+            showMessage(
+                "La compra fue creada. "
+                + "Falta registrar el pago de: "
+                + affectedStores.join(", ")
+                + ". No vuelvas a confirmar la compra.",
+                "error"
+            );
+        } else {
+            showMessage(
+                "Compra confirmada y formas de pago registradas.",
+                "success"
+            );
+        }
+
     } catch (checkoutError) {
         console.error("Error de conexion checkout:", checkoutError);
 
@@ -5588,6 +7194,9 @@ function renderOrderSuccess(orders, delivery) {
     if (!container) {
         return;
     }
+
+    window.walzOrderSuccessOpen = true;
+    window.walzOrderDetailOpen = false;
 
     const createdOrders = Array.isArray(orders)
         ? orders
@@ -5738,7 +7347,7 @@ function showMessage(
 
 
 // =====================================================
-// UI AUTENTICACIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œN
+// UI AUTENTICACION
 // =====================================================
 
 function hideAuthForms() {
@@ -5858,6 +7467,359 @@ function showReceivedOrders() {
 }
 
 
+function normalizeSellerPaymentOrderId(value) {
+    return String(value || "")
+        .replace(/-/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+
+function getSellerPaymentMethodLabel(method) {
+    const labels = {
+        CASH: "Efectivo",
+        BANK_TRANSFER: "Transferencia bancaria",
+        CUENTA_DNI: "Cuenta DNI",
+        MERCADO_PAGO: "Mercado Pago"
+    };
+
+    const normalized = String(method || "")
+        .trim()
+        .toUpperCase();
+
+    return labels[normalized] || normalized || "No informado";
+}
+
+
+function getSellerPaymentStatusPresentation(status) {
+    const normalized = String(status || "")
+        .trim()
+        .toLowerCase();
+
+    const states = {
+        pending: {
+            label: "Pendiente",
+            css: "order-status-pending"
+        },
+        reported: {
+            label: "Informado por el comprador",
+            css: "order-status-confirmed"
+        },
+        approved: {
+            label: "Pago confirmado",
+            css: "order-status-delivered"
+        },
+        rejected: {
+            label: "Pago rechazado",
+            css: "order-status-cancelled"
+        },
+        cancelled: {
+            label: "Pago cancelado",
+            css: "order-status-cancelled"
+        }
+    };
+
+    return states[normalized] || {
+        label: normalized || "Sin estado",
+        css: "order-status-unknown"
+    };
+}
+
+
+function rebuildSellerPaymentIndex(payments) {
+    const index = {};
+
+    for (
+        const payment of Array.isArray(payments)
+            ? payments
+            : []
+    ) {
+        const key = normalizeSellerPaymentOrderId(
+            payment?.order_id
+        );
+
+        if (!key) {
+            continue;
+        }
+
+        const current = index[key];
+
+        const currentTime = Date.parse(
+            current?.created_at || ""
+        ) || 0;
+
+        const candidateTime = Date.parse(
+            payment?.created_at || ""
+        ) || 0;
+
+        if (
+            !current
+            || candidateTime >= currentTime
+        ) {
+            index[key] = payment;
+        }
+    }
+
+    window.walzSellerPaymentByOrderId = index;
+}
+
+
+async function loadAllSellerPayments(currentToken) {
+    const pageSize = 200;
+    let offset = 0;
+    const payments = [];
+
+    while (true) {
+        const response = await fetch(
+            `${API_URL}/payments/seller/mine?limit=${pageSize}&offset=${offset}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ([]));
+
+        if (response.status === 401) {
+            throw new Error("SESSION_EXPIRED");
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || `HTTP ${response.status}`
+            );
+        }
+
+        const rows = Array.isArray(data)
+            ? data
+            : [];
+
+        payments.push(...rows);
+
+        if (rows.length < pageSize) {
+            break;
+        }
+
+        offset += pageSize;
+    }
+
+    return payments;
+}
+
+
+function renderSellerPaymentBlock(order) {
+    const orderKey = normalizeSellerPaymentOrderId(
+        order?.id
+    );
+
+    const payment =
+        window.walzSellerPaymentByOrderId?.[
+            orderKey
+        ] || null;
+
+    if (window.walzSellerPaymentsLoadError) {
+        return `
+            <div class="sales-delivery-data">
+                <span>Pago</span>
+                <p>
+                    No se pudo consultar el estado del pago.
+                </p>
+            </div>
+        `;
+    }
+
+    if (!payment) {
+        return `
+            <div class="sales-delivery-data">
+                <span>Pago</span>
+                <p>Pago no registrado.</p>
+            </div>
+        `;
+    }
+
+    const method = String(
+        payment.method || ""
+    ).trim().toUpperCase();
+
+    const status = String(
+        payment.status || ""
+    ).trim().toLowerCase();
+
+    const statusInfo =
+        getSellerPaymentStatusPresentation(status);
+
+    const amount = Number(
+        payment.amount || 0
+    );
+
+    const currency = String(
+        payment.currency || "ARS"
+    ).trim().toUpperCase();
+
+    const paymentId = escapeJs(
+        String(payment.id || "")
+    );
+
+    const buyerReportable =
+        method === "BANK_TRANSFER"
+        || method === "CUENTA_DNI";
+
+    const canReview = buyerReportable
+        ? status === "reported"
+        : (
+            status === "pending"
+            || status === "reported"
+        );
+
+    const waitingForBuyerPayment =
+        buyerReportable && status === "pending"
+            ? `
+                <p>
+                    Esperando que el comprador informe el pago.
+                </p>
+            `
+            : "";
+
+    const approveLabel =
+        method === "CASH"
+            ? "Confirmar pago recibido"
+            : "Aprobar pago";
+
+    const actions = canReview
+        ? `
+            <div class="seller-order-actions">
+                <button
+                    type="button"
+                    onclick="updateSellerPaymentStatus(
+                        '${paymentId}',
+                        'approved',
+                        '${approveLabel}'
+                    )"
+                >
+                    ${approveLabel}
+                </button>
+
+                <button
+                    type="button"
+                    class="seller-cancel-button"
+                    onclick="updateSellerPaymentStatus(
+                        '${paymentId}',
+                        'rejected',
+                        'Rechazar pago'
+                    )"
+                >
+                    Rechazar pago
+                </button>
+            </div>
+        `
+        : "";
+
+    return `
+        <div class="sales-delivery-data">
+            <span>Pago</span>
+
+            <p>
+                <strong>
+                    ${escapeHtml(
+                        getSellerPaymentMethodLabel(method)
+                    )}
+                </strong>
+                - $${amount.toFixed(2)}
+                ${escapeHtml(currency)}
+            </p>
+
+            <span class="order-status ${statusInfo.css}">
+                ${escapeHtml(statusInfo.label)}
+            </span>
+
+            ${waitingForBuyerPayment}
+
+            ${actions}
+        </div>
+    `;
+}
+
+
+async function updateSellerPaymentStatus(
+    paymentId,
+    requestedStatus,
+    actionLabel
+) {
+    const currentToken =
+        localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        handleExpiredSession();
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `${actionLabel}. Confirma esta accion.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/payments/seller/${encodeURIComponent(paymentId)}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({
+                    status: requestedStatus
+                })
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ({}));
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || `HTTP ${response.status}`
+            );
+        }
+
+        showMessage(
+            requestedStatus === "approved"
+                ? "Pago confirmado correctamente."
+                : "Pago rechazado.",
+            "success"
+        );
+
+        await loadReceivedOrders();
+
+    } catch (error) {
+        console.error(
+            "Error actualizando pago:",
+            error
+        );
+
+        showMessage(
+            error.message
+            || "No se pudo actualizar el pago.",
+            "error"
+        );
+    }
+}
+
+
 async function loadReceivedOrders(silent = false) {
     const container =
         document.getElementById("sales-orders-content");
@@ -5904,6 +7866,43 @@ async function loadReceivedOrders(silent = false) {
         }
 
         window.walzReceivedOrders = Array.isArray(data) ? data : [];
+
+        try {
+            const sellerPayments =
+                await loadAllSellerPayments(currentToken);
+
+            window.walzSellerPayments =
+                sellerPayments;
+
+            window.walzSellerPaymentsLoadError = "";
+
+            rebuildSellerPaymentIndex(
+                sellerPayments
+            );
+
+        } catch (paymentError) {
+            if (
+                paymentError.message
+                === "SESSION_EXPIRED"
+            ) {
+                handleExpiredSession();
+                return;
+            }
+
+            console.error(
+                "Error cargando pagos del vendedor:",
+                paymentError
+            );
+
+            window.walzSellerPayments = [];
+
+            window.walzSellerPaymentsLoadError =
+                paymentError.message
+                || "No se pudieron cargar los pagos.";
+
+            rebuildSellerPaymentIndex([]);
+        }
+
         setSellerPendingOrderBadge(window.walzReceivedOrders.filter(order => String(order.status || "").toLowerCase() === "pending").length);
         applyReceivedOrdersFilters();
 
@@ -5997,6 +7996,8 @@ function renderReceivedOrders(orders) {
                         <h3 class="order-total">
                             Total de tus productos: ${Number(order.seller_total || 0).toFixed(2)}
                         </h3>
+
+                        ${renderSellerPaymentBlock(order)}
 
                         ${renderSellerOrderActions(order)}
                     </article>
@@ -6213,6 +8214,58 @@ function renderSellerOrderActions(order) {
         if (!isPickup && !order.delivery_estimated_date) return `${renderDeliveryPlanForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
         if (!isPickup && String(order.delivery_plan_status) === "seller_proposed") return `${renderDeliveryPlan(order, false)}<div class="delivery-waiting-card">Esperando la respuesta del comprador.</div>`;
         if (!isPickup && String(order.delivery_plan_status) === "coordinated" && !deliveryResponsibleIsComplete(order)) return `${renderDeliveryPlan(order, false)}${renderDeliveryResponsibleForm(order)}<div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
+
+        const sellerPayment =
+            window.walzSellerPaymentByOrderId?.[
+                normalizeSellerPaymentOrderId(order?.id)
+            ] || null;
+
+        const paymentRequired =
+            order?.payment_required === true;
+
+        if (
+            paymentRequired
+            && !sellerPayment
+        ) {
+            const paymentMissingContext =
+                !isPickup
+                    ? renderDeliveryPlan(order, false)
+                        + renderDeliveryResponsible(order)
+                    : "";
+
+            const paymentMissingMessage =
+                isPickup
+                    ? "El pago de este pedido no quedo registrado. No se puede marcar listo para retirar hasta regularizarlo."
+                    : "El pago de este pedido no quedo registrado. No se puede despachar hasta regularizarlo.";
+
+            return `${paymentMissingContext}<div class="delivery-waiting-card">${paymentMissingMessage}</div><div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
+        }
+
+        const sellerPaymentMethod = String(
+            sellerPayment?.method || ""
+        ).trim().toUpperCase();
+
+        const sellerPaymentStatus = String(
+            sellerPayment?.status || ""
+        ).trim().toLowerCase();
+
+        const requiresApprovedPayment =
+            sellerPaymentMethod === "BANK_TRANSFER"
+            || sellerPaymentMethod === "CUENTA_DNI";
+
+        if (
+            !isPickup
+            && requiresApprovedPayment
+            && sellerPaymentStatus !== "approved"
+        ) {
+            const paymentWaitingMessage =
+                sellerPaymentStatus === "reported"
+                    ? "El comprador informo el pago. Verificalo y aprobalo antes de despachar."
+                    : "Esperando que el comprador informe el pago antes del despacho.";
+
+            return `${renderDeliveryPlan(order, false)}${renderDeliveryResponsible(order)}<div class="delivery-waiting-card">${paymentWaitingMessage}</div><div class="seller-order-actions"><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
+        }
+
         const actionLabel = isPickup ? "Marcar listo para retirar" : "Marcar como enviado";
         return `${!isPickup ? renderDeliveryPlan(order, false) + renderDeliveryResponsible(order) : ""}<div class="seller-order-actions"><button type="button" onclick="updateSellerOrderStatus('${orderId}', 'shipped', '${actionLabel}')">${actionLabel}</button><button type="button" class="seller-cancel-button" onclick="updateSellerOrderStatus('${orderId}', 'cancelled', 'Cancelar venta')">Cancelar venta</button></div>`;
     }
@@ -6240,7 +8293,7 @@ async function updateSellerOrderStatus(orderId, newStatus, actionLabel) {
     }
 
     const confirmed = window.confirm(
-        `${actionLabel}: ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿confirmas esta accion?`
+        `${actionLabel}: ¿confirmas esta acción?`
     );
 
     if (!confirmed) {
@@ -8853,10 +10906,10 @@ function updateAdminBannerVisibility() {
 
     const cartButton = document.querySelector(".cart-button");
     if (cartButton) {
-        cartButton.style.display = isAdmin ? "none" : "inline-flex";
+        cartButton.style.display = (isAdmin || canSell) ? "none" : "inline-flex";
     }
 
-    if (isAdmin) {
+    if (isAdmin || canSell) {
         const cartSection = document.getElementById("cart-section");
         if (cartSection) cartSection.style.display = "none";
         document.body.classList.remove("cart-panel-open");
@@ -9105,14 +11158,47 @@ function renderMarketplaceBanner() {
     const index = Math.max(0, Math.min(Number(window.walzBannerIndex || 0), banners.length - 1));
     window.walzBannerIndex = index;
     const banner = banners[index];
+
+    const rawStyleVariant = String(
+        banner.style_variant || "STANDARD"
+    ).trim().toUpperCase();
+
+    const styleVariant = [
+        "STANDARD",
+        "INFO",
+        "PROMO",
+        "NOTICE",
+    ].includes(rawStyleVariant)
+        ? rawStyleVariant
+        : "STANDARD";
+
+    const bannerImageUrl = getProductImageUrl(
+        banner.image_url
+    );
+
+    const bannerHasImage = Boolean(bannerImageUrl);
+
+    const bannerImage = bannerHasImage
+        ? `<img
+            class="marketplace-banner-image"
+            src="${escapeHtml(bannerImageUrl)}"
+            alt="${escapeHtml(banner.title || "Publicidad")}"
+            loading="lazy"
+            onerror="const card=this.closest('.marketplace-banner-card');if(card)card.classList.add('marketplace-banner-card-no-image');this.remove();"
+        >`
+        : "";
+
     const link = getSafeBannerLink(banner.link_url);
     const productButton = banner.product_id
         ? `<button type="button" onclick="openPromotedProduct('${escapeJs(String(banner.product_id))}')">${escapeHtml(banner.button_text || "Ver producto")}</button>`
         : "";
 
     container.innerHTML = `
-        <article class="marketplace-banner-card">
-            ${renderProductImage(banner.image_url, banner.title, "marketplace-banner-image")}
+        <article
+            class="marketplace-banner-card${bannerHasImage ? "" : " marketplace-banner-card-no-image"}"
+            data-style-variant="${styleVariant}"
+        >
+            ${bannerImage}
             <div class="marketplace-banner-copy">
                 <span class="marketplace-banner-label">Publicidad</span>
                 <h2>${escapeHtml(banner.title || "")}</h2>
@@ -9158,52 +11244,113 @@ function selectMarketplaceBanner(index) {
 }
 
 
-async function loadActiveBanners() {
-    const container = document.getElementById("marketplace-banners");
-    if (!container) return;
+function hideMarketplaceBanners() {
+    const container =
+        document.getElementById("marketplace-banners");
 
-    const requestToken = localStorage.getItem("walz_token");
+    window.walzBannerLoadToken =
+        Number(window.walzBannerLoadToken || 0) + 1;
 
-    if (!requestToken) {
-        stopMarketplaceBannerRotation();
-        window.walzActiveBanners = [];
+    stopMarketplaceBannerRotation();
+    window.walzActiveBanners = [];
+
+    if (container) {
         container.style.display = "none";
         container.innerHTML = "";
-        return;
+    }
+}
+
+
+function bannerMatchesCurrentAudience(banner) {
+    const hasSession =
+        Boolean(localStorage.getItem("walz_token"));
+
+    const role =
+        hasSession ? currentUserRole : null;
+
+    const audience =
+        String(banner?.audience || "PUBLIC").toUpperCase();
+
+    if (audience === "BUYER") {
+        return role === "COMPRADOR";
     }
 
-    try {
-        const response = await fetch(`${API_URL}/banners/active`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const banners = await response.json();
+    if (audience === "SELLER") {
+        return ["VENDEDOR", "SELLER"].includes(role);
+    }
 
-        if (localStorage.getItem("walz_token") !== requestToken) {
-            stopMarketplaceBannerRotation();
-            window.walzActiveBanners = [];
-            container.style.display = "none";
-            container.innerHTML = "";
+    // PUBLIC = visitante o comprador.
+    return !["ADMIN", "VENDEDOR", "SELLER"].includes(role);
+}
+
+
+async function loadActiveBanners(
+    placement = "CENTRAL_MARKETPLACE"
+) {
+    const container =
+        document.getElementById("marketplace-banners");
+
+    if (!container) return;
+
+    const requestToken =
+        Number(window.walzBannerLoadToken || 0) + 1;
+
+    window.walzBannerLoadToken = requestToken;
+
+    try {
+        const response = await fetch(
+            `${API_URL}/banners/active?placement=${encodeURIComponent(placement)}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const received = await response.json();
+
+        if (
+            requestToken
+            !== Number(window.walzBannerLoadToken || 0)
+        ) {
             return;
         }
 
-        if (!Array.isArray(banners) || banners.length === 0) {
-            stopMarketplaceBannerRotation();
-            window.walzActiveBanners = [];
-            container.style.display = "none";
-            container.innerHTML = "";
+        const banners =
+            Array.isArray(received)
+                ? received.filter(bannerMatchesCurrentAudience)
+                : [];
+
+        if (banners.length === 0) {
+            hideMarketplaceBanners();
             return;
         }
 
         window.walzActiveBanners = banners;
         window.walzBannerIndex = 0;
+
         renderMarketplaceBanner();
+
         container.style.display = "block";
-        container.onmouseenter = stopMarketplaceBannerRotation;
-        container.onmouseleave = startMarketplaceBannerRotation;
+        container.onmouseenter =
+            stopMarketplaceBannerRotation;
+        container.onmouseleave =
+            startMarketplaceBannerRotation;
+
         startMarketplaceBannerRotation();
     } catch (error) {
-        console.error("No se pudieron cargar los banners:", error);
-        stopMarketplaceBannerRotation();
-        container.style.display = "none";
+        if (
+            requestToken
+            !== Number(window.walzBannerLoadToken || 0)
+        ) {
+            return;
+        }
+
+        console.error(
+            "No se pudieron cargar los banners:",
+            error
+        );
+
+        hideMarketplaceBanners();
     }
 }
 
@@ -9324,7 +11471,7 @@ function renderSellerApplicationBusinessCategoriesField(categories = []) {
                     id="seller-application-business-categories-custom"
                     type="text"
                     maxlength="400"
-                    placeholder="Ejemplo: Fotograf?a, Reparaci?n de bicicletas"
+                    placeholder="Ejemplo: Fotografía, Reparación de bicicletas"
                     value="${escapeHtml(customValues.join(", "))}"
                 >
                 <small>Si tu actividad no aparece, escribila ac&aacute;. Separ&aacute; varios rubros con comas.</small>
@@ -10018,14 +12165,14 @@ async function changeSellerStoreStatus(requestedStatus) {
 
     if (status === "PAUSED") {
         const confirmed = window.confirm(
-            "?Queres pausar temporalmente tu tienda? Dejaria de mostrarse a los compradores hasta que la reactives."
+            "¿Querés pausar temporalmente tu tienda? Dejaría de mostrarse a los compradores hasta que la reactives."
         );
         if (!confirmed) return;
     }
 
     if (status === "ACTIVE") {
         const confirmed = window.confirm(
-            "?Queres reactivar tu tienda y volver a mostrarla publicamente?"
+            "¿Querés reactivar tu tienda y volver a mostrarla públicamente?"
         );
         if (!confirmed) return;
     }
@@ -10117,11 +12264,19 @@ async function loadStoreProfile() {
         };
         const deliveryInput = document.getElementById("store-delivery-enabled");
         const pickupInput = document.getElementById("store-pickup-enabled");
-        const avanterInput = document.getElementById("store-avanter-enabled");
+
+        const avanterSection =
+            document.getElementById("store-avanter-settings");
+
+        if (avanterSection) {
+            avanterSection.style.display =
+                values.avanter_enabled === true
+                    ? ""
+                    : "none";
+        }
 
         if (deliveryInput) deliveryInput.checked = values.delivery_enabled !== false;
         if (pickupInput) pickupInput.checked = values.pickup_enabled !== false;
-        if (avanterInput) avanterInput.checked = values.avanter_enabled === true;
         setStoreBusinessCategoriesForm(values.business_categories || []);
         const textFields = {
         };
@@ -10144,7 +12299,12 @@ const STORE_PAYMENT_METHOD_UI = {
     },
     BANK_TRANSFER: {
         enabledId: "store-payment-bank-transfer-enabled",
-        pickupId: "store-payment-bank-transfer-pickup"
+        pickupId: "store-payment-bank-transfer-pickup",
+        holderId: "store-payment-bank-transfer-holder",
+        aliasId: "store-payment-bank-transfer-alias",
+        cbuCvuId: "store-payment-bank-transfer-cbu-cvu",
+        bankId: "store-payment-bank-transfer-bank",
+        instructionsId: "store-payment-bank-transfer-instructions"
     },
     CUENTA_DNI: {
         enabledId: "store-payment-cuenta-dni-enabled",
@@ -10178,6 +12338,24 @@ function syncStorePaymentPickupAvailability() {
         if (!canUsePickup) {
             pickupInput.checked = false;
         }
+
+        const detailIds = [
+            config.holderId,
+            config.aliasId,
+            config.cbuCvuId,
+            config.bankId,
+            config.instructionsId
+        ].filter(Boolean);
+
+        for (const detailId of detailIds) {
+            const detailInput =
+                document.getElementById(detailId);
+
+            if (detailInput) {
+                detailInput.disabled =
+                    !enabledInput.checked;
+            }
+        }
     }
 }
 
@@ -10210,6 +12388,26 @@ function renderStorePaymentMethods(methods) {
         if (pickupInput) {
             pickupInput.checked =
                 values.allow_pay_on_pickup === true;
+        }
+
+        const detailValues = [
+            [config.holderId, values.account_holder],
+            [config.aliasId, values.account_alias],
+            [config.cbuCvuId, values.account_cbu_cvu],
+            [config.bankId, values.bank_name],
+            [config.instructionsId, values.instructions]
+        ];
+
+        for (const [detailId, detailValue] of detailValues) {
+            if (!detailId) continue;
+
+            const detailInput =
+                document.getElementById(detailId);
+
+            if (detailInput) {
+                detailInput.value =
+                    String(detailValue || "");
+            }
         }
     }
 
@@ -10292,17 +12490,37 @@ async function saveStorePaymentMethods() {
         const pickupInput =
             document.getElementById(config.pickupId);
 
+        const readValue = id => {
+            if (!id) return null;
+
+            const value = String(
+                document.getElementById(id)?.value || ""
+            ).trim();
+
+            return value || null;
+        };
+
         return {
             method,
             enabled: enabledInput?.checked === true,
             allow_pay_on_pickup:
-                pickupInput?.checked === true
+                pickupInput?.checked === true,
+            account_holder:
+                readValue(config.holderId),
+            account_alias:
+                readValue(config.aliasId),
+            account_cbu_cvu:
+                readValue(config.cbuCvuId),
+            bank_name:
+                readValue(config.bankId),
+            instructions:
+                readValue(config.instructionsId)
         };
     });
 
     if (!methods.some(item => item.enabled)) {
         const message =
-            "Eleg? al menos una forma de pago.";
+            "Elegí al menos una forma de pago.";
 
         if (messageElement) {
             messageElement.textContent = message;
@@ -10439,9 +12657,6 @@ async function saveStoreProfile(event) {
                 city: value("store-city") || null,
                 address: value("store-address") || null,
                 business_categories: businessCategories,
-                avanter_enabled: Boolean(
-                    document.getElementById("store-avanter-enabled")?.checked
-                ),
                 avanter_title: value("store-avanter-title") || null,
                 avanter_text: value("store-avanter-text") || null,
                 avanter_image_url: value("store-avanter-image-url") || null,
@@ -10661,10 +12876,38 @@ async function createAdminBanner() {
     const buttonText = document.getElementById("banner-button-text")?.value.trim() || "";
     const displayOrder = Number(document.getElementById("banner-display-order")?.value || 0);
     const isActive = Boolean(document.getElementById("banner-is-active")?.checked);
+    const placement =
+        document.getElementById("banner-placement")?.value
+        || "CENTRAL_MARKETPLACE";
+    const audience =
+        document.getElementById("banner-audience")?.value
+        || "PUBLIC";
+    const styleVariant =
+        document.getElementById("banner-style-variant")?.value
+        || "STANDARD";
 
     if (errorElement) errorElement.textContent = "";
-    if (!title || (!imageFile && !getProductImageUrl(imageUrl))) {
-        if (errorElement) errorElement.textContent = "Completa el titulo y elige una imagen.";
+
+    if (!title) {
+        if (errorElement) {
+            errorElement.textContent =
+                "Completa el titulo.";
+        }
+        return;
+    }
+
+    const requiresImage =
+        placement !== "BOTTOM_BAR";
+
+    if (
+        requiresImage
+        && !imageFile
+        && !getProductImageUrl(imageUrl)
+    ) {
+        if (errorElement) {
+            errorElement.textContent =
+                "Los banners graficos requieren una imagen.";
+        }
         return;
     }
 
@@ -10679,13 +12922,17 @@ async function createAdminBanner() {
             body: JSON.stringify({
                 title,
                 subtitle: subtitle || null,
-                image_url: imageUrl,
+                image_url:
+                    getProductImageUrl(imageUrl) || null,
                 link_url: getSafeBannerLink(linkUrl) || null,
                 button_text: buttonText || null,
                 is_active: isActive,
                 starts_at: bannerDateToIso("banner-starts-at"),
                 ends_at: bannerDateToIso("banner-ends-at"),
-                display_order: Number.isInteger(displayOrder) && displayOrder >= 0 ? displayOrder : 0
+                display_order: Number.isInteger(displayOrder) && displayOrder >= 0 ? displayOrder : 0,
+                placement,
+                audience,
+                style_variant: styleVariant
             })
         });
         const data = await response.json().catch(() => ({}));
@@ -10698,6 +12945,24 @@ async function createAdminBanner() {
         }
         const bannerFile = document.getElementById("banner-image-file");
         if (bannerFile) bannerFile.value = "";
+
+        const placementInput =
+            document.getElementById("banner-placement");
+        const audienceInput =
+            document.getElementById("banner-audience");
+        const styleInput =
+            document.getElementById("banner-style-variant");
+
+        if (placementInput) {
+            placementInput.value = "CENTRAL_MARKETPLACE";
+        }
+        if (audienceInput) {
+            audienceInput.value = "PUBLIC";
+        }
+        if (styleInput) {
+            styleInput.value = "STANDARD";
+        }
+
         await loadAdminBanners();
         await loadActiveBanners();
         await refreshAdminPendingCounts();
@@ -10707,42 +12972,308 @@ async function createAdminBanner() {
 }
 
 
+function getBannerPlacementLabel(placement) {
+    const labels = {
+        CENTRAL_MARKETPLACE: "Marketplace Central",
+        SELLER_SPONSORED: "Publicidad de vendedor",
+        BOTTOM_BAR: "Barra inferior"
+    };
+
+    return labels[String(placement || "").toUpperCase()]
+        || String(placement || "Sin ubicacion");
+}
+
+
+function getBannerAudienceLabel(audience) {
+    const labels = {
+        PUBLIC: "Visitantes y compradores",
+        BUYER: "Solo compradores",
+        SELLER: "Vendedores"
+    };
+
+    return labels[String(audience || "").toUpperCase()]
+        || String(audience || "Sin publico");
+}
+
+
+function renderAdminBannerCard(banner) {
+    const isSellerBanner =
+        Boolean(banner?.seller_id);
+
+    const placement =
+        String(
+            banner?.placement
+            || (
+                isSellerBanner
+                    ? "SELLER_SPONSORED"
+                    : "CENTRAL_MARKETPLACE"
+            )
+        ).toUpperCase();
+
+    const imageHtml =
+        banner?.image_url
+            ? renderProductImage(
+                banner.image_url,
+                banner.title,
+                "banner-admin-image"
+            )
+            : "";
+
+    const state =
+        isSellerBanner
+            ? getBannerProposalStatus(
+                banner.approval_status
+            )
+            : null;
+
+    const statusHtml =
+        isSellerBanner
+            ? `
+                <span class="banner-review-state ${state.css}">
+                    ${state.label}
+                </span>
+            `
+            : `
+                <span class="my-product-state ${banner.is_active ? "active" : "paused"}">
+                    ${banner.is_active ? "Activo" : "Pausado"}
+                </span>
+            `;
+
+    const sellerApprovalStatus =
+        String(banner?.approval_status || "")
+            .trim()
+            .toLowerCase();
+
+    const actionsHtml =
+        isSellerBanner
+            ? (
+                sellerApprovalStatus === "pending"
+                    ? `
+                        <div class="banner-review-actions">
+                            <button
+                                type="button"
+                                onclick="reviewBannerProposal(
+                                    '${escapeJs(String(banner.id))}',
+                                    'approved'
+                                )"
+                            >
+                                Aprobar
+                            </button>
+
+                            <button
+                                type="button"
+                                class="seller-cancel-button"
+                                onclick="reviewBannerProposal(
+                                    '${escapeJs(String(banner.id))}',
+                                    'rejected'
+                                )"
+                            >
+                                Rechazar
+                            </button>
+                        </div>
+                    `
+                    : sellerApprovalStatus === "approved"
+                        ? `
+                            <button
+                                type="button"
+                                onclick="toggleAdminBanner(
+                                    '${escapeJs(String(banner.id))}',
+                                    ${banner.is_active ? "false" : "true"}
+                                )"
+                            >
+                                ${banner.is_active ? "Pausar" : "Activar"}
+                            </button>
+                        `
+                        : ""
+            )
+            : `
+                <button
+                    type="button"
+                    onclick="toggleAdminBanner(
+                        '${escapeJs(String(banner.id))}',
+                        ${banner.is_active ? "false" : "true"}
+                    )"
+                >
+                    ${banner.is_active ? "Pausar" : "Activar"}
+                </button>
+            `;
+
+
+    const cardClass =
+        banner?.image_url
+            ? "banner-admin-card"
+            : "banner-admin-card banner-admin-card-no-image";
+
+    return `
+        <article class="${cardClass}">
+            ${imageHtml}
+
+            <div>
+                <h3>${escapeHtml(banner.title || "")}</h3>
+
+                <p>
+                    ${escapeHtml(
+                        banner.subtitle || "Sin texto adicional"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Ubicacion:</strong>
+                    ${escapeHtml(
+                        getBannerPlacementLabel(placement)
+                    )}
+                    &middot;
+                    <strong>Publico:</strong>
+                    ${escapeHtml(
+                        getBannerAudienceLabel(
+                            banner.audience
+                        )
+                    )}
+                </p>
+
+                ${statusHtml}
+            </div>
+
+            ${actionsHtml}
+        </article>
+    `;
+}
+
+
+function renderAdminBannerGroup(
+    title,
+    description,
+    banners
+) {
+    const rows =
+        Array.isArray(banners)
+            ? banners
+            : [];
+
+    return `
+        <section class="banner-admin-group">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(description)}</p>
+
+            ${
+                rows.length
+                    ? `
+                        <div class="banner-admin-list">
+                            ${rows
+                                .map(renderAdminBannerCard)
+                                .join("")}
+                        </div>
+                    `
+                    : `
+                        <div class="orders-state-card">
+                            No hay publicaciones en este espacio.
+                        </div>
+                    `
+            }
+        </section>
+    `;
+}
+
+
 async function loadAdminBanners() {
-    const container = document.getElementById("banner-admin-list");
-    const currentToken = localStorage.getItem("walz_token");
+    const container =
+        document.getElementById("banner-admin-list");
+
+    const currentToken =
+        localStorage.getItem("walz_token");
+
     if (!container) return;
-    container.innerHTML = "Cargando banners...";
+
+    container.innerHTML =
+        "Cargando banners...";
 
     try {
-        const response = await fetch(`${API_URL}/banners/admin`, {
-            headers: { Authorization: `Bearer ${currentToken}` }
-        });
-        const banners = await response.json().catch(() => ([]));
-        if (!response.ok) throw new Error(banners.detail || `HTTP ${response.status}`);
+        const response = await fetch(
+            `${API_URL}/banners/admin`,
+            {
+                headers: {
+                    Authorization:
+                        `Bearer ${currentToken}`
+                }
+            }
+        );
 
-        if (!Array.isArray(banners) || banners.length === 0) {
-            container.innerHTML = '<div class="orders-state-card">Todavia no hay banners.</div>';
+        const banners = await response
+            .json()
+            .catch(() => ([]));
+
+        if (!response.ok) {
+            throw new Error(
+                banners.detail
+                || `HTTP ${response.status}`
+            );
+        }
+
+        if (
+            !Array.isArray(banners)
+            || banners.length === 0
+        ) {
+            container.innerHTML =
+                '<div class="orders-state-card">Todavia no hay banners.</div>';
             return;
         }
 
-        container.innerHTML = `<div class="banner-admin-list">${banners.map(banner => `
-            <article class="banner-admin-card">
-                ${renderProductImage(banner.image_url, banner.title, "banner-admin-image")}
-                <div>
-                    <h3>${escapeHtml(banner.title || "")}</h3>
-                    <p>${escapeHtml(banner.subtitle || "Sin texto adicional")}</p>
-                    ${banner.seller_id ? `<span class="banner-review-state ${getBannerProposalStatus(banner.approval_status).css}">${getBannerProposalStatus(banner.approval_status).label}</span>` : `<span class="my-product-state ${banner.is_active ? "active" : "paused"}">${banner.is_active ? "Activo" : "Pausado"}</span>`}
-                </div>
-                ${banner.seller_id && String(banner.approval_status) === "pending" ? `
-                    <div class="banner-review-actions">
-                        <button type="button" onclick="reviewBannerProposal('${escapeJs(String(banner.id))}', 'approved')">Aprobar</button>
-                        <button type="button" class="seller-cancel-button" onclick="reviewBannerProposal('${escapeJs(String(banner.id))}', 'rejected')">Rechazar</button>
-                    </div>
-                ` : `<button type="button" onclick="toggleAdminBanner('${escapeJs(String(banner.id))}', ${banner.is_active ? "false" : "true"})">${banner.is_active ? "Pausar" : "Activar"}</button>`}
-            </article>
-        `).join("")}</div>`;
+        const centralMarketplace =
+            banners.filter(
+                banner =>
+                    !banner.seller_id
+                    && String(
+                        banner.placement
+                        || "CENTRAL_MARKETPLACE"
+                    ).toUpperCase()
+                        === "CENTRAL_MARKETPLACE"
+            );
+
+        const bottomBars =
+            banners.filter(
+                banner =>
+                    !banner.seller_id
+                    && String(
+                        banner.placement || ""
+                    ).toUpperCase()
+                        === "BOTTOM_BAR"
+            );
+
+        const sellerSponsored =
+            banners.filter(
+                banner =>
+                    Boolean(banner.seller_id)
+            );
+
+        container.innerHTML = `
+            ${renderAdminBannerGroup(
+                "WalZ One Central - Marketplace",
+                "Campanas propias de WalZ One en el Marketplace Central.",
+                centralMarketplace
+            )}
+
+            ${renderAdminBannerGroup(
+                "WalZ One Central - Barra inferior",
+                "Avisos institucionales o comerciales de la franja inferior.",
+                bottomBars
+            )}
+
+            ${renderAdminBannerGroup(
+                "Publicidad de vendedores",
+                "Propuestas comerciales de vendedores, separadas del inventario propio de WalZ One.",
+                sellerSponsored
+            )}
+        `;
+
     } catch (error) {
-        container.innerHTML = `<div class="orders-state-card orders-error">${escapeHtml(error.message || "No se pudieron cargar los banners.")}</div>`;
+        container.innerHTML = `
+            <div class="orders-state-card orders-error">
+                ${escapeHtml(
+                    error.message
+                    || "No se pudieron cargar los banners."
+                )}
+            </div>
+        `;
     }
 }
 
@@ -10796,14 +13327,141 @@ async function toggleAdminBanner(bannerId, shouldActivate) {
 }
 
 
-function showWalzNewsBarIfAllowed() {
-    const bar = document.getElementById("walz-news-bar");
-    const isAdmin = currentUserRole === "ADMIN";
-    const wasClosed = sessionStorage.getItem("walz_news_closed") === "1";
-    const shouldShow = !isAdmin && !wasClosed;
+async function showWalzNewsBarIfAllowed() {
+    const bar =
+        document.getElementById("walz-news-bar");
 
-    if (bar) bar.style.display = shouldShow ? "flex" : "none";
-    document.body.classList.toggle("has-walz-news-bar", shouldShow);
+    const track =
+        document.getElementById("walz-news-track");
+
+    if (!bar || !track) {
+        return;
+    }
+
+    const isAdmin =
+        currentUserRole === "ADMIN";
+
+    const wasClosed =
+        sessionStorage.getItem(
+            "walz_news_closed"
+        ) === "1";
+
+    const pathParts =
+        window.location.pathname
+            .split("/")
+            .filter(Boolean);
+
+    const isDirectStore =
+        pathParts.length === 1;
+
+    if (
+        isAdmin
+        || wasClosed
+        || isDirectStore
+    ) {
+        bar.style.display = "none";
+        track.innerHTML = "";
+
+        document.body.classList.remove(
+            "has-walz-news-bar"
+        );
+
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/banners/active?placement=BOTTOM_BAR`
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const received = await response.json();
+
+        const banners =
+            Array.isArray(received)
+                ? received.filter(
+                    banner =>
+                        !banner.seller_id
+                        && bannerMatchesCurrentAudience(
+                            banner
+                        )
+                )
+                : [];
+
+        const banner =
+            banners[0] || null;
+
+        if (!banner) {
+            bar.style.display = "none";
+            track.innerHTML = "";
+
+            document.body.classList.remove(
+                "has-walz-news-bar"
+            );
+
+            return;
+        }
+
+        const title =
+            String(banner.title || "").trim();
+
+        const subtitle =
+            String(banner.subtitle || "").trim();
+
+        const message =
+            [title, subtitle]
+                .filter(Boolean)
+                .join(" - ");
+
+        if (!message) {
+            bar.style.display = "none";
+            track.innerHTML = "";
+
+            document.body.classList.remove(
+                "has-walz-news-bar"
+            );
+
+            return;
+        }
+
+        const safeMessage =
+            escapeHtml(message);
+
+        track.innerHTML = `
+            <span>${safeMessage}</span>
+            <span aria-hidden="true">${safeMessage}</span>
+        `;
+
+        bar.dataset.styleVariant =
+            String(
+                banner.style_variant
+                || "STANDARD"
+            ).toUpperCase();
+
+        bar.style.display = "flex";
+
+        document.body.classList.add(
+            "has-walz-news-bar"
+        );
+
+    } catch (error) {
+        console.error(
+            "No se pudo cargar la barra inferior:",
+            error
+        );
+
+        bar.style.display = "none";
+        track.innerHTML = "";
+
+        document.body.classList.remove(
+            "has-walz-news-bar"
+        );
+    }
 }
 
 
@@ -10904,7 +13562,9 @@ window.moveMarketplaceBanner = moveMarketplaceBanner;
 window.selectMarketplaceBanner = selectMarketplaceBanner;
 window.cancelPendingOrder = cancelPendingOrder;
 window.updateBuyerPickupStatus = updateBuyerPickupStatus;
+window.reportBuyerPayment = reportBuyerPayment;
 window.confirmSellerPickupHandover = confirmSellerPickupHandover;
+window.updateSellerPaymentStatus = updateSellerPaymentStatus;
 
 // =====================================================
 // NAVEGACION RAPIDA EN PAGINAS LARGAS
@@ -11011,7 +13671,7 @@ document.addEventListener(
     async () => {
 
         console.log(
-            "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ WalZ app.js cargado correctamente"
+            "WalZ app.js cargado correctamente"
         );
 
         console.log(
@@ -11058,10 +13718,9 @@ document.addEventListener(
                 window.walzMarketplaceSellerId =
                     directStore.owner_id;
 
-                showMarketplaceContent();
+                showMarketplaceContent(false);
 
                 await loadProducts();
-                await loadActiveBanners();
             } catch (error) {
                 const section = document.getElementById("public-store-section");
                 const container = document.getElementById("public-store-content");
@@ -11090,6 +13749,7 @@ document.addEventListener(
         } else {
             showMarketplace();
             loadProducts();
+            loadActiveBanners("CENTRAL_MARKETPLACE");
         }
     }
 );
@@ -11126,4 +13786,3 @@ document.addEventListener(
     },
     true
 );
-

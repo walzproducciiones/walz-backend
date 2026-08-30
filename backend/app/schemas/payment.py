@@ -15,6 +15,26 @@ class StorePaymentMethodUpdate(BaseModel):
     )
     enabled: bool = False
     allow_pay_on_pickup: bool = False
+    account_holder: str | None = Field(
+        default=None,
+        max_length=160,
+    )
+    account_alias: str | None = Field(
+        default=None,
+        max_length=120,
+    )
+    account_cbu_cvu: str | None = Field(
+        default=None,
+        max_length=40,
+    )
+    bank_name: str | None = Field(
+        default=None,
+        max_length=120,
+    )
+    instructions: str | None = Field(
+        default=None,
+        max_length=500,
+    )
 
 
 class StorePaymentMethodsUpdate(BaseModel):
@@ -30,6 +50,11 @@ class StorePaymentMethodResponse(BaseModel):
     provider: str
     enabled: bool
     allow_pay_on_pickup: bool
+    account_holder: str | None = None
+    account_alias: str | None = None
+    account_cbu_cvu: str | None = None
+    bank_name: str | None = None
+    instructions: str | None = None
 
 
 class StorePaymentMethodsResponse(BaseModel):
@@ -44,6 +69,11 @@ class BuyerStorePaymentMethodResponse(BaseModel):
     method: str
     label: str
     allow_pay_on_pickup: bool
+    account_holder: str | None = None
+    account_alias: str | None = None
+    account_cbu_cvu: str | None = None
+    bank_name: str | None = None
+    instructions: str | None = None
 
 
 class BuyerStorePaymentMethodsResponse(BaseModel):
@@ -74,6 +104,13 @@ class PaymentResponse(BaseModel):
     store_id: UUID
     method: str
     provider: str
+
+    destination_account_holder: str | None = None
+    destination_account_alias: str | None = None
+    destination_account_cbu_cvu: str | None = None
+    destination_bank_name: str | None = None
+    destination_instructions: str | None = None
+
     status: PaymentStatus
     amount: Decimal
     currency: str

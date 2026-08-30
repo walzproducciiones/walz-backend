@@ -19,6 +19,24 @@ class Banner(Base):
     starts_at = Column(DateTime(timezone=True), nullable=True)
     ends_at = Column(DateTime(timezone=True), nullable=True)
     display_order = Column(Integer, nullable=False, default=0, server_default="0")
+    placement = Column(
+        String(40),
+        nullable=False,
+        default="CENTRAL_MARKETPLACE",
+        server_default="CENTRAL_MARKETPLACE",
+    )
+    audience = Column(
+        String(40),
+        nullable=False,
+        default="PUBLIC",
+        server_default="PUBLIC",
+    )
+    style_variant = Column(
+        String(40),
+        nullable=False,
+        default="STANDARD",
+        server_default="STANDARD",
+    )
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=True)
