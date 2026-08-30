@@ -8981,6 +8981,8 @@ button.admin-central-card:hover {
 .admin-economy-status,
 .admin-economy-summary,
 .admin-economy-settings,
+.admin-economy-sellers,
+.admin-economy-settlements,
 .admin-economy-ledger {
     margin-top: 24px;
 }
@@ -9116,6 +9118,34 @@ button.admin-central-card:hover {
 #admin-economy-save-button:disabled {
     opacity: 0.55;
     cursor: wait;
+}
+
+.admin-economy-sellers {
+    padding-top: 4px;
+}
+
+#admin-economy-sellers-content {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+#admin-economy-sellers-content .orders-state-card {
+    margin-top: 0;
+}
+
+.admin-economy-settlements {
+    padding-top: 4px;
+}
+
+#admin-economy-settlements-content {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+#admin-economy-settlements-content .orders-state-card {
+    margin-top: 0;
 }
 
 .admin-economy-ledger {

@@ -4673,6 +4673,383 @@ function renderAdminEconomyLedger(rows) {
 }
 
 
+function renderAdminEconomySellers(rows) {
+    const container =
+        document.getElementById(
+            "admin-economy-sellers-content"
+        );
+
+    if (!container) return;
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card">
+                Todavia no hay vendedores con cuenta economica.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = rows.map((account) => {
+        const currency = account?.currency || "ARS";
+
+        return `
+            <article class="orders-state-card admin-economy-ledger-row">
+                <div class="admin-economy-ledger-row-heading">
+                    <strong>
+                        ${escapeHtml(
+                            account?.store_name || "Sin tienda"
+                        )}
+                    </strong>
+                    <span>
+                        Pendiente:
+                        ${escapeHtml(
+                            formatAdminEconomyMoney(
+                                account?.pending_amount,
+                                currency
+                            )
+                        )}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>Vendedor:</strong>
+                    ${escapeHtml(
+                        account?.seller_name || "Sin vendedor"
+                    )}
+                </div>
+
+                <div>
+                    <strong>Email:</strong>
+                    ${escapeHtml(
+                        account?.seller_email || ""
+                    )}
+                </div>
+
+                <div>
+                    <strong>Comisiones devengadas:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            account?.accrued_amount,
+                            currency
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Reversos:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            account?.reversal_amount,
+                            currency
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Saldo neto de comisiones:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            account?.net_fee_amount,
+                            currency
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Abonado a WalZ One:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            account?.settled_amount,
+                            currency
+                        )
+                    )}
+                </div>
+
+                ${
+                    Number(account?.pending_amount || 0) > 0
+                        ? `
+                            <div class="admin-economy-seller-actions">
+                                <button
+                                    type="button"
+                                    onclick="registerAdminSellerFeeSettlement(
+                                        '${escapeHtml(String(account?.seller_id || ""))}',
+                                        '${encodeURIComponent(String(account?.seller_name || "Vendedor"))}',
+                                        '${escapeHtml(String(account?.pending_amount || "0"))}',
+                                        '${escapeHtml(currency)}'
+                                    )"
+                                >
+                                    Registrar pago de comision
+                                </button>
+                            </div>
+                        `
+                        : ""
+                }
+            </article>
+        `;
+    }).join("");
+}
+
+
+async function registerAdminSellerFeeSettlement(
+    sellerId,
+    sellerNameEncoded,
+    pendingAmount,
+    currency = "ARS"
+) {
+    const sellerName = decodeURIComponent(
+        sellerNameEncoded || "Vendedor"
+    );
+
+    const pending = Number(pendingAmount || 0);
+
+    if (!Number.isFinite(pending) || pending <= 0) {
+        showMessage(
+            "Este vendedor no tiene saldo pendiente con WalZ One.",
+            "error"
+        );
+        return;
+    }
+
+    const amountText = window.prompt(
+        `Importe abonado por ${sellerName}. Saldo pendiente: ${formatAdminEconomyMoney(pending, currency)}`,
+        pending.toFixed(2)
+    );
+
+    if (amountText === null) return;
+
+    const normalizedAmount = amountText
+        .trim()
+        .replace(",", ".");
+
+    const amount = Number(normalizedAmount);
+
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        amount > pending
+    ) {
+        showMessage(
+            "El importe debe ser mayor que cero y no superar el saldo pendiente.",
+            "error"
+        );
+        return;
+    }
+
+    const method = window.prompt(
+        "Medio de pago informado (opcional):",
+        "Transferencia"
+    );
+
+    if (method === null) return;
+
+    const reference = window.prompt(
+        "Referencia o numero de comprobante (opcional):",
+        ""
+    );
+
+    if (reference === null) return;
+
+    const notes = window.prompt(
+        "Observaciones (opcional):",
+        ""
+    );
+
+    if (notes === null) return;
+
+    const confirmed = window.confirm(
+        `Registrar ${formatAdminEconomyMoney(amount, currency)} abonados por ${sellerName} a WalZ One?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+        await fetchAdminEconomy(
+            "/economy/admin/settlements",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    seller_id: sellerId,
+                    amount: amount.toFixed(2),
+                    method: method.trim() || null,
+                    reference: reference.trim() || null,
+                    notes: notes.trim() || null
+                })
+            }
+        );
+
+        showMessage(
+            "Pago de comision registrado correctamente.",
+            "success"
+        );
+
+        await loadAdminEconomy();
+    } catch (error) {
+        showMessage(
+            error.message ||
+                "No se pudo registrar el pago de comision.",
+            "error"
+        );
+    }
+}
+
+
+async function cancelAdminSellerFeeSettlement(
+    settlementId
+) {
+    const confirmed = window.confirm(
+        "Anular este registro de pago? El importe volvera a formar parte del saldo pendiente del vendedor."
+    );
+
+    if (!confirmed) return;
+
+    try {
+        await fetchAdminEconomy(
+            `/economy/admin/settlements/${encodeURIComponent(settlementId)}/cancel`,
+            {
+                method: "POST"
+            }
+        );
+
+        showMessage(
+            "Registro de pago anulado correctamente.",
+            "success"
+        );
+
+        await loadAdminEconomy();
+    } catch (error) {
+        showMessage(
+            error.message ||
+                "No se pudo anular el registro de pago.",
+            "error"
+        );
+    }
+}
+
+
+function renderAdminEconomySettlements(rows, sellerAccounts = []) {
+    const container =
+        document.getElementById(
+            "admin-economy-settlements-content"
+        );
+
+    if (!container) return;
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card">
+                Todavia no hay pagos de comisiones registrados.
+            </div>
+        `;
+        return;
+    }
+
+    const accountsBySellerId = new Map(
+        (Array.isArray(sellerAccounts) ? sellerAccounts : [])
+            .map((account) => [
+                String(account?.seller_id || ""),
+                account
+            ])
+    );
+
+    container.innerHTML = rows.map((settlement) => {
+        const account =
+            accountsBySellerId.get(
+                String(settlement?.seller_id || "")
+            ) || {};
+
+        const isCancelled =
+            settlement?.status === "cancelled";
+
+        const statusLabel = isCancelled
+            ? "Anulado"
+            : "Registrado";
+
+        const methodText =
+            settlement?.method || "No informado";
+
+        const referenceText =
+            settlement?.reference || "Sin referencia";
+
+        const notesText =
+            settlement?.notes || "Sin observaciones";
+
+        return `
+            <article class="orders-state-card admin-economy-ledger-row">
+                <div class="admin-economy-ledger-row-heading">
+                    <strong>
+                        ${escapeHtml(
+                            account?.store_name || "Sin tienda"
+                        )}
+                        ? ${escapeHtml(statusLabel)}
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(
+                            formatAdminEconomyMoney(
+                                settlement?.amount,
+                                settlement?.currency || "ARS"
+                            )
+                        )}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>Vendedor:</strong>
+                    ${escapeHtml(
+                        account?.seller_name || "Sin vendedor"
+                    )}
+                </div>
+
+                <div>
+                    <strong>Medio:</strong>
+                    ${escapeHtml(methodText)}
+                </div>
+
+                <div>
+                    <strong>Referencia:</strong>
+                    ${escapeHtml(referenceText)}
+                </div>
+
+                <div>
+                    <strong>Fecha registrada:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyDate(
+                            settlement?.settled_at
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Observaciones:</strong>
+                    ${escapeHtml(notesText)}
+                </div>
+
+                ${
+                    !isCancelled && settlement?.id
+                        ? `
+                            <div class="admin-economy-settlement-actions">
+                                <button
+                                    type="button"
+                                    onclick="cancelAdminSellerFeeSettlement(
+                                        '${escapeHtml(String(settlement.id))}'
+                                    )"
+                                >
+                                    Anular registro
+                                </button>
+                            </div>
+                        `
+                        : ""
+                }
+            </article>
+        `;
+    }).join("");
+}
+
+
 async function showAdminEconomy() {
     if (currentUserRole !== "ADMIN") {
         showMessage(
@@ -4728,10 +5105,16 @@ async function loadAdminEconomy() {
         const [
             setting,
             summary,
+            sellers,
+            settlements,
             ledger
         ] = await Promise.all([
             fetchAdminEconomy("/economy/admin"),
             fetchAdminEconomy("/economy/admin/summary"),
+            fetchAdminEconomy("/economy/admin/sellers"),
+            fetchAdminEconomy(
+                "/economy/admin/settlements?limit=100&offset=0"
+            ),
             fetchAdminEconomy(
                 "/economy/admin/ledger?limit=100&offset=0"
             )
@@ -4739,6 +5122,11 @@ async function loadAdminEconomy() {
 
         renderAdminEconomySetting(setting);
         renderAdminEconomySummary(summary);
+        renderAdminEconomySellers(sellers);
+        renderAdminEconomySettlements(
+            settlements,
+            sellers
+        );
         renderAdminEconomyLedger(ledger);
 
         if (message) {
