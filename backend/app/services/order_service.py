@@ -40,6 +40,36 @@ def get_order_by_id(db: Session, order_id: UUID, buyer_id: UUID):
         .first()
     )
 
+
+def _cancel_open_payments_for_order(
+    db: Session,
+    order_id: UUID,
+):
+    payments = (
+        db.query(Payment)
+        .filter(
+            Payment.order_id == order_id,
+            Payment.status.in_({
+                PaymentStatus.PENDING,
+                PaymentStatus.REPORTED,
+            }),
+        )
+        .with_for_update()
+        .all()
+    )
+
+    if not payments:
+        return
+
+    cancelled_at = datetime.now(timezone.utc)
+
+    for payment in payments:
+        payment.status = PaymentStatus.CANCELLED
+
+        if not payment.cancelled_at:
+            payment.cancelled_at = cancelled_at
+
+
 def cancel_order_by_buyer(
     db: Session,
     order_id: UUID,
@@ -80,6 +110,11 @@ def cancel_order_by_buyer(
             product = products_by_id.get(item.product_id)
             if product:
                 product.stock = max(product.stock or 0, 0) + item.quantity
+
+        _cancel_open_payments_for_order(
+            db,
+            order.id,
+        )
 
         order.status = OrderStatus.CANCELLED
         db.commit()
@@ -535,6 +570,15 @@ def update_order_status_by_seller(
                 product = products_by_id.get(item.product_id)
                 if product:
                     product.stock = max(product.stock or 0, 0) + item.quantity
+
+        if (
+            new_status == OrderStatus.CANCELLED
+            and current_status != OrderStatus.CANCELLED
+        ):
+            _cancel_open_payments_for_order(
+                db,
+                order.id,
+            )
 
         order.status = new_status
         if is_pickup and new_status == OrderStatus.SHIPPED:
