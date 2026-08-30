@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=ENV_FILE, override=False)
 
-from backend.app.api import auth, banners, institutional_settings, products, orders, payments, seller_applications, stores
+from backend.app.api import auth, banners, institutional_settings, platform_economy, products, orders, payments, seller_applications, stores
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
@@ -122,6 +122,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(banners.router)
 app.include_router(institutional_settings.router)
+app.include_router(platform_economy.router)
 app.include_router(stores.router)
 app.include_router(seller_applications.router)
 app.include_router(products.router)

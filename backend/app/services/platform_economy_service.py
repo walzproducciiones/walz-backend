@@ -6,6 +6,10 @@ from backend.app.models.platform_economy_setting import (
     PlatformEconomySetting,
 )
 
+from backend.app.schemas.platform_economy_setting import (
+    PlatformEconomySettingUpdate,
+)
+
 
 MONEY_QUANTUM = Decimal("0.01")
 RATE_QUANTUM = Decimal("0.0001")
@@ -106,3 +110,43 @@ def calculate_order_economy_snapshot(
         "platform_fee_amount": platform_fee_amount,
         "seller_net_amount": seller_net_amount,
     }
+
+def save_platform_economy_setting(
+    db: Session,
+    data: PlatformEconomySettingUpdate,
+):
+    values = data.model_dump()
+
+    commission_rate = _rate(
+        values["default_commission_rate"]
+    )
+
+    if commission_rate < Decimal("0.0000"):
+        raise ValueError(
+            "La comision de WalZ One no puede ser negativa."
+        )
+
+    if commission_rate > Decimal("100.0000"):
+        raise ValueError(
+            "La comision de WalZ One no puede superar el 100 %."
+        )
+
+    setting = get_platform_economy_setting(db)
+
+    if setting:
+        setting.economy_enabled = bool(
+            values["economy_enabled"]
+        )
+        setting.default_commission_rate = commission_rate
+    else:
+        setting = PlatformEconomySetting(
+            economy_enabled=bool(
+                values["economy_enabled"]
+            ),
+            default_commission_rate=commission_rate,
+        )
+        db.add(setting)
+
+    db.commit()
+    db.refresh(setting)
+    return setting

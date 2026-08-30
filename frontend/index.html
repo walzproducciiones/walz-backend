@@ -378,6 +378,13 @@
                 <small>Supervisar productos de todos los vendedores sin modificar el catalogo.</small>
             </button>
 
+
+            <button type="button" class="admin-central-card" onclick="showAdminEconomy()">
+                <span class="admin-central-icon">&#128200;</span>
+                <strong>Economia Central</strong>
+                <small>Supervisar comisiones, movimientos y configuracion economica de WalZ One.</small>
+            </button>
+
             <button type="button" class="admin-central-card" onclick="showBannerAdmin()">
                 <span class="admin-central-icon">&#128226;</span>
                 <strong>Publicidad Central</strong>
@@ -577,6 +584,104 @@
     </div>
 </section>
 
+
+
+<!-- WALZ_ADMIN_ECONOMY_V1 -->
+<section id="admin-economy-section" class="admin-central-section" style="display:none;">
+    <div class="admin-central-shell">
+        <button type="button" onclick="showAdminCentralPanel()">
+            &larr; Volver a Administracion Central
+        </button>
+
+        <div class="admin-central-heading">
+            <span class="admin-central-kicker">WalZ One Central</span>
+            <h2>Economia Central</h2>
+            <p>Control economico y contable de la plataforma. Los movimientos historicos no se recalculan.</p>
+        </div>
+
+        <div class="admin-economy-status">
+            <div class="orders-state-card">
+                <strong>Estado de la economia</strong>
+                <div id="admin-economy-status-text">Cargando configuracion...</div>
+            </div>
+        </div>
+
+        <div class="admin-economy-summary">
+            <div class="orders-state-card">
+                <strong>Comisiones devengadas</strong>
+                <div id="admin-economy-accrued-amount">$ 0,00</div>
+                <small id="admin-economy-accrued-count">0 movimientos</small>
+            </div>
+
+            <div class="orders-state-card">
+                <strong>Reversos</strong>
+                <div id="admin-economy-reversal-amount">$ 0,00</div>
+                <small id="admin-economy-reversal-count">0 movimientos</small>
+            </div>
+
+            <div class="orders-state-card">
+                <strong>Saldo neto WalZ</strong>
+                <div id="admin-economy-net-amount">$ 0,00</div>
+                <small id="admin-economy-total-count">0 asientos</small>
+            </div>
+        </div>
+
+        <div class="admin-economy-settings">
+            <h3>Configuracion economica</h3>
+
+            <p class="admin-economy-warning">
+                La economia debe permanecer desactivada hasta que WalZ One defina formalmente su esquema de comisiones.
+            </p>
+
+            <label class="admin-economy-toggle">
+                <input
+                    id="admin-economy-enabled"
+                    type="checkbox"
+                >
+                <span>Economia transaccional habilitada</span>
+            </label>
+
+            <label for="admin-economy-rate">
+                Comision general (%)
+            </label>
+
+            <input
+                id="admin-economy-rate"
+                type="number"
+                min="0"
+                max="100"
+                step="0.0001"
+                value="0"
+                inputmode="decimal"
+            >
+
+            <div id="admin-economy-settings-message" class="institutional-settings-message"></div>
+
+            <button
+                id="admin-economy-save-button"
+                type="button"
+                onclick="saveAdminEconomySettings()"
+            >
+                Guardar configuracion economica
+            </button>
+        </div>
+
+        <div class="admin-economy-ledger">
+            <div class="admin-central-heading">
+                <h3>Libro economico</h3>
+                <p>Registro historico de comisiones devengadas y movimientos de reverso.</p>
+            </div>
+
+            <button type="button" onclick="loadAdminEconomy()">
+                Actualizar datos
+            </button>
+
+            <div id="admin-economy-ledger-content">
+                <div class="orders-state-card">Cargando movimientos economicos...</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- WALZ_INSTITUTIONAL_SETTINGS_V1 -->
 <section id="institutional-settings-section" class="institutional-settings-section" style="display:none;">

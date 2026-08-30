@@ -4391,6 +4391,488 @@ async function saveInstitutionalSettings() {
 
 
 
+
+
+function formatAdminEconomyMoney(value, currency = "ARS") {
+    const amount = Number(value ?? 0);
+
+    return new Intl.NumberFormat(
+        "es-AR",
+        {
+            style: "currency",
+            currency: currency || "ARS",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }
+    ).format(Number.isFinite(amount) ? amount : 0);
+}
+
+
+function formatAdminEconomyDate(value) {
+    if (!value) return "Sin fecha";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return new Intl.DateTimeFormat(
+        "es-AR",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    ).format(date);
+}
+
+
+async function fetchAdminEconomy(path, options = {}) {
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        handleExpiredSession();
+        throw new Error("Sesion vencida.");
+    }
+
+    const headers = {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${currentToken}`
+    };
+
+    const response = await fetch(
+        `${API_URL}${path}`,
+        {
+            ...options,
+            headers
+        }
+    );
+
+    if (response.status === 401) {
+        handleExpiredSession();
+        throw new Error("Sesion vencida.");
+    }
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        throw new Error(
+            data?.detail || `HTTP ${response.status}`
+        );
+    }
+
+    return data;
+}
+
+
+function renderAdminEconomySetting(setting) {
+    const enabledInput =
+        document.getElementById("admin-economy-enabled");
+
+    const rateInput =
+        document.getElementById("admin-economy-rate");
+
+    const statusText =
+        document.getElementById("admin-economy-status-text");
+
+    const enabled = setting?.economy_enabled === true;
+    const rate = Number(
+        setting?.default_commission_rate ?? 0
+    );
+
+    if (enabledInput) {
+        enabledInput.checked = enabled;
+    }
+
+    if (rateInput) {
+        rateInput.value =
+            Number.isFinite(rate)
+                ? String(rate)
+                : "0";
+    }
+
+    if (statusText) {
+        if (!setting) {
+            statusText.textContent =
+                "Economia desactivada. Todavia no existe configuracion economica guardada.";
+        } else if (enabled) {
+            statusText.textContent =
+                `Economia HABILITADA. Comision general configurada: ${rate.toFixed(4)} %.`;
+        } else {
+            statusText.textContent =
+                `Economia desactivada. Comision configurada: ${rate.toFixed(4)} %.`;
+        }
+    }
+}
+
+
+function renderAdminEconomySummary(summary) {
+    const currency = summary?.currency || "ARS";
+
+    const accruedAmount =
+        document.getElementById("admin-economy-accrued-amount");
+
+    const reversalAmount =
+        document.getElementById("admin-economy-reversal-amount");
+
+    const netAmount =
+        document.getElementById("admin-economy-net-amount");
+
+    const accruedCount =
+        document.getElementById("admin-economy-accrued-count");
+
+    const reversalCount =
+        document.getElementById("admin-economy-reversal-count");
+
+    const totalCount =
+        document.getElementById("admin-economy-total-count");
+
+    if (accruedAmount) {
+        accruedAmount.textContent =
+            formatAdminEconomyMoney(
+                summary?.accrued_amount,
+                currency
+            );
+    }
+
+    if (reversalAmount) {
+        reversalAmount.textContent =
+            formatAdminEconomyMoney(
+                summary?.reversal_amount,
+                currency
+            );
+    }
+
+    if (netAmount) {
+        netAmount.textContent =
+            formatAdminEconomyMoney(
+                summary?.net_platform_amount,
+                currency
+            );
+    }
+
+    if (accruedCount) {
+        accruedCount.textContent =
+            `${Number(summary?.accrued_entries || 0)} movimientos`;
+    }
+
+    if (reversalCount) {
+        reversalCount.textContent =
+            `${Number(summary?.reversal_entries || 0)} movimientos`;
+    }
+
+    if (totalCount) {
+        totalCount.textContent =
+            `${Number(summary?.total_entries || 0)} asientos`;
+    }
+}
+
+
+function renderAdminEconomyLedger(rows) {
+    const container =
+        document.getElementById(
+            "admin-economy-ledger-content"
+        );
+
+    if (!container) return;
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        container.innerHTML = `
+            <div class="orders-state-card">
+                Todavia no hay movimientos en el libro economico.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = rows.map((row) => {
+        const entry = row?.entry || {};
+        const store = row?.store || {};
+        const seller = row?.seller || {};
+
+        const isReversal =
+            entry.entry_type === "platform_fee_reversal";
+
+        const typeLabel = isReversal
+            ? "Reverso"
+            : "Comision devengada";
+
+        const paymentText = entry.payment_id
+            ? escapeHtml(String(entry.payment_id))
+            : "Sin pago asociado";
+
+        return `
+            <article class="orders-state-card admin-economy-ledger-row">
+                <div class="admin-economy-ledger-row-heading">
+                    <strong>${escapeHtml(typeLabel)}</strong>
+                    <span>
+                        ${escapeHtml(
+                            formatAdminEconomyMoney(
+                                entry.amount,
+                                entry.currency || "ARS"
+                            )
+                        )}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>Tienda:</strong>
+                    ${escapeHtml(store.name || "Sin tienda")}
+                </div>
+
+                <div>
+                    <strong>Vendedor:</strong>
+                    ${escapeHtml(seller.name || "Sin vendedor")}
+                </div>
+
+                <div>
+                    <strong>Pedido:</strong>
+                    ${escapeHtml(String(entry.order_id || ""))}
+                </div>
+
+                <div>
+                    <strong>Pago:</strong>
+                    ${paymentText}
+                </div>
+
+                <div>
+                    <strong>Base:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            entry.platform_fee_base,
+                            entry.currency || "ARS"
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Tasa:</strong>
+                    ${escapeHtml(
+                        String(entry.platform_fee_rate ?? "0")
+                    )} %
+                </div>
+
+                <div>
+                    <strong>Neto vendedor:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyMoney(
+                            entry.seller_net_amount,
+                            entry.currency || "ARS"
+                        )
+                    )}
+                </div>
+
+                <div>
+                    <strong>Fecha:</strong>
+                    ${escapeHtml(
+                        formatAdminEconomyDate(
+                            entry.created_at
+                        )
+                    )}
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
+
+async function showAdminEconomy() {
+    if (currentUserRole !== "ADMIN") {
+        showMessage(
+            "Se requiere una cuenta administradora.",
+            "error"
+        );
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section =
+        document.getElementById("admin-economy-section");
+
+    if (!section) {
+        console.error(
+            "No existe la seccion Economia Central."
+        );
+        return;
+    }
+
+    section.style.display = "block";
+    window.scrollTo(0, 0);
+
+    await loadAdminEconomy();
+}
+
+
+async function loadAdminEconomy() {
+    const ledgerContainer =
+        document.getElementById(
+            "admin-economy-ledger-content"
+        );
+
+    const message =
+        document.getElementById(
+            "admin-economy-settings-message"
+        );
+
+    if (ledgerContainer) {
+        ledgerContainer.innerHTML = `
+            <div class="orders-state-card">
+                Cargando movimientos economicos...
+            </div>
+        `;
+    }
+
+    if (message) {
+        message.textContent = "Cargando datos economicos...";
+    }
+
+    try {
+        const [
+            setting,
+            summary,
+            ledger
+        ] = await Promise.all([
+            fetchAdminEconomy("/economy/admin"),
+            fetchAdminEconomy("/economy/admin/summary"),
+            fetchAdminEconomy(
+                "/economy/admin/ledger?limit=100&offset=0"
+            )
+        ]);
+
+        renderAdminEconomySetting(setting);
+        renderAdminEconomySummary(summary);
+        renderAdminEconomyLedger(ledger);
+
+        if (message) {
+            message.textContent =
+                "Datos economicos actualizados.";
+        }
+    } catch (error) {
+        console.error(
+            "Error cargando Economia Central:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "No se pudieron cargar los datos economicos.";
+        }
+
+        if (ledgerContainer) {
+            ledgerContainer.innerHTML = `
+                <div class="orders-state-card orders-error">
+                    No se pudo cargar el libro economico.
+                </div>
+            `;
+        }
+    }
+}
+
+
+async function saveAdminEconomySettings() {
+    const enabledInput =
+        document.getElementById("admin-economy-enabled");
+
+    const rateInput =
+        document.getElementById("admin-economy-rate");
+
+    const message =
+        document.getElementById(
+            "admin-economy-settings-message"
+        );
+
+    const saveButton =
+        document.getElementById(
+            "admin-economy-save-button"
+        );
+
+    const economyEnabled =
+        enabledInput?.checked === true;
+
+    const rate = Number(
+        rateInput?.value ?? 0
+    );
+
+    if (
+        !Number.isFinite(rate) ||
+        rate < 0 ||
+        rate > 100
+    ) {
+        if (message) {
+            message.textContent =
+                "La comision debe estar entre 0 y 100 %.";
+        }
+        return;
+    }
+
+    if (economyEnabled) {
+        const confirmed = window.confirm(
+            "Estas por HABILITAR la economia transaccional de WalZ One. " +
+            "Los nuevos pedidos comenzaran a congelar esta configuracion economica. " +
+            "Confirma solamente si el esquema de comisiones ya fue definido formalmente."
+        );
+
+        if (!confirmed) {
+            if (message) {
+                message.textContent =
+                    "Activacion cancelada. No se guardaron cambios.";
+            }
+            return;
+        }
+    }
+
+    const payload = {
+        economy_enabled: economyEnabled,
+        default_commission_rate: rate.toFixed(4)
+    };
+
+    if (saveButton) {
+        saveButton.disabled = true;
+    }
+
+    if (message) {
+        message.textContent =
+            "Guardando configuracion economica...";
+    }
+
+    try {
+        const setting = await fetchAdminEconomy(
+            "/economy/admin",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        renderAdminEconomySetting(setting);
+
+        if (message) {
+            message.textContent =
+                economyEnabled
+                    ? "Configuracion guardada. Economia transaccional HABILITADA."
+                    : "Configuracion guardada. Economia transaccional desactivada.";
+        }
+    } catch (error) {
+        console.error(
+            "Error guardando Economia Central:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "No se pudo guardar la configuracion economica.";
+        }
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+        }
+    }
+}
+
+
 async function loadPublicInstitutionalContact() {
     const section =
         document.getElementById("walz-public-contact");
@@ -11906,7 +12388,7 @@ function hideAllWalzWorkSections() {
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
-        "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "institutional-settings-section"
+        "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "admin-economy-section", "institutional-settings-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }
