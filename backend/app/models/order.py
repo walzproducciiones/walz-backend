@@ -94,6 +94,33 @@ class Order(Base):
         nullable=True
     )
 
+    # Snapshot economico de WalZ One.
+    # Los pedidos historicos permanecen en NULL.
+    economy_enabled_snapshot = Column(
+        Boolean,
+        nullable=True,
+    )
+
+    platform_fee_rate = Column(
+        Numeric(7, 4),
+        nullable=True,
+    )
+
+    platform_fee_base = Column(
+        Numeric(14, 2),
+        nullable=True,
+    )
+
+    platform_fee_amount = Column(
+        Numeric(14, 2),
+        nullable=True,
+    )
+
+    seller_net_amount = Column(
+        Numeric(14, 2),
+        nullable=True,
+    )
+
     currency = Column(
         String(3),
         nullable=True

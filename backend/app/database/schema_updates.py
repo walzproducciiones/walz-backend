@@ -493,6 +493,11 @@ def ensure_order_financial_snapshot_columns(engine):
         "shipping_amount": "NUMERIC(14, 2)",
         "discount_amount": "NUMERIC(14, 2)",
         "payable_amount": "NUMERIC(14, 2)",
+        "economy_enabled_snapshot": "BOOLEAN",
+        "platform_fee_rate": "NUMERIC(7, 4)",
+        "platform_fee_base": "NUMERIC(14, 2)",
+        "platform_fee_amount": "NUMERIC(14, 2)",
+        "seller_net_amount": "NUMERIC(14, 2)",
         "currency": "VARCHAR(3)",
     }
 

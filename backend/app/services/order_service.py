@@ -11,6 +11,9 @@ from backend.app.models.payment import Payment, PaymentStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
+from backend.app.services.platform_economy_service import (
+    calculate_order_economy_snapshot,
+)
 from backend.app.schemas.order import CheckoutCreate, DeliveryPlanDecision, DeliveryPlanUpdate, DeliveryResponsibleUpdate
 from backend.app.services.order_status_service import can_transition_order_status
 
@@ -357,6 +360,15 @@ def create_orders_by_seller(
                 Decimal("0.01")
             )
 
+            economy_snapshot = (
+                calculate_order_economy_snapshot(
+                    db,
+                    items_subtotal=items_subtotal,
+                    discount_amount=discount_amount,
+                    payable_amount=payable_amount,
+                )
+            )
+
             delivery_choice = delivery_by_seller[
                 seller_id
             ]
@@ -377,6 +389,33 @@ def create_orders_by_seller(
                 shipping_amount=shipping_amount,
                 discount_amount=discount_amount,
                 payable_amount=payable_amount,
+
+                economy_enabled_snapshot=(
+                    economy_snapshot[
+                        "economy_enabled_snapshot"
+                    ]
+                ),
+                platform_fee_rate=(
+                    economy_snapshot[
+                        "platform_fee_rate"
+                    ]
+                ),
+                platform_fee_base=(
+                    economy_snapshot[
+                        "platform_fee_base"
+                    ]
+                ),
+                platform_fee_amount=(
+                    economy_snapshot[
+                        "platform_fee_amount"
+                    ]
+                ),
+                seller_net_amount=(
+                    economy_snapshot[
+                        "seller_net_amount"
+                    ]
+                ),
+
                 currency="ARS",
 
                 shipping_address=delivery_choice.shipping_address,
@@ -420,6 +459,13 @@ def create_orders_by_seller(
             for order_id in created_order_ids
         ]
         return created_orders, None
+
+    except ValueError:
+        db.rollback()
+        return (
+            None,
+            "La configuracion economica de WalZ One no es valida.",
+        )
 
     except SQLAlchemyError:
         db.rollback()
