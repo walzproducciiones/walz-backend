@@ -37,6 +37,12 @@ class Banner(Base):
         default="STANDARD",
         server_default="STANDARD",
     )
+    motion_variant = Column(
+        String(40),
+        nullable=False,
+        default="STATIC",
+        server_default="STATIC",
+    )
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=True)

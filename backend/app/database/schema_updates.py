@@ -200,6 +200,10 @@ def ensure_banner_targeting_columns(engine):
             "VARCHAR(40) NOT NULL "
             "DEFAULT 'STANDARD'"
         ),
+        "motion_variant": (
+            "VARCHAR(40) NOT NULL "
+            "DEFAULT 'STATIC'"
+        ),
     }
 
     with engine.begin() as connection:

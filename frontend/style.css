@@ -1850,6 +1850,54 @@ body.cart-panel-open .cart-button {
     height: 220px;
 }
 
+.marketplace-banner-card[data-motion-variant="FADE"].is-motion-pending {
+    opacity: 0;
+}
+
+.marketplace-banner-card[data-motion-variant="FADE"].is-motion-visible {
+    animation: walz-banner-fade 1.2s ease both;
+}
+
+.marketplace-banner-card[data-motion-variant="SLIDE"].is-motion-pending {
+    opacity: 0;
+    transform: translateX(28px);
+}
+
+.marketplace-banner-card[data-motion-variant="SLIDE"].is-motion-visible {
+    animation: walz-banner-slide 1.2s ease both;
+}
+
+@keyframes walz-banner-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes walz-banner-slide {
+    from {
+        opacity: 0;
+        transform: translateX(28px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marketplace-banner-card[data-motion-variant="FADE"],
+    .marketplace-banner-card[data-motion-variant="SLIDE"] {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
 .marketplace-banner-copy {
     padding: clamp(20px, 4vw, 42px);
 }

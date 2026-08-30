@@ -31,6 +31,11 @@ class BannerBase(BaseModel):
         "PROMO",
         "NOTICE",
     ] = "STANDARD"
+    motion_variant: Literal[
+        "STATIC",
+        "FADE",
+        "SLIDE",
+    ] = "STATIC"
 
 
 class BannerCreate(BannerBase):
@@ -59,6 +64,9 @@ class BannerUpdate(BaseModel):
     ] = None
     style_variant: Optional[
         Literal["STANDARD", "INFO", "PROMO", "NOTICE"]
+    ] = None
+    motion_variant: Optional[
+        Literal["STATIC", "FADE", "SLIDE"]
     ] = None
 
 

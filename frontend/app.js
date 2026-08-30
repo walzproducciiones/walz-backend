@@ -11150,6 +11150,54 @@ function startMarketplaceBannerRotation() {
 }
 
 
+function prepareMarketplaceBannerMotion() {
+    if (window.walzBannerMotionObserver) {
+        window.walzBannerMotionObserver.disconnect();
+        window.walzBannerMotionObserver = null;
+    }
+
+    const card = document.querySelector(
+        "#marketplace-banners .marketplace-banner-card"
+    );
+
+    if (!card) return;
+
+    const motionVariant = String(
+        card.dataset.motionVariant || "STATIC"
+    ).trim().toUpperCase();
+
+    if (motionVariant === "STATIC") {
+        card.classList.add("is-motion-visible");
+        return;
+    }
+
+    card.classList.add("is-motion-pending");
+
+    if (!("IntersectionObserver" in window)) {
+        card.classList.add("is-motion-visible");
+        return;
+    }
+
+    const observer = new IntersectionObserver(
+        entries => {
+            const entry = entries[0];
+            if (!entry?.isIntersecting) return;
+
+            card.classList.add("is-motion-visible");
+            observer.disconnect();
+
+            if (window.walzBannerMotionObserver === observer) {
+                window.walzBannerMotionObserver = null;
+            }
+        },
+        { threshold: 0.75 }
+    );
+
+    window.walzBannerMotionObserver = observer;
+    observer.observe(card);
+}
+
+
 function renderMarketplaceBanner() {
     const container = document.getElementById("marketplace-banners");
     const banners = Array.isArray(window.walzActiveBanners) ? window.walzActiveBanners : [];
@@ -11171,6 +11219,18 @@ function renderMarketplaceBanner() {
     ].includes(rawStyleVariant)
         ? rawStyleVariant
         : "STANDARD";
+
+    const rawMotionVariant = String(
+        banner.motion_variant || "STATIC"
+    ).trim().toUpperCase();
+
+    const motionVariant = [
+        "STATIC",
+        "FADE",
+        "SLIDE",
+    ].includes(rawMotionVariant)
+        ? rawMotionVariant
+        : "STATIC";
 
     const bannerImageUrl = getProductImageUrl(
         banner.image_url
@@ -11197,6 +11257,7 @@ function renderMarketplaceBanner() {
         <article
             class="marketplace-banner-card${bannerHasImage ? "" : " marketplace-banner-card-no-image"}"
             data-style-variant="${styleVariant}"
+            data-motion-variant="${motionVariant}"
         >
             ${bannerImage}
             <div class="marketplace-banner-copy">
@@ -12864,6 +12925,117 @@ function bannerDateToIso(inputId) {
     return value ? new Date(value).toISOString() : null;
 }
 
+function cancelAdminBannerEdit() {
+    window.walzEditingBannerId = null;
+
+    for (const id of [
+        "banner-title",
+        "banner-subtitle",
+        "banner-image-url",
+        "banner-link-url",
+        "banner-button-text",
+        "banner-starts-at",
+        "banner-ends-at"
+    ]) {
+        const input = document.getElementById(id);
+        if (input) input.value = "";
+    }
+
+    const imageFile = document.getElementById("banner-image-file");
+    if (imageFile) imageFile.value = "";
+
+    const orderInput = document.getElementById("banner-display-order");
+    if (orderInput) orderInput.value = "0";
+
+    const activeInput = document.getElementById("banner-is-active");
+    if (activeInput) activeInput.checked = true;
+
+    const placementInput = document.getElementById("banner-placement");
+    if (placementInput) placementInput.value = "CENTRAL_MARKETPLACE";
+
+    const audienceInput = document.getElementById("banner-audience");
+    if (audienceInput) audienceInput.value = "PUBLIC";
+
+    const styleInput = document.getElementById("banner-style-variant");
+    if (styleInput) styleInput.value = "STANDARD";
+
+    const motionInput = document.getElementById("banner-motion-variant");
+    if (motionInput) motionInput.value = "STATIC";
+
+    const submitButton = document.getElementById("banner-admin-submit-button");
+    if (submitButton) submitButton.textContent = "Crear banner";
+
+    const cancelButton = document.getElementById("banner-admin-cancel-edit-button");
+    if (cancelButton) cancelButton.style.display = "none";
+
+    const errorElement = document.getElementById("banner-admin-error");
+    if (errorElement) errorElement.textContent = "";
+}
+
+
+function bannerDateToLocalInput(value) {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs)
+        .toISOString()
+        .slice(0, 16);
+}
+
+function editAdminBanner(bannerId) {
+    const banner = (Array.isArray(window.walzAdminBanners)
+        ? window.walzAdminBanners
+        : []
+    ).find(item => String(item.id) === String(bannerId));
+
+    if (!banner || banner.seller_id) {
+        showMessage("La campana Central no esta disponible para editar.", "error");
+        return;
+    }
+
+    window.walzEditingBannerId = String(banner.id);
+
+    const values = {
+        "banner-title": banner.title || "",
+        "banner-subtitle": banner.subtitle || "",
+        "banner-image-url": banner.image_url || "",
+        "banner-link-url": banner.link_url || "",
+        "banner-button-text": banner.button_text || "",
+        "banner-display-order": String(Number(banner.display_order || 0)),
+        "banner-starts-at": bannerDateToLocalInput(banner.starts_at),
+        "banner-ends-at": bannerDateToLocalInput(banner.ends_at),
+        "banner-placement": banner.placement || "CENTRAL_MARKETPLACE",
+        "banner-audience": banner.audience || "PUBLIC",
+        "banner-style-variant": banner.style_variant || "STANDARD",
+        "banner-motion-variant": banner.motion_variant || "STATIC"
+    };
+
+    for (const [id, value] of Object.entries(values)) {
+        const input = document.getElementById(id);
+        if (input) input.value = value;
+    }
+
+    const imageFile = document.getElementById("banner-image-file");
+    if (imageFile) imageFile.value = "";
+
+    const activeInput = document.getElementById("banner-is-active");
+    if (activeInput) activeInput.checked = banner.is_active === true;
+
+    const submitButton = document.getElementById("banner-admin-submit-button");
+    if (submitButton) submitButton.textContent = "Guardar cambios";
+
+    const cancelButton = document.getElementById("banner-admin-cancel-edit-button");
+    if (cancelButton) cancelButton.style.display = "";
+
+    const errorElement = document.getElementById("banner-admin-error");
+    if (errorElement) errorElement.textContent = "";
+
+    document.getElementById("banner-admin-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 async function createAdminBanner() {
     const currentToken = localStorage.getItem("walz_token");
@@ -12885,6 +13057,9 @@ async function createAdminBanner() {
     const styleVariant =
         document.getElementById("banner-style-variant")?.value
         || "STANDARD";
+    const motionVariant =
+        document.getElementById("banner-motion-variant")?.value
+        || "STATIC";
 
     if (errorElement) errorElement.textContent = "";
 
@@ -12913,32 +13088,46 @@ async function createAdminBanner() {
 
     try {
         if (imageFile) imageUrl = await uploadBannerImage(imageFile);
-        const response = await fetch(`${API_URL}/banners/`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${currentToken}`
-            },
-            body: JSON.stringify({
-                title,
-                subtitle: subtitle || null,
-                image_url:
-                    getProductImageUrl(imageUrl) || null,
-                link_url: getSafeBannerLink(linkUrl) || null,
-                button_text: buttonText || null,
-                is_active: isActive,
-                starts_at: bannerDateToIso("banner-starts-at"),
-                ends_at: bannerDateToIso("banner-ends-at"),
-                display_order: Number.isInteger(displayOrder) && displayOrder >= 0 ? displayOrder : 0,
-                placement,
-                audience,
-                style_variant: styleVariant
-            })
-        });
+        const editingBannerId =
+            String(window.walzEditingBannerId || "").trim();
+
+        const response = await fetch(
+            editingBannerId
+                ? `${API_URL}/banners/${editingBannerId}`
+                : `${API_URL}/banners/`,
+            {
+                method: editingBannerId ? "PATCH" : "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({
+                    title,
+                    subtitle: subtitle || null,
+                    image_url:
+                        getProductImageUrl(imageUrl) || null,
+                    link_url: getSafeBannerLink(linkUrl) || null,
+                    button_text: buttonText || null,
+                    is_active: isActive,
+                    starts_at: bannerDateToIso("banner-starts-at"),
+                    ends_at: bannerDateToIso("banner-ends-at"),
+                    display_order: Number.isInteger(displayOrder) && displayOrder >= 0 ? displayOrder : 0,
+                    placement,
+                    audience,
+                    style_variant: styleVariant,
+                    motion_variant: motionVariant
+                })
+            }
+        );
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
 
-        showMessage("Banner creado correctamente.", "success");
+        showMessage(
+            editingBannerId
+                ? "Campana actualizada correctamente."
+                : "Banner creado correctamente.",
+            "success"
+        );
         for (const id of ["banner-title", "banner-subtitle", "banner-image-url", "banner-link-url", "banner-button-text", "banner-starts-at", "banner-ends-at"]) {
             const input = document.getElementById(id);
             if (input) input.value = "";
@@ -12952,6 +13141,8 @@ async function createAdminBanner() {
             document.getElementById("banner-audience");
         const styleInput =
             document.getElementById("banner-style-variant");
+        const motionInput =
+            document.getElementById("banner-motion-variant");
 
         if (placementInput) {
             placementInput.value = "CENTRAL_MARKETPLACE";
@@ -12962,6 +13153,27 @@ async function createAdminBanner() {
         if (styleInput) {
             styleInput.value = "STANDARD";
         }
+        if (motionInput) {
+            motionInput.value = "STATIC";
+        }
+
+        const orderInput =
+            document.getElementById("banner-display-order");
+        if (orderInput) orderInput.value = "0";
+
+        const activeInput =
+            document.getElementById("banner-is-active");
+        if (activeInput) activeInput.checked = true;
+
+        window.walzEditingBannerId = null;
+
+        const submitButton =
+            document.getElementById("banner-admin-submit-button");
+        if (submitButton) submitButton.textContent = "Crear banner";
+
+        const cancelButton =
+            document.getElementById("banner-admin-cancel-edit-button");
+        if (cancelButton) cancelButton.style.display = "none";
 
         await loadAdminBanners();
         await loadActiveBanners();
@@ -12993,6 +13205,17 @@ function getBannerAudienceLabel(audience) {
 
     return labels[String(audience || "").toUpperCase()]
         || String(audience || "Sin publico");
+}
+
+function getBannerMotionLabel(motionVariant) {
+    const labels = {
+        STATIC: "Fijo",
+        FADE: "Desvanecer",
+        SLIDE: "Deslizar"
+    };
+
+    return labels[String(motionVariant || "STATIC").toUpperCase()]
+        || "Fijo";
 }
 
 
@@ -13087,15 +13310,26 @@ function renderAdminBannerCard(banner) {
                         : ""
             )
             : `
-                <button
-                    type="button"
-                    onclick="toggleAdminBanner(
-                        '${escapeJs(String(banner.id))}',
-                        ${banner.is_active ? "false" : "true"}
-                    )"
-                >
-                    ${banner.is_active ? "Pausar" : "Activar"}
-                </button>
+                <div class="banner-review-actions">
+                    <button
+                        type="button"
+                        onclick="editAdminBanner(
+                            '${escapeJs(String(banner.id))}'
+                        )"
+                    >
+                        Editar
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="toggleAdminBanner(
+                            '${escapeJs(String(banner.id))}',
+                            ${banner.is_active ? "false" : "true"}
+                        )"
+                    >
+                        ${banner.is_active ? "Pausar" : "Activar"}
+                    </button>
+                </div>
             `;
 
 
@@ -13127,6 +13361,13 @@ function renderAdminBannerCard(banner) {
                     ${escapeHtml(
                         getBannerAudienceLabel(
                             banner.audience
+                        )
+                    )}
+                    &middot;
+                    <strong>Movimiento:</strong>
+                    ${escapeHtml(
+                        getBannerMotionLabel(
+                            banner.motion_variant
                         )
                     )}
                 </p>
@@ -13213,10 +13454,13 @@ async function loadAdminBanners() {
             !Array.isArray(banners)
             || banners.length === 0
         ) {
+            window.walzAdminBanners = [];
             container.innerHTML =
                 '<div class="orders-state-card">Todavia no hay banners.</div>';
             return;
         }
+
+        window.walzAdminBanners = banners;
 
         const centralMarketplace =
             banners.filter(
