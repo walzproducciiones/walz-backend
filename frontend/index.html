@@ -1861,6 +1861,98 @@
             </fieldset>
             <button type="submit" id="store-save-button">Guardar tienda</button>
 
+            <fieldset class="store-schedule-settings store-profile-wide">
+                <div class="store-delivery-title">Horarios de atenci&oacute;n</div>
+
+                <p>
+                    Configur&aacute; cu&aacute;ndo est&aacute; abierto tu local.
+                    Pod&eacute;s usar m&aacute;s de una franja por d&iacute;a y cambiarlo cuando quieras.
+                </p>
+
+                <label class="store-schedule-online-option">
+                    <input
+                        id="store-schedule-online-always"
+                        type="checkbox"
+                        checked
+                    >
+                    <span>
+                        <strong>Recibir pedidos online aunque el local est&eacute; cerrado</strong>
+                        <small>
+                            Si lo desactiv&aacute;s, WalZ One aceptar&aacute; pedidos solamente mientras el local est&eacute; abierto.
+                        </small>
+                    </span>
+                </label>
+
+                <div
+                    id="store-schedule-weekly"
+                    class="store-schedule-weekly"
+                ></div>
+
+                <div class="store-schedule-advanced-heading">
+                    <div>
+                        <strong>Temporadas y fechas especiales</strong>
+                        <small>
+                            Para horarios de verano, temporada alta, feriados, vacaciones,
+                            remodelaciones u otros cambios temporales.
+                        </small>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="store-schedule-advanced-toggle"
+                        onclick="toggleStoreScheduleAdvanced()"
+                    >
+                        Configurar
+                    </button>
+                </div>
+
+                <div
+                    id="store-schedule-advanced"
+                    class="store-schedule-advanced"
+                    style="display:none;"
+                >
+                    <div class="store-schedule-advanced-actions">
+                        <button
+                            type="button"
+                            onclick="addStoreScheduleSeason()"
+                        >
+                            + Agregar temporada
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="addStoreScheduleException()"
+                        >
+                            + Agregar fecha especial
+                        </button>
+                    </div>
+
+                    <div
+                        id="store-schedule-seasons"
+                        class="store-schedule-seasons"
+                    ></div>
+
+                    <div
+                        id="store-schedule-exceptions"
+                        class="store-schedule-exceptions"
+                    ></div>
+                </div>
+
+                <button
+                    type="button"
+                    id="store-schedule-save-button"
+                    onclick="saveStoreSchedule()"
+                >
+                    Guardar horarios
+                </button>
+
+                <p
+                    id="store-schedule-message"
+                    class="store-schedule-message"
+                    role="status"
+                ></p>
+            </fieldset>
+
             <fieldset class="store-payment-settings store-profile-wide">
                 <div class="store-delivery-title">Formas de pago</div>
 

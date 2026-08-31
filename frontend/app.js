@@ -12906,6 +12906,157 @@ function hidePublicStoreSection() {
 }
 
 
+function formatPublicStoreScheduleTime(value) {
+    return String(value || "")
+        .trim()
+        .slice(0, 5);
+}
+
+
+function formatPublicStoreNextOpen(value) {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(
+        "es-AR",
+        {
+            weekday: "short",
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false
+        }
+    ).format(date);
+}
+
+
+function renderPublicStoreWeeklySchedule(schedule) {
+    if (!schedule) return "";
+
+    const regularPeriod =
+        (schedule.periods || []).find(
+            period =>
+                period.period_type === "REGULAR" &&
+                period.is_active !== false
+        );
+
+    if (!regularPeriod) {
+        return "";
+    }
+
+    const intervals =
+        regularPeriod.intervals || [];
+
+    const rows = STORE_SCHEDULE_DAYS.map(
+        (dayName, weekday) => {
+            const dayIntervals =
+                intervals.filter(
+                    interval =>
+                        Number(interval.weekday) ===
+                        weekday
+                );
+
+            const hours = dayIntervals.length
+                ? dayIntervals.map(
+                    interval =>
+                        `${formatPublicStoreScheduleTime(interval.opens_at)} a ${formatPublicStoreScheduleTime(interval.closes_at)}`
+                ).join(" / ")
+                : "Cerrado";
+
+            return `
+                <div class="public-store-schedule-row">
+                    <span>${escapeHtml(dayName)}</span>
+                    <strong>${escapeHtml(hours)}</strong>
+                </div>
+            `;
+        }
+    ).join("");
+
+    return `
+        <details class="public-store-schedule-details">
+            <summary>Ver horario habitual</summary>
+
+            <div class="public-store-schedule-week">
+                ${rows}
+            </div>
+        </details>
+    `;
+}
+
+
+function renderPublicStoreScheduleStatus(
+    scheduleStatus,
+    storeSchedule
+) {
+    if (
+        !scheduleStatus ||
+        scheduleStatus.is_configured !== true
+    ) {
+        return "";
+    }
+
+    const isOpen =
+        scheduleStatus.is_open === true;
+
+    const nextOpen =
+        !isOpen
+            ? formatPublicStoreNextOpen(
+                scheduleStatus.next_open_at
+            )
+            : "";
+
+    const specialMessage =
+        String(
+            scheduleStatus.public_message || ""
+        ).trim();
+
+    const sourceLabel =
+        String(
+            scheduleStatus.source_label || ""
+        ).trim();
+
+    return `
+        <section class="public-store-schedule-card">
+            <div class="public-store-schedule-status">
+                <span class="${isOpen ? "is-open" : "is-closed"}">
+                    ${isOpen ? "Abierto ahora" : "Cerrado ahora"}
+                </span>
+
+                ${sourceLabel ? `
+                    <small>
+                        ${escapeHtml(sourceLabel)}
+                    </small>
+                ` : ""}
+            </div>
+
+            ${nextOpen ? `
+                <p>
+                    Pr&oacute;xima apertura:
+                    <strong>${escapeHtml(nextOpen)}</strong>
+                </p>
+            ` : ""}
+
+            ${specialMessage ? `
+                <p class="public-store-schedule-message">
+                    ${escapeHtml(specialMessage)}
+                </p>
+            ` : ""}
+
+            ${renderPublicStoreWeeklySchedule(
+                storeSchedule
+            )}
+        </section>
+    `;
+}
+
+
+
 async function showPublicStore(sellerId) {
     hideSellerApplicationSections();
     const section = document.getElementById("public-store-section");
@@ -12928,12 +13079,35 @@ async function showPublicStore(sellerId) {
     container.innerHTML = '<div class="orders-state-card">Cargando tienda...</div>';
 
     try {
-        const [storeResponse, productsResponse] = await Promise.all([
+        const [
+            storeResponse,
+            productsResponse,
+            scheduleStatusResponse,
+            scheduleResponse
+        ] = await Promise.all([
             fetch(`${API_URL}/stores/seller/${sellerId}`),
-            fetch(`${API_URL}/products/`)
+            fetch(`${API_URL}/products/`),
+            fetch(`${API_URL}/store-schedules/seller/${sellerId}/status`)
+                .catch(() => null),
+            fetch(`${API_URL}/store-schedules/seller/${sellerId}`)
+                .catch(() => null)
         ]);
-        const store = await storeResponse.json().catch(() => ({}));
-        const products = await productsResponse.json().catch(() => ([]));
+
+        const store =
+            await storeResponse.json().catch(() => ({}));
+
+        const products =
+            await productsResponse.json().catch(() => ([]));
+
+        const scheduleStatus =
+            scheduleStatusResponse?.ok
+                ? await scheduleStatusResponse.json().catch(() => null)
+                : null;
+
+        const storeSchedule =
+            scheduleResponse?.ok
+                ? await scheduleResponse.json().catch(() => null)
+                : null;
         if (!storeResponse.ok) throw new Error(store.detail || "Esta tienda todavia no completo su perfil.");
         if (!productsResponse.ok) throw new Error("No se pudieron cargar los productos de la tienda.");
 
@@ -12981,6 +13155,11 @@ async function showPublicStore(sellerId) {
                         ${store.phone ? `<span>Telefono: <strong>${escapeHtml(store.phone)}</strong></span>` : ""}
                         ${store.address ? `<span>Direccion: <strong>${escapeHtml(store.address)}</strong></span>` : ""}
                     </div>
+
+                    ${renderPublicStoreScheduleStatus(
+                        scheduleStatus,
+                        storeSchedule
+                    )}
                 </div>
             </header>
 
@@ -13236,6 +13415,7 @@ async function showStoreProfile() {
     document.getElementById("banner-proposal-section")?.style.setProperty("display", "none");
     section.style.display = "block";
     await loadStoreProfile();
+    await loadStoreSchedule();
     await loadStorePaymentMethods();
 }
 
@@ -13497,6 +13677,1721 @@ async function loadStoreProfile() {
     } catch (error) {
         if (errorElement) errorElement.textContent = error.message || "No se pudo cargar la tienda.";
         renderStorePreview();
+    }
+}
+
+
+const STORE_SCHEDULE_DAYS = [
+    "Lunes",
+    "Martes",
+    "Mi\u00e9rcoles",
+    "Jueves",
+    "Viernes",
+    "S\u00e1bado",
+    "Domingo"
+];
+
+
+function normalizeStoreScheduleTime(value) {
+    const text = String(value || "").trim();
+    return text ? text.slice(0, 5) : "";
+}
+
+
+function getStoreScheduleRegularPeriod(schedule) {
+    return (schedule?.periods || []).find(
+        period => period.period_type === "REGULAR"
+    ) || null;
+}
+
+
+function createStoreScheduleIntervalRow(
+    weekday,
+    opensAt = "",
+    closesAt = ""
+) {
+    const row = document.createElement("div");
+    row.className = "store-schedule-interval-row";
+
+    row.innerHTML = `
+        <input
+            type="time"
+            class="store-schedule-opens-at"
+            value="${escapeHtml(normalizeStoreScheduleTime(opensAt))}"
+            aria-label="Hora de apertura"
+        >
+        <span>a</span>
+        <input
+            type="time"
+            class="store-schedule-closes-at"
+            value="${escapeHtml(normalizeStoreScheduleTime(closesAt))}"
+            aria-label="Hora de cierre"
+        >
+        <button
+            type="button"
+            class="store-schedule-remove-interval"
+            aria-label="Eliminar franja"
+        >
+            Quitar
+        </button>
+    `;
+
+    row.querySelector(".store-schedule-remove-interval")
+        ?.addEventListener("click", () => {
+            row.remove();
+        });
+
+    return row;
+}
+
+
+function addStoreScheduleWeeklyInterval(
+    weekday,
+    opensAt = "",
+    closesAt = ""
+) {
+    const dayCard = document.querySelector(
+        `.store-schedule-day[data-weekday="${weekday}"]`
+    );
+
+    if (!dayCard) return;
+
+    const closedInput = dayCard.querySelector(
+        ".store-schedule-day-closed"
+    );
+
+    if (closedInput?.checked) {
+        closedInput.checked = false;
+    }
+
+    const intervalsContainer = dayCard.querySelector(
+        ".store-schedule-day-intervals"
+    );
+
+    intervalsContainer?.appendChild(
+        createStoreScheduleIntervalRow(
+            weekday,
+            opensAt,
+            closesAt
+        )
+    );
+
+    syncStoreScheduleDayState(weekday);
+}
+
+
+function syncStoreScheduleDayState(weekday) {
+    const dayCard = document.querySelector(
+        `.store-schedule-day[data-weekday="${weekday}"]`
+    );
+
+    if (!dayCard) return;
+
+    const closedInput = dayCard.querySelector(
+        ".store-schedule-day-closed"
+    );
+
+    const isClosed = Boolean(closedInput?.checked);
+
+    const intervalRows = dayCard.querySelectorAll(
+        ".store-schedule-interval-row"
+    );
+
+    intervalRows.forEach(row => {
+        row.querySelectorAll("input, button").forEach(control => {
+            control.disabled = isClosed;
+        });
+    });
+
+    const addButton = dayCard.querySelector(
+        ".store-schedule-add-interval"
+    );
+
+    if (addButton) {
+        addButton.disabled = false;
+    }
+
+    dayCard.classList.toggle(
+        "is-closed",
+        isClosed
+    );
+}
+
+
+function getStoreScheduleDayIntervals(dayCard) {
+    if (!dayCard) return [];
+
+    return Array.from(
+        dayCard.querySelectorAll(
+            ".store-schedule-interval-row"
+        )
+    ).map(row => ({
+        opens_at:
+            row.querySelector(
+                ".store-schedule-opens-at"
+            )?.value || "",
+        closes_at:
+            row.querySelector(
+                ".store-schedule-closes-at"
+            )?.value || ""
+    }));
+}
+
+
+function copyStoreScheduleDayToDays(
+    sourceWeekday,
+    targetWeekdays
+) {
+    const sourceCard = document.querySelector(
+        `.store-schedule-day[data-weekday="${sourceWeekday}"]`
+    );
+
+    if (!sourceCard) return;
+
+    const sourceClosed =
+        sourceCard.querySelector(
+            ".store-schedule-day-closed"
+        )?.checked === true;
+
+    const sourceIntervals =
+        getStoreScheduleDayIntervals(
+            sourceCard
+        );
+
+    targetWeekdays.forEach(weekday => {
+        const targetCard =
+            document.querySelector(
+                `.store-schedule-day[data-weekday="${weekday}"]`
+            );
+
+        if (!targetCard) return;
+
+        const closedInput =
+            targetCard.querySelector(
+                ".store-schedule-day-closed"
+            );
+
+        const intervalsContainer =
+            targetCard.querySelector(
+                ".store-schedule-day-intervals"
+            );
+
+        if (closedInput) {
+            closedInput.checked =
+                sourceClosed;
+        }
+
+        if (intervalsContainer) {
+            intervalsContainer.innerHTML = "";
+
+            if (!sourceClosed) {
+                sourceIntervals.forEach(
+                    interval => {
+                        intervalsContainer.appendChild(
+                            createStoreScheduleIntervalRow(
+                                weekday,
+                                interval.opens_at,
+                                interval.closes_at
+                            )
+                        );
+                    }
+                );
+            }
+        }
+
+        syncStoreScheduleDayState(
+            weekday
+        );
+    });
+}
+
+
+function copyStoreScheduleMondayToWeekdays() {
+    copyStoreScheduleDayToDays(
+        0,
+        [1, 2, 3, 4]
+    );
+}
+
+
+function copyStoreScheduleMondayToAllDays() {
+    copyStoreScheduleDayToDays(
+        0,
+        [1, 2, 3, 4, 5, 6]
+    );
+}
+
+
+
+function renderStoreScheduleWeekly(schedule) {
+    const container = document.getElementById(
+        "store-schedule-weekly"
+    );
+
+    if (!container) return;
+
+    const regularPeriod =
+        getStoreScheduleRegularPeriod(schedule);
+
+    const intervals =
+        regularPeriod?.intervals || [];
+
+    container.innerHTML = `
+        <div class="store-schedule-quick-actions">
+            <span><strong>Atajos</strong></span>
+
+            <button
+                type="button"
+                onclick="copyStoreScheduleMondayToWeekdays()"
+            >
+                Copiar lunes a martes-viernes
+            </button>
+
+            <button
+                type="button"
+                onclick="copyStoreScheduleMondayToAllDays()"
+            >
+                Copiar lunes a todos los d\u00edas
+            </button>
+        </div>
+    `;
+
+    STORE_SCHEDULE_DAYS.forEach(
+        (dayName, weekday) => {
+            const dayIntervals = intervals.filter(
+                interval =>
+                    Number(interval.weekday) === weekday
+            );
+
+            const dayCard = document.createElement("div");
+            dayCard.className = "store-schedule-day";
+            dayCard.dataset.weekday = String(weekday);
+
+            dayCard.innerHTML = `
+                <div class="store-schedule-day-heading">
+                    <strong>${dayName}</strong>
+
+                    <label class="store-schedule-closed-option">
+                        <input
+                            type="checkbox"
+                            class="store-schedule-day-closed"
+                            ${dayIntervals.length ? "" : "checked"}
+                        >
+                        <span>Cerrado</span>
+                    </label>
+                </div>
+
+                <div class="store-schedule-day-intervals"></div>
+
+                <button
+                    type="button"
+                    class="store-schedule-add-interval"
+                >
+                    + Agregar franja
+                </button>
+            `;
+
+            container.appendChild(dayCard);
+
+            const intervalsContainer =
+                dayCard.querySelector(
+                    ".store-schedule-day-intervals"
+                );
+
+            dayIntervals.forEach(interval => {
+                intervalsContainer?.appendChild(
+                    createStoreScheduleIntervalRow(
+                        weekday,
+                        interval.opens_at,
+                        interval.closes_at
+                    )
+                );
+            });
+
+            dayCard.querySelector(
+                ".store-schedule-day-closed"
+            )?.addEventListener("change", () => {
+                syncStoreScheduleDayState(weekday);
+            });
+
+            dayCard.querySelector(
+                ".store-schedule-add-interval"
+            )?.addEventListener("click", () => {
+                addStoreScheduleWeeklyInterval(
+                    weekday,
+                    "09:00",
+                    "18:00"
+                );
+            });
+
+            syncStoreScheduleDayState(weekday);
+        }
+    );
+}
+
+
+function collectStoreScheduleWeeklyIntervals() {
+    const intervals = [];
+
+    document.querySelectorAll(
+        ".store-schedule-day[data-weekday]"
+    ).forEach(dayCard => {
+        const weekday = Number(
+            dayCard.dataset.weekday
+        );
+
+        const closedInput = dayCard.querySelector(
+            ".store-schedule-day-closed"
+        );
+
+        if (closedInput?.checked) {
+            return;
+        }
+
+        const rows = dayCard.querySelectorAll(
+            ".store-schedule-interval-row"
+        );
+
+        if (!rows.length) {
+            throw new Error(
+                `${STORE_SCHEDULE_DAYS[weekday]}: agreg\u00e1 al menos una franja o marc\u00e1 Cerrado.`
+            );
+        }
+
+        rows.forEach(row => {
+            const opensAt = row.querySelector(
+                ".store-schedule-opens-at"
+            )?.value;
+
+            const closesAt = row.querySelector(
+                ".store-schedule-closes-at"
+            )?.value;
+
+            if (!opensAt || !closesAt) {
+                throw new Error(
+                    `${STORE_SCHEDULE_DAYS[weekday]}: complet\u00e1 hora de apertura y cierre.`
+                );
+            }
+
+            intervals.push({
+                weekday,
+                opens_at: opensAt,
+                closes_at: closesAt
+            });
+        });
+    });
+
+    return intervals;
+}
+
+
+function storeSchedulePeriodToPayload(period) {
+    return {
+        id: period.id || null,
+        period_type: period.period_type,
+        name: period.name,
+        valid_from: period.valid_from || null,
+        valid_until: period.valid_until || null,
+        recurs_annually:
+            period.period_type === "SEASONAL"
+                ? period.recurs_annually !== false
+                : false,
+        is_active: period.is_active !== false,
+        intervals: (period.intervals || []).map(
+            interval => ({
+                weekday: Number(interval.weekday),
+                opens_at: interval.opens_at,
+                closes_at: interval.closes_at
+            })
+        )
+    };
+}
+
+
+function storeScheduleExceptionToPayload(exception) {
+    return {
+        id: exception.id || null,
+        start_date: exception.start_date,
+        end_date: exception.end_date,
+        mode: exception.mode,
+        label: exception.label || null,
+        public_message:
+            exception.public_message || null,
+        online_order_override:
+            exception.online_order_override || null,
+        intervals: (exception.intervals || []).map(
+            interval => ({
+                opens_at: interval.opens_at,
+                closes_at: interval.closes_at
+            })
+        )
+    };
+}
+
+
+let storeScheduleSeasonSequence = 0;
+
+
+function toggleStoreScheduleAdvanced(forceOpen = null) {
+    const panel = document.getElementById(
+        "store-schedule-advanced"
+    );
+
+    const button = document.getElementById(
+        "store-schedule-advanced-toggle"
+    );
+
+    if (!panel) return;
+
+    const isOpen =
+        forceOpen === null
+            ? panel.style.display === "none"
+            : Boolean(forceOpen);
+
+    panel.style.display =
+        isOpen ? "" : "none";
+
+    if (button) {
+        button.textContent =
+            isOpen ? "Ocultar" : "Configurar";
+    }
+}
+
+
+function createStoreScheduleSeasonIntervalRow(
+    weekday,
+    opensAt = "",
+    closesAt = ""
+) {
+    const row = document.createElement("div");
+    row.className =
+        "store-schedule-season-interval-row";
+
+    row.innerHTML = `
+        <input
+            type="time"
+            class="store-schedule-season-opens"
+            value="${escapeHtml(normalizeStoreScheduleTime(opensAt))}"
+            aria-label="Hora de apertura"
+        >
+        <span>a</span>
+        <input
+            type="time"
+            class="store-schedule-season-closes"
+            value="${escapeHtml(normalizeStoreScheduleTime(closesAt))}"
+            aria-label="Hora de cierre"
+        >
+        <button
+            type="button"
+            class="store-schedule-remove-interval"
+        >
+            Quitar
+        </button>
+    `;
+
+    row.querySelector(
+        ".store-schedule-remove-interval"
+    )?.addEventListener("click", () => {
+        row.remove();
+    });
+
+    return row;
+}
+
+
+function createStoreScheduleSeasonDay(
+    weekday,
+    intervals = []
+) {
+    const day = document.createElement("div");
+
+    day.className =
+        "store-schedule-season-day";
+
+    day.dataset.weekday =
+        String(weekday);
+
+    day.innerHTML = `
+        <div class="store-schedule-season-day-heading">
+            <strong>
+                ${STORE_SCHEDULE_DAYS[weekday]}
+            </strong>
+
+            <label>
+                <input
+                    type="checkbox"
+                    class="store-schedule-season-day-closed"
+                    ${intervals.length ? "" : "checked"}
+                >
+                <span>Cerrado</span>
+            </label>
+        </div>
+
+        <div
+            class="store-schedule-season-day-intervals"
+        ></div>
+
+        <button
+            type="button"
+            class="store-schedule-season-add-interval"
+        >
+            + Agregar franja
+        </button>
+    `;
+
+    const intervalsContainer =
+        day.querySelector(
+            ".store-schedule-season-day-intervals"
+        );
+
+    intervals.forEach(interval => {
+        intervalsContainer?.appendChild(
+            createStoreScheduleSeasonIntervalRow(
+                weekday,
+                interval.opens_at,
+                interval.closes_at
+            )
+        );
+    });
+
+    const closed =
+        day.querySelector(
+            ".store-schedule-season-day-closed"
+        );
+
+    const addButton =
+        day.querySelector(
+            ".store-schedule-season-add-interval"
+        );
+
+    function syncDay() {
+        const disabled =
+            Boolean(closed?.checked);
+
+        day.querySelectorAll(
+            ".store-schedule-season-interval-row input, " +
+            ".store-schedule-season-interval-row button"
+        ).forEach(control => {
+            control.disabled = disabled;
+        });
+
+        if (addButton) {
+            addButton.disabled = false;
+        }
+
+        day.classList.toggle(
+            "is-closed",
+            disabled
+        );
+    }
+
+    closed?.addEventListener(
+        "change",
+        syncDay
+    );
+
+    addButton?.addEventListener(
+        "click",
+        () => {
+            if (closed) {
+                closed.checked = false;
+            }
+
+            intervalsContainer?.appendChild(
+                createStoreScheduleSeasonIntervalRow(
+                    weekday,
+                    "09:00",
+                    "18:00"
+                )
+            );
+
+            syncDay();
+        }
+    );
+
+    syncDay();
+
+    return day;
+}
+
+
+function getStoreScheduleSeasonDayIntervals(day) {
+    if (!day) return [];
+
+    return Array.from(
+        day.querySelectorAll(
+            ".store-schedule-season-interval-row"
+        )
+    ).map(row => ({
+        opens_at:
+            row.querySelector(
+                ".store-schedule-season-opens"
+            )?.value || "",
+        closes_at:
+            row.querySelector(
+                ".store-schedule-season-closes"
+            )?.value || ""
+    }));
+}
+
+
+function copyStoreScheduleSeasonMonday(
+    button,
+    targetWeekdays
+) {
+    const card = button?.closest(
+        ".store-schedule-season-card"
+    );
+
+    if (!card) return;
+
+    const sourceDay = card.querySelector(
+        '.store-schedule-season-day[data-weekday="0"]'
+    );
+
+    if (!sourceDay) return;
+
+    const sourceClosed =
+        sourceDay.querySelector(
+            ".store-schedule-season-day-closed"
+        )?.checked === true;
+
+    const sourceIntervals =
+        getStoreScheduleSeasonDayIntervals(
+            sourceDay
+        );
+
+    targetWeekdays.forEach(weekday => {
+        const targetDay = card.querySelector(
+            `.store-schedule-season-day[data-weekday="${weekday}"]`
+        );
+
+        if (!targetDay) return;
+
+        const closedInput =
+            targetDay.querySelector(
+                ".store-schedule-season-day-closed"
+            );
+
+        const intervalsContainer =
+            targetDay.querySelector(
+                ".store-schedule-season-day-intervals"
+            );
+
+        if (closedInput) {
+            closedInput.checked =
+                sourceClosed;
+        }
+
+        if (intervalsContainer) {
+            intervalsContainer.innerHTML = "";
+
+            if (!sourceClosed) {
+                sourceIntervals.forEach(
+                    interval => {
+                        intervalsContainer.appendChild(
+                            createStoreScheduleSeasonIntervalRow(
+                                weekday,
+                                interval.opens_at,
+                                interval.closes_at
+                            )
+                        );
+                    }
+                );
+            }
+        }
+
+        const disabled =
+            Boolean(closedInput?.checked);
+
+        targetDay.querySelectorAll(
+            ".store-schedule-season-interval-row input, " +
+            ".store-schedule-season-interval-row button"
+        ).forEach(control => {
+            control.disabled = disabled;
+        });
+
+        targetDay.classList.toggle(
+            "is-closed",
+            disabled
+        );
+    });
+}
+
+
+function copyStoreScheduleSeasonMondayToWeekdays(button) {
+    copyStoreScheduleSeasonMonday(
+        button,
+        [1, 2, 3, 4]
+    );
+}
+
+
+function copyStoreScheduleSeasonMondayToAllDays(button) {
+    copyStoreScheduleSeasonMonday(
+        button,
+        [1, 2, 3, 4, 5, 6]
+    );
+}
+
+
+
+function createStoreScheduleSeasonCard(
+    period = null
+) {
+    storeScheduleSeasonSequence += 1;
+
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "store-schedule-season-card";
+
+    if (period?.id) {
+        card.dataset.periodId =
+            String(period.id);
+    }
+
+    const seasonName =
+        period?.name || "";
+
+    const validFrom =
+        period?.valid_from || "";
+
+    const validUntil =
+        period?.valid_until || "";
+
+    card.innerHTML = `
+        <div class="store-schedule-card-heading">
+            <strong>Temporada</strong>
+
+            <button
+                type="button"
+                class="store-schedule-remove-season"
+            >
+                Eliminar
+            </button>
+        </div>
+
+        <label>
+            <span>Nombre</span>
+            <input
+                type="text"
+                class="store-schedule-season-name"
+                maxlength="120"
+                value="${escapeHtml(seasonName)}"
+                placeholder="Ejemplo: Temporada alta"
+            >
+        </label>
+
+        <div class="store-schedule-date-grid">
+            <label>
+                <span>Desde</span>
+                <input
+                    type="date"
+                    class="store-schedule-season-from"
+                    value="${escapeHtml(validFrom)}"
+                >
+            </label>
+
+            <label>
+                <span>Hasta</span>
+                <input
+                    type="date"
+                    class="store-schedule-season-until"
+                    value="${escapeHtml(validUntil)}"
+                >
+            </label>
+        </div>
+
+        <label class="store-schedule-simple-option">
+            <input
+                type="checkbox"
+                class="store-schedule-season-recurring"
+                ${period?.recurs_annually !== false ? "checked" : ""}
+            >
+            <span>
+                Repetir estas fechas todos los a&ntilde;os
+            </span>
+        </label>
+
+        <label class="store-schedule-simple-option">
+            <input
+                type="checkbox"
+                class="store-schedule-season-active"
+                ${period?.is_active !== false ? "checked" : ""}
+            >
+            <span>Temporada activa</span>
+        </label>
+
+        <div class="store-schedule-quick-actions">
+            <span><strong>Atajos de esta temporada</strong></span>
+
+            <button
+                type="button"
+                onclick="copyStoreScheduleSeasonMondayToWeekdays(this)"
+            >
+                Copiar lunes a martes-viernes
+            </button>
+
+            <button
+                type="button"
+                onclick="copyStoreScheduleSeasonMondayToAllDays(this)"
+            >
+                Copiar lunes a todos los d\u00edas
+            </button>
+        </div>
+
+        <div
+            class="store-schedule-season-days"
+        ></div>
+    `;
+
+    const daysContainer =
+        card.querySelector(
+            ".store-schedule-season-days"
+        );
+
+    const existingIntervals =
+        period?.intervals || [];
+
+    STORE_SCHEDULE_DAYS.forEach(
+        (_, weekday) => {
+            const dayIntervals =
+                existingIntervals.filter(
+                    interval =>
+                        Number(interval.weekday) ===
+                        weekday
+                );
+
+            daysContainer?.appendChild(
+                createStoreScheduleSeasonDay(
+                    weekday,
+                    dayIntervals
+                )
+            );
+        }
+    );
+
+    card.querySelector(
+        ".store-schedule-remove-season"
+    )?.addEventListener(
+        "click",
+        () => card.remove()
+    );
+
+    return card;
+}
+
+
+function addStoreScheduleSeason(
+    period = null
+) {
+    const container =
+        document.getElementById(
+            "store-schedule-seasons"
+        );
+
+    if (!container) return;
+
+    container.appendChild(
+        createStoreScheduleSeasonCard(
+            period
+        )
+    );
+
+    toggleStoreScheduleAdvanced(true);
+}
+
+
+function renderStoreScheduleSeasons(
+    schedule
+) {
+    const container =
+        document.getElementById(
+            "store-schedule-seasons"
+        );
+
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    const seasons =
+        (schedule?.periods || [])
+            .filter(
+                period =>
+                    period.period_type ===
+                    "SEASONAL"
+            );
+
+    seasons.forEach(
+        period =>
+            addStoreScheduleSeason(period)
+    );
+}
+
+
+function collectStoreScheduleSeasons() {
+    const periods = [];
+
+    document.querySelectorAll(
+        ".store-schedule-season-card"
+    ).forEach(card => {
+        const name =
+            card.querySelector(
+                ".store-schedule-season-name"
+            )?.value.trim();
+
+        const validFrom =
+            card.querySelector(
+                ".store-schedule-season-from"
+            )?.value;
+
+        const validUntil =
+            card.querySelector(
+                ".store-schedule-season-until"
+            )?.value;
+
+        if (!name) {
+            throw new Error(
+                "Cada temporada necesita un nombre."
+            );
+        }
+
+        if (!validFrom || !validUntil) {
+            throw new Error(
+                `La temporada "${name}" necesita fecha desde y hasta.`
+            );
+        }
+
+        const intervals = [];
+
+        card.querySelectorAll(
+            ".store-schedule-season-day"
+        ).forEach(day => {
+            const weekday =
+                Number(day.dataset.weekday);
+
+            const closed =
+                day.querySelector(
+                    ".store-schedule-season-day-closed"
+                )?.checked === true;
+
+            if (closed) return;
+
+            const rows =
+                day.querySelectorAll(
+                    ".store-schedule-season-interval-row"
+                );
+
+            if (!rows.length) {
+                throw new Error(
+                    `${name} - ${STORE_SCHEDULE_DAYS[weekday]}: agreg\u00e1 una franja o marc\u00e1 Cerrado.`
+                );
+            }
+
+            rows.forEach(row => {
+                const opensAt =
+                    row.querySelector(
+                        ".store-schedule-season-opens"
+                    )?.value;
+
+                const closesAt =
+                    row.querySelector(
+                        ".store-schedule-season-closes"
+                    )?.value;
+
+                if (!opensAt || !closesAt) {
+                    throw new Error(
+                        `${name} - ${STORE_SCHEDULE_DAYS[weekday]}: complet\u00e1 apertura y cierre.`
+                    );
+                }
+
+                intervals.push({
+                    weekday,
+                    opens_at: opensAt,
+                    closes_at: closesAt
+                });
+            });
+        });
+
+        periods.push({
+            id:
+                card.dataset.periodId ||
+                null,
+            period_type: "SEASONAL",
+            name,
+            valid_from: validFrom,
+            valid_until: validUntil,
+            recurs_annually:
+                card.querySelector(
+                    ".store-schedule-season-recurring"
+                )?.checked !== false,
+            is_active:
+                card.querySelector(
+                    ".store-schedule-season-active"
+                )?.checked !== false,
+            intervals
+        });
+    });
+
+    return periods;
+}
+
+
+function createStoreScheduleExceptionIntervalRow(
+    opensAt = "",
+    closesAt = ""
+) {
+    const row = document.createElement("div");
+
+    row.className =
+        "store-schedule-exception-interval-row";
+
+    row.innerHTML = `
+        <input
+            type="time"
+            class="store-schedule-exception-opens"
+            value="${escapeHtml(normalizeStoreScheduleTime(opensAt))}"
+            aria-label="Hora de apertura"
+        >
+        <span>a</span>
+        <input
+            type="time"
+            class="store-schedule-exception-closes"
+            value="${escapeHtml(normalizeStoreScheduleTime(closesAt))}"
+            aria-label="Hora de cierre"
+        >
+        <button
+            type="button"
+            class="store-schedule-remove-interval"
+        >
+            Quitar
+        </button>
+    `;
+
+    row.querySelector(
+        ".store-schedule-remove-interval"
+    )?.addEventListener(
+        "click",
+        () => row.remove()
+    );
+
+    return row;
+}
+
+
+function syncStoreScheduleExceptionCard(card) {
+    if (!card) return;
+
+    const mode =
+        card.querySelector(
+            ".store-schedule-exception-mode"
+        )?.value || "CLOSED";
+
+    const hoursBlock =
+        card.querySelector(
+            ".store-schedule-exception-hours"
+        );
+
+    if (hoursBlock) {
+        hoursBlock.style.display =
+            mode === "SPECIAL_HOURS"
+                ? ""
+                : "none";
+    }
+}
+
+
+function createStoreScheduleExceptionCard(
+    exception = null
+) {
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "store-schedule-exception-card";
+
+    if (exception?.id) {
+        card.dataset.exceptionId =
+            String(exception.id);
+    }
+
+    const mode =
+        exception?.mode || "CLOSED";
+
+    const startDate =
+        exception?.start_date || "";
+
+    const endDate =
+        exception?.end_date || "";
+
+    const label =
+        exception?.label || "";
+
+    const publicMessage =
+        exception?.public_message || "";
+
+    const onlineOverride =
+        exception?.online_order_override || "";
+
+    card.innerHTML = `
+        <div class="store-schedule-card-heading">
+            <strong>Fecha especial</strong>
+
+            <button
+                type="button"
+                class="store-schedule-remove-exception"
+            >
+                Eliminar
+            </button>
+        </div>
+
+        <div class="store-schedule-date-grid">
+            <label>
+                <span>Desde</span>
+                <input
+                    type="date"
+                    class="store-schedule-exception-from"
+                    value="${escapeHtml(startDate)}"
+                >
+            </label>
+
+            <label>
+                <span>Hasta</span>
+                <input
+                    type="date"
+                    class="store-schedule-exception-until"
+                    value="${escapeHtml(endDate)}"
+                >
+            </label>
+        </div>
+
+        <label>
+            <span>Motivo o nombre</span>
+            <input
+                type="text"
+                class="store-schedule-exception-label"
+                maxlength="120"
+                value="${escapeHtml(label)}"
+                placeholder="Ejemplo: Vacaciones, feriado local, remodelacion"
+            >
+        </label>
+
+        <label>
+            <span>Situaci&oacute;n del local</span>
+            <select
+                class="store-schedule-exception-mode"
+            >
+                <option
+                    value="CLOSED"
+                    ${mode === "CLOSED" ? "selected" : ""}
+                >
+                    Cerrado
+                </option>
+
+                <option
+                    value="SPECIAL_HOURS"
+                    ${mode === "SPECIAL_HOURS" ? "selected" : ""}
+                >
+                    Horario especial
+                </option>
+            </select>
+        </label>
+
+        <div
+            class="store-schedule-exception-hours"
+        >
+            <div
+                class="store-schedule-exception-intervals"
+            ></div>
+
+            <button
+                type="button"
+                class="store-schedule-exception-add-interval"
+            >
+                + Agregar franja
+            </button>
+        </div>
+
+        <label>
+            <span>Mensaje para los compradores (opcional)</span>
+            <textarea
+                class="store-schedule-exception-message"
+                maxlength="500"
+                rows="3"
+                placeholder="Ejemplo: El local estara cerrado, pero seguimos recibiendo pedidos online."
+            >${escapeHtml(publicMessage)}</textarea>
+        </label>
+
+        <label>
+            <span>Pedidos online durante esta fecha</span>
+            <select
+                class="store-schedule-exception-online"
+            >
+                <option
+                    value=""
+                    ${onlineOverride === "" ? "selected" : ""}
+                >
+                    Usar la configuracion general
+                </option>
+
+                <option
+                    value="ALWAYS"
+                    ${onlineOverride === "ALWAYS" ? "selected" : ""}
+                >
+                    Recibir pedidos aunque el local este cerrado
+                </option>
+
+                <option
+                    value="OPEN_ONLY"
+                    ${onlineOverride === "OPEN_ONLY" ? "selected" : ""}
+                >
+                    Recibir pedidos solo mientras el local este abierto
+                </option>
+
+                <option
+                    value="DISABLED"
+                    ${onlineOverride === "DISABLED" ? "selected" : ""}
+                >
+                    No recibir pedidos online
+                </option>
+            </select>
+        </label>
+    `;
+
+    const intervalsContainer =
+        card.querySelector(
+            ".store-schedule-exception-intervals"
+        );
+
+    (exception?.intervals || [])
+        .forEach(interval => {
+            intervalsContainer?.appendChild(
+                createStoreScheduleExceptionIntervalRow(
+                    interval.opens_at,
+                    interval.closes_at
+                )
+            );
+        });
+
+    const modeInput =
+        card.querySelector(
+            ".store-schedule-exception-mode"
+        );
+
+    modeInput?.addEventListener(
+        "change",
+        () => {
+            syncStoreScheduleExceptionCard(card);
+        }
+    );
+
+    card.querySelector(
+        ".store-schedule-exception-add-interval"
+    )?.addEventListener(
+        "click",
+        () => {
+            intervalsContainer?.appendChild(
+                createStoreScheduleExceptionIntervalRow(
+                    "09:00",
+                    "18:00"
+                )
+            );
+        }
+    );
+
+    card.querySelector(
+        ".store-schedule-remove-exception"
+    )?.addEventListener(
+        "click",
+        () => card.remove()
+    );
+
+    syncStoreScheduleExceptionCard(card);
+
+    return card;
+}
+
+
+function addStoreScheduleException(
+    exception = null
+) {
+    const container =
+        document.getElementById(
+            "store-schedule-exceptions"
+        );
+
+    if (!container) return;
+
+    container.appendChild(
+        createStoreScheduleExceptionCard(
+            exception
+        )
+    );
+
+    toggleStoreScheduleAdvanced(true);
+}
+
+
+function renderStoreScheduleExceptions(
+    schedule
+) {
+    const container =
+        document.getElementById(
+            "store-schedule-exceptions"
+        );
+
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    (schedule?.exceptions || [])
+        .forEach(
+            exception =>
+                addStoreScheduleException(
+                    exception
+                )
+        );
+}
+
+
+function collectStoreScheduleExceptions() {
+    const exceptions = [];
+
+    document.querySelectorAll(
+        ".store-schedule-exception-card"
+    ).forEach(card => {
+        const startDate =
+            card.querySelector(
+                ".store-schedule-exception-from"
+            )?.value;
+
+        const endDate =
+            card.querySelector(
+                ".store-schedule-exception-until"
+            )?.value;
+
+        const label =
+            card.querySelector(
+                ".store-schedule-exception-label"
+            )?.value.trim() || null;
+
+        const mode =
+            card.querySelector(
+                ".store-schedule-exception-mode"
+            )?.value || "CLOSED";
+
+        const publicMessage =
+            card.querySelector(
+                ".store-schedule-exception-message"
+            )?.value.trim() || null;
+
+        const onlineOverride =
+            card.querySelector(
+                ".store-schedule-exception-online"
+            )?.value || null;
+
+        if (!startDate || !endDate) {
+            throw new Error(
+                "Cada fecha especial necesita fecha desde y hasta."
+            );
+        }
+
+        const intervals = [];
+
+        if (mode === "SPECIAL_HOURS") {
+            const rows =
+                card.querySelectorAll(
+                    ".store-schedule-exception-interval-row"
+                );
+
+            if (!rows.length) {
+                throw new Error(
+                    "Un horario especial necesita al menos una franja."
+                );
+            }
+
+            rows.forEach(row => {
+                const opensAt =
+                    row.querySelector(
+                        ".store-schedule-exception-opens"
+                    )?.value;
+
+                const closesAt =
+                    row.querySelector(
+                        ".store-schedule-exception-closes"
+                    )?.value;
+
+                if (!opensAt || !closesAt) {
+                    throw new Error(
+                        "Complet\u00e1 apertura y cierre del horario especial."
+                    );
+                }
+
+                intervals.push({
+                    opens_at: opensAt,
+                    closes_at: closesAt
+                });
+            });
+        }
+
+        exceptions.push({
+            id:
+                card.dataset.exceptionId ||
+                null,
+            start_date: startDate,
+            end_date: endDate,
+            mode,
+            label,
+            public_message: publicMessage,
+            online_order_override:
+                onlineOverride,
+            intervals
+        });
+    });
+
+    return exceptions;
+}
+
+
+async function loadStoreSchedule() {
+    const currentToken =
+        localStorage.getItem("walz_token");
+
+    const messageElement =
+        document.getElementById(
+            "store-schedule-message"
+        );
+
+    if (messageElement) {
+        messageElement.textContent = "";
+        messageElement.classList.remove(
+            "is-success",
+            "is-error"
+        );
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/store-schedules/mine`,
+            {
+                headers: {
+                    Authorization:
+                        `Bearer ${currentToken}`
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data =
+            await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron cargar los horarios."
+            );
+        }
+
+        window.walzStoreSchedule = data;
+
+        const onlineAlways =
+            document.getElementById(
+                "store-schedule-online-always"
+            );
+
+        if (onlineAlways) {
+            onlineAlways.checked =
+                data.online_order_mode !==
+                "OPEN_ONLY";
+        }
+
+        renderStoreScheduleWeekly(data);
+        renderStoreScheduleSeasons(data);
+        renderStoreScheduleExceptions(data);
+
+    } catch (error) {
+        console.error(
+            "Error cargando horarios de la tienda:",
+            error
+        );
+
+        window.walzStoreSchedule = {
+            timezone_name:
+                "America/Argentina/Buenos_Aires",
+            online_order_mode: "ALWAYS",
+            periods: [],
+            exceptions: []
+        };
+
+        renderStoreScheduleWeekly(
+            window.walzStoreSchedule
+        );
+        renderStoreScheduleSeasons(
+            window.walzStoreSchedule
+        );
+        renderStoreScheduleExceptions(
+            window.walzStoreSchedule
+        );
+
+        if (messageElement) {
+            messageElement.textContent =
+                error.message ||
+                "No se pudieron cargar los horarios.";
+
+            messageElement.classList.add(
+                "is-error"
+            );
+        }
+    }
+}
+
+
+async function saveStoreSchedule() {
+    const currentToken =
+        localStorage.getItem("walz_token");
+
+    const messageElement =
+        document.getElementById(
+            "store-schedule-message"
+        );
+
+    const saveButton =
+        document.getElementById(
+            "store-schedule-save-button"
+        );
+
+    if (messageElement) {
+        messageElement.textContent = "";
+        messageElement.classList.remove(
+            "is-success",
+            "is-error"
+        );
+    }
+
+    try {
+        const current =
+            window.walzStoreSchedule || {
+                timezone_name:
+                    "America/Argentina/Buenos_Aires",
+                periods: [],
+                exceptions: []
+            };
+
+        const regularExisting =
+            getStoreScheduleRegularPeriod(current);
+
+        const seasonalPeriods =
+            collectStoreScheduleSeasons();
+
+        const regularPeriod = {
+            id: regularExisting?.id || null,
+            period_type: "REGULAR",
+            name:
+                regularExisting?.name ||
+                "Horario habitual",
+            valid_from: null,
+            valid_until: null,
+            recurs_annually: false,
+            is_active: true,
+            intervals:
+                collectStoreScheduleWeeklyIntervals()
+        };
+
+        const onlineAlways =
+            document.getElementById(
+                "store-schedule-online-always"
+            );
+
+        const payload = {
+            timezone_name:
+                current.timezone_name ||
+                "America/Argentina/Buenos_Aires",
+            online_order_mode:
+                onlineAlways?.checked
+                    ? "ALWAYS"
+                    : "OPEN_ONLY",
+            periods: [
+                regularPeriod,
+                ...seasonalPeriods
+            ],
+            exceptions:
+                collectStoreScheduleExceptions()
+        };
+
+        if (saveButton) {
+            saveButton.disabled = true;
+        }
+
+        const response = await fetch(
+            `${API_URL}/store-schedules/mine`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                    Authorization:
+                        `Bearer ${currentToken}`
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (response.status === 401) {
+            handleExpiredSession();
+            return;
+        }
+
+        const data =
+            await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron guardar los horarios."
+            );
+        }
+
+        window.walzStoreSchedule = data;
+
+        renderStoreScheduleWeekly(data);
+        renderStoreScheduleSeasons(data);
+        renderStoreScheduleExceptions(data);
+
+        if (messageElement) {
+            messageElement.textContent =
+                "Horarios guardados.";
+
+            messageElement.classList.add(
+                "is-success"
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            "Error guardando horarios de la tienda:",
+            error
+        );
+
+        if (messageElement) {
+            messageElement.textContent =
+                error.message ||
+                "No se pudieron guardar los horarios.";
+
+            messageElement.classList.add(
+                "is-error"
+            );
+        }
+
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+        }
     }
 }
 

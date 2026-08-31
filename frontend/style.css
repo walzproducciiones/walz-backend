@@ -2204,6 +2204,113 @@ body.has-walz-news-bar .cart-button {
     color: #155b32;
     font-weight: 700;
 }
+/* HORARIOS PUBLICOS DE TIENDA */
+.public-store-schedule-card {
+    display: grid;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #f5faf8;
+    border: 1px solid #cfe3dd;
+    border-radius: 11px;
+    color: #173f47;
+}
+
+.public-store-schedule-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.public-store-schedule-status > span {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.public-store-schedule-status > span.is-open {
+    background: #dff5e7;
+    color: #17633b;
+}
+
+.public-store-schedule-status > span.is-closed {
+    background: #f6e5e3;
+    color: #8d302c;
+}
+
+.public-store-schedule-status small {
+    color: #5f7377;
+}
+
+.public-store-schedule-card > p {
+    margin: 0;
+    color: #50676c;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.public-store-schedule-message {
+    padding: 8px 10px;
+    background: #fff;
+    border-left: 3px solid var(--walz-turquoise);
+    border-radius: 6px;
+}
+
+.public-store-schedule-details {
+    margin-top: 2px;
+}
+
+.public-store-schedule-details summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--walz-petrol);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.public-store-schedule-week {
+    display: grid;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.public-store-schedule-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.7fr) minmax(0, 1.3fr);
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #e1ece8;
+    font-size: 13px;
+}
+
+.public-store-schedule-row:last-child {
+    border-bottom: 0;
+}
+
+.public-store-schedule-row > span {
+    color: #64777a;
+}
+
+.public-store-schedule-row > strong {
+    color: #173f47;
+    text-align: right;
+}
+
+@media (max-width: 600px) {
+    .public-store-schedule-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+
+    .public-store-schedule-row > strong {
+        text-align: left;
+    }
+}
+
 /* FASE 5N - TIENDA PUBLICA */
 .public-store-section {
     max-width: 1180px;
@@ -3168,6 +3275,297 @@ body {
     font-weight: 800;
     line-height: 1.25;
 }
+/* HORARIOS CONFIGURABLES POR TIENDA */
+.store-schedule-settings {
+    display: grid;
+    gap: 14px;
+    margin-top: 6px;
+    padding: 18px 15px 15px;
+    background: #f5faf8;
+    border: 1px solid #cfe2dc;
+    border-radius: 12px;
+    color: #173f47;
+}
+
+.store-schedule-settings > p {
+    margin: 0 0 3px;
+    color: #5b7074;
+    font-size: 13px;
+}
+
+.store-schedule-online-option,
+.store-schedule-simple-option {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    margin: 0;
+    padding: 11px;
+    background: #fff;
+    border: 1px solid #d9e7e3;
+    border-radius: 10px;
+}
+
+.store-schedule-online-option input,
+.store-schedule-simple-option input,
+.store-schedule-closed-option input,
+.store-schedule-season-day-heading input {
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+    accent-color: var(--walz-turquoise);
+}
+
+.store-schedule-online-option span {
+    display: grid;
+    gap: 3px;
+}
+
+.store-schedule-online-option small,
+.store-schedule-settings small {
+    color: #68787b;
+}
+
+.store-schedule-weekly,
+.store-schedule-season-days {
+    display: grid;
+    gap: 10px;
+}
+
+.store-schedule-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #edf6f3;
+    border: 1px solid #d2e5df;
+    border-radius: 9px;
+}
+
+.store-schedule-quick-actions > span {
+    margin-right: 4px;
+}
+
+.store-schedule-quick-actions button {
+    width: auto;
+}
+
+@media (max-width: 600px) {
+    .store-schedule-quick-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .store-schedule-quick-actions button {
+        width: 100%;
+    }
+}
+
+.store-schedule-day,
+.store-schedule-season-day {
+    display: grid;
+    gap: 9px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #dce9e5;
+    border-radius: 10px;
+}
+
+.store-schedule-day.is-closed,
+.store-schedule-season-day.is-closed {
+    background: #f5f6f6;
+}
+
+.store-schedule-day-heading,
+.store-schedule-season-day-heading,
+.store-schedule-card-heading,
+.store-schedule-advanced-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.store-schedule-closed-option,
+.store-schedule-season-day-heading label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.store-schedule-day-intervals,
+.store-schedule-season-day-intervals,
+.store-schedule-exception-intervals {
+    display: grid;
+    gap: 8px;
+}
+
+.store-schedule-interval-row,
+.store-schedule-season-interval-row,
+.store-schedule-exception-interval-row {
+    display: grid;
+    grid-template-columns:
+        minmax(105px, 1fr)
+        auto
+        minmax(105px, 1fr)
+        auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.store-schedule-settings input[type="time"],
+.store-schedule-settings input[type="date"],
+.store-schedule-settings input[type="text"],
+.store-schedule-settings select,
+.store-schedule-settings textarea {
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid #c9d9d5;
+    background: #fff;
+    color: #173f47;
+}
+
+.store-schedule-settings strong,
+.store-schedule-settings label,
+.store-schedule-settings span {
+    color: #173f47;
+}
+
+.store-schedule-settings input:disabled {
+    opacity: 0.55;
+}
+
+.store-schedule-add-interval,
+.store-schedule-season-add-interval,
+.store-schedule-exception-add-interval,
+.store-schedule-remove-interval,
+.store-schedule-remove-season,
+.store-schedule-remove-exception,
+.store-schedule-advanced-actions button,
+#store-schedule-advanced-toggle {
+    width: fit-content;
+}
+
+.store-schedule-settings button {
+    grid-column: auto;
+}
+
+#store-schedule-save-button {
+    width: 100%;
+    grid-column: 1 / -1;
+}
+
+.store-schedule-remove-interval,
+.store-schedule-remove-season,
+.store-schedule-remove-exception {
+    background: transparent;
+    border: 1px solid #d8b8b5;
+    color: #8d302c;
+}
+
+.store-schedule-advanced-heading {
+    padding-top: 4px;
+}
+
+.store-schedule-advanced-heading > div {
+    display: grid;
+    gap: 3px;
+}
+
+.store-schedule-advanced {
+    display: grid;
+    gap: 14px;
+}
+
+.store-schedule-advanced-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.store-schedule-seasons,
+.store-schedule-exceptions {
+    display: grid;
+    gap: 14px;
+}
+
+.store-schedule-season-card,
+.store-schedule-exception-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid #d7e4e0;
+    border-radius: 11px;
+}
+
+.store-schedule-season-card > label,
+.store-schedule-exception-card > label,
+.store-schedule-date-grid > label {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.store-schedule-date-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.store-schedule-exception-hours {
+    display: grid;
+    gap: 9px;
+    padding: 11px;
+    background: #f4f8f7;
+    border-radius: 9px;
+}
+
+.store-schedule-message {
+    min-height: 20px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.store-schedule-message.is-success {
+    color: #17633b;
+}
+
+.store-schedule-message.is-error {
+    color: #a32620;
+}
+
+@media (max-width: 600px) {
+    .store-schedule-day-heading,
+    .store-schedule-season-day-heading,
+    .store-schedule-card-heading,
+    .store-schedule-advanced-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .store-schedule-interval-row,
+    .store-schedule-season-interval-row,
+    .store-schedule-exception-interval-row {
+        grid-template-columns:
+            minmax(0, 1fr)
+            auto
+            minmax(0, 1fr);
+    }
+
+    .store-schedule-remove-interval {
+        grid-column: 1 / -1;
+    }
+
+    .store-schedule-date-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* FORMAS DE PAGO CONFIGURABLES POR TIENDA */
 .store-payment-settings {
     display: grid;

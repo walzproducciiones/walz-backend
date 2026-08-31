@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=ENV_FILE, override=False)
 
-from backend.app.api import auth, banners, institutional_settings, platform_economy, products, orders, payments, seller_applications, stores
+from backend.app.api import auth, banners, institutional_settings, platform_economy, products, orders, payments, seller_applications, stores, store_schedules
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
@@ -34,7 +34,7 @@ from backend.app.database.schema_updates import (
     ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, economic_ledger_entry, email_change_token, institutional_setting, user, product, order, payment, password_reset_token, platform_economy_setting, seller_application, seller_fee_settlement, store, store_payment_method
+from backend.app.models import banner, economic_ledger_entry, email_change_token, institutional_setting, user, product, order, payment, password_reset_token, platform_economy_setting, seller_application, seller_fee_settlement, store, store_payment_method, store_schedule
 
 
 # ============================================================
@@ -52,6 +52,7 @@ banner.Base.metadata.create_all(bind=engine)
 institutional_setting.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
 store_payment_method.Base.metadata.create_all(bind=engine)
+store_schedule.Base.metadata.create_all(bind=engine)
 seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
 email_change_token.Base.metadata.create_all(bind=engine)
@@ -125,6 +126,7 @@ app.include_router(banners.router)
 app.include_router(institutional_settings.router)
 app.include_router(platform_economy.router)
 app.include_router(stores.router)
+app.include_router(store_schedules.router)
 app.include_router(seller_applications.router)
 app.include_router(products.router)
 app.include_router(orders.router)

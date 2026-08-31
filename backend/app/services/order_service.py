@@ -11,6 +11,7 @@ from backend.app.models.payment import Payment, PaymentStatus
 from backend.app.models.product import Product
 from backend.app.models.store import Store
 from backend.app.services.product_service import get_effective_product_price
+from backend.app.services.store_schedule_service import get_store_schedule_status
 from backend.app.services.platform_economy_service import (
     calculate_order_economy_snapshot,
 )
@@ -315,6 +316,20 @@ def create_orders_by_seller(
                 db.rollback()
                 return None, "Selecciona una forma de entrega para cada tienda."
             store = stores_by_owner[seller_id]
+
+            schedule_status = get_store_schedule_status(
+                db,
+                store,
+            )
+
+            if not schedule_status["online_orders_allowed"]:
+                db.rollback()
+                return (
+                    None,
+                    f"{store.name} no esta recibiendo pedidos "
+                    "online en este momento.",
+                )
+
             delivery_allowed = bool(
                 store.delivery_enabled
             )
