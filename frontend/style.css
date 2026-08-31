@@ -2912,6 +2912,11 @@ input:focus,
     color: #785b0c;
 }
 
+.my-product-state.draft {
+    background: #eef1f5;
+    color: #46515f;
+}
+
 .my-product-stock-state.low {
     background: #fff2cd;
     color: #785b0c;

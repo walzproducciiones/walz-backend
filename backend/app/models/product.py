@@ -119,6 +119,13 @@ class Product(Base):
         default=True
     )
 
+    publication_status = Column(
+        String(20),
+        nullable=False,
+        default="PUBLISHED",
+        server_default="PUBLISHED"
+    )
+
     is_deleted = Column(
         Boolean,
         nullable=False,

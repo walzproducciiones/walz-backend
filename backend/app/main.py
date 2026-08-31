@@ -20,6 +20,7 @@ from backend.app.database.schema_updates import (
     ensure_order_pickup_columns,
     ensure_payment_destination_snapshot_columns,
     ensure_product_promotion_columns,
+    ensure_product_publication_status_column,
     ensure_product_deletion_column,
     ensure_product_subcategory_column,
     ensure_product_brand_column,
@@ -57,6 +58,7 @@ seller_application.Base.metadata.create_all(bind=engine)
 password_reset_token.Base.metadata.create_all(bind=engine)
 email_change_token.Base.metadata.create_all(bind=engine)
 ensure_product_promotion_columns(engine)
+ensure_product_publication_status_column(engine)
 ensure_product_deletion_column(engine)
 ensure_product_subcategory_column(engine)
 ensure_product_brand_column(engine)

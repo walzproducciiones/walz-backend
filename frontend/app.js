@@ -9778,15 +9778,22 @@ function renderAdminProducts(entries) {
                 const brandLabel =
                     product.brand || "Sin marca";
 
+                const publicationStatus =
+                    getMyProductPublicationStatus(product);
+
                 const activeLabel =
-                    product.is_active
-                        ? "Activo"
-                        : "Pausado";
+                    publicationStatus === "PUBLISHED"
+                        ? "Publicado"
+                        : publicationStatus === "DRAFT"
+                            ? "No publicado"
+                            : "Pausado";
 
                 const activeClass =
-                    product.is_active
+                    publicationStatus === "PUBLISHED"
                         ? "active"
-                        : "paused";
+                        : publicationStatus === "DRAFT"
+                            ? "draft"
+                            : "paused";
 
                 const offerLabel =
                     product.offer_active &&
@@ -10680,6 +10687,19 @@ async function loadMyProducts() {
 }
 
 
+function getMyProductPublicationStatus(product) {
+    const explicitStatus = String(product?.publication_status || "")
+        .trim()
+        .toUpperCase();
+
+    if (["DRAFT", "PUBLISHED", "PAUSED"].includes(explicitStatus)) {
+        return explicitStatus;
+    }
+
+    return product?.is_active ? "PUBLISHED" : "PAUSED";
+}
+
+
 function applyMyProductsFilters() {
     const allProducts = Array.isArray(window.walzMyProducts)
         ? window.walzMyProducts
@@ -10692,15 +10712,23 @@ function applyMyProductsFilters() {
     );
 
     const summary = document.getElementById("my-products-stock-summary");
-    const activeCount = allProducts.filter(product => product.is_active).length;
-    const pausedCount = allProducts.filter(product => !product.is_active).length;
+    const publishedCount = allProducts.filter(
+        product => getMyProductPublicationStatus(product) === "PUBLISHED"
+    ).length;
+    const draftCount = allProducts.filter(
+        product => getMyProductPublicationStatus(product) === "DRAFT"
+    ).length;
+    const pausedCount = allProducts.filter(
+        product => getMyProductPublicationStatus(product) === "PAUSED"
+    ).length;
     const lowStockCount = allProducts.filter(product => Number(product.stock) > 0 && Number(product.stock) <= 5).length;
     const outOfStockCount = allProducts.filter(product => Number(product.stock) <= 0).length;
 
     if (summary) {
         summary.innerHTML = `
             <button type="button" onclick="setMyProductsStatusFilter('')"><span>Total</span><strong>${allProducts.length}</strong></button>
-            <button type="button" onclick="setMyProductsStatusFilter('active')"><span>Activos</span><strong>${activeCount}</strong></button>
+            <button type="button" onclick="setMyProductsStatusFilter('published')"><span>Publicados</span><strong>${publishedCount}</strong></button>
+            <button type="button" onclick="setMyProductsStatusFilter('draft')"><span>No publicados</span><strong>${draftCount}</strong></button>
             <button type="button" onclick="setMyProductsStatusFilter('paused')"><span>Pausados</span><strong>${pausedCount}</strong></button>
             <button type="button" class="low-stock" onclick="setMyProductsStatusFilter('low_stock')"><span>Stock bajo</span><strong>${lowStockCount}</strong></button>
             <button type="button" class="out-of-stock" onclick="setMyProductsStatusFilter('out_of_stock')"><span>Agotados</span><strong>${outOfStockCount}</strong></button>
@@ -10709,8 +10737,10 @@ function applyMyProductsFilters() {
 
     const filteredProducts = allProducts.filter(product => {
         const stock = Number(product.stock || 0);
-        if (selectedStatus === "active" && !product.is_active) return false;
-        if (selectedStatus === "paused" && product.is_active) return false;
+        const publicationStatus = getMyProductPublicationStatus(product);
+        if (selectedStatus === "published" && publicationStatus !== "PUBLISHED") return false;
+        if (selectedStatus === "draft" && publicationStatus !== "DRAFT") return false;
+        if (selectedStatus === "paused" && publicationStatus !== "PAUSED") return false;
         if (selectedStatus === "low_stock" && !(stock > 0 && stock <= 5)) return false;
         if (selectedStatus === "out_of_stock" && stock > 0) return false;
 
@@ -11160,9 +11190,23 @@ function renderMyProducts(products) {
                             <h3>${escapeHtml(product.name || "Sin nombre")}</h3>
                         </div>
                         <div class="my-product-badges">
-                            <span class="my-product-state ${product.is_active ? "active" : "paused"}">
-                                ${product.is_active ? "Activo" : "Pausado"}
-                            </span>
+                            ${(() => {
+                                const publicationStatus = getMyProductPublicationStatus(product);
+                                const stateClass =
+                                    publicationStatus === "PUBLISHED"
+                                        ? "active"
+                                        : publicationStatus === "DRAFT"
+                                            ? "draft"
+                                            : "paused";
+                                const stateLabel =
+                                    publicationStatus === "PUBLISHED"
+                                        ? "Publicado"
+                                        : publicationStatus === "DRAFT"
+                                            ? "No publicado"
+                                            : "Pausado";
+
+                                return `<span class="my-product-state ${stateClass}">${stateLabel}</span>`;
+                            })()}
                             ${Number(product.stock || 0) <= 0
                                 ? '<span class="my-product-stock-state out">Agotado</span>'
                                 : Number(product.stock || 0) <= 5
@@ -11185,13 +11229,33 @@ function renderMyProducts(products) {
                                >
                                    Editar producto
                                </button>
-                               <button
-                                   type="button"
-                                   class="${product.is_active ? "pause-product-button" : "reactivate-product-button"}"
-                                   onclick="toggleMyProductStatus('${escapeJs(String(product.id))}', ${product.is_active ? "false" : "true"})"
-                               >
-                                   ${product.is_active ? "Pausar producto" : "Reactivar producto"}
-                               </button>
+                               ${(() => {
+                                   const publicationStatus = getMyProductPublicationStatus(product);
+                                   const nextStatus =
+                                       publicationStatus === "PUBLISHED"
+                                           ? "PAUSED"
+                                           : "PUBLISHED";
+                                   const buttonClass =
+                                       publicationStatus === "PUBLISHED"
+                                           ? "pause-product-button"
+                                           : "reactivate-product-button";
+                                   const buttonLabel =
+                                       publicationStatus === "PUBLISHED"
+                                           ? "Pausar producto"
+                                           : publicationStatus === "DRAFT"
+                                               ? "Publicar producto"
+                                               : "Reactivar producto";
+
+                                   return `
+                                       <button
+                                           type="button"
+                                           class="${buttonClass}"
+                                           onclick="setMyProductPublicationStatus('${escapeJs(String(product.id))}', '${nextStatus}')"
+                                       >
+                                           ${buttonLabel}
+                                       </button>
+                                   `;
+                               })()}
                                <button
                                    type="button"
                                    onclick="shareSellerProductWhatsApp('${escapeJs(String(product.id))}')"
@@ -11681,15 +11745,41 @@ async function saveMyProductChanges(productId) {
 
 // =====================================================
 // FASE 5K PASO 3 - PAUSAR Y REACTIVAR PRODUCTOS
-async function toggleMyProductStatus(productId, shouldActivate) {
+async function setMyProductPublicationStatus(productId, publicationStatus) {
     const currentToken = localStorage.getItem("walz_token");
-    const action = shouldActivate ? "reactivar" : "pausar";
+    const normalizedStatus = String(publicationStatus || "").trim().toUpperCase();
+
+    const actions = {
+        PUBLISHED: "publicar",
+        PAUSED: "pausar"
+    };
+
+    const successMessages = {
+        PUBLISHED: "Producto publicado correctamente.",
+        PAUSED: "Producto pausado correctamente."
+    };
+
+    if (!["PUBLISHED", "PAUSED"].includes(normalizedStatus)) {
+        showMessage("Estado de publicacion invalido.", "error");
+        return;
+    }
 
     if (!currentToken) {
         showMessage("Tu sesion vencio. Inicia sesion nuevamente.", "error");
         handleLogout();
         return;
     }
+
+    const currentProduct = (window.walzMyProducts || []).find(
+        product => String(product.id) === String(productId)
+    );
+
+    const currentStatus = getMyProductPublicationStatus(currentProduct);
+
+    const action =
+        normalizedStatus === "PUBLISHED" && currentStatus === "PAUSED"
+            ? "reactivar"
+            : actions[normalizedStatus];
 
     if (!confirm(`Confirmas que queres ${action} este producto?`)) return;
 
@@ -11700,8 +11790,11 @@ async function toggleMyProductStatus(productId, shouldActivate) {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ is_active: Boolean(shouldActivate) })
+            body: JSON.stringify({
+                publication_status: normalizedStatus
+            })
         });
+
         const data = await res.json().catch(() => ({}));
 
         if (res.status === 401) {
@@ -11717,22 +11810,30 @@ async function toggleMyProductStatus(productId, shouldActivate) {
         const index = (window.walzMyProducts || []).findIndex(
             product => String(product.id) === String(data.id)
         );
-        if (index >= 0) window.walzMyProducts[index] = data;
+
+        if (index >= 0) {
+            window.walzMyProducts[index] = data;
+        }
 
         showMessage(
-            shouldActivate
+            normalizedStatus === "PUBLISHED" && currentStatus === "PAUSED"
                 ? "Producto reactivado correctamente."
-                : "Producto pausado correctamente.",
+                : successMessages[normalizedStatus],
             "success"
         );
+
         applyMyProductsFilters();
         await loadProducts();
 
     } catch (error) {
-        console.error("Error cambiando estado del producto:", error);
-        showMessage(error.message || "No se pudo cambiar el estado del producto.", "error");
+        console.error("Error cambiando publicacion del producto:", error);
+        showMessage(
+            error.message || "No se pudo cambiar el estado de publicacion del producto.",
+            "error"
+        );
     }
 }
+
 
 
 // =====================================================
@@ -16939,7 +17040,7 @@ window.setMyProductsStatusFilter = setMyProductsStatusFilter;
 window.startEditingMyProduct = startEditingMyProduct;
 window.cancelEditingMyProduct = cancelEditingMyProduct;
 window.saveMyProductChanges = saveMyProductChanges;
-window.toggleMyProductStatus = toggleMyProductStatus;
+window.setMyProductPublicationStatus = setMyProductPublicationStatus;
 window.deleteMyProduct = deleteMyProduct;
 window.refreshAdminPendingCounts = refreshAdminPendingCounts;
 window.refreshSellerPendingOrderCount = refreshSellerPendingOrderCount;

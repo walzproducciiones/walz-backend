@@ -129,6 +129,27 @@ def ensure_product_deletion_column(engine):
             ))
 
 
+def ensure_product_publication_status_column(engine):
+    """Add explicit publication state while preserving existing published products."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "publication_status" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products "
+                "ADD COLUMN publication_status VARCHAR(20) "
+                "NOT NULL DEFAULT 'PUBLISHED'"
+            ))
+
+
 def ensure_admin_user(engine, admin_email):
     """Promote only the configured owner account to administrator."""
     normalized_email = str(admin_email or "").strip().lower()

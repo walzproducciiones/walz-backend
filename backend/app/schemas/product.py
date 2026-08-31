@@ -14,6 +14,13 @@ CommercialType = Literal[
 ]
 
 
+PublicationStatus = Literal[
+    "DRAFT",
+    "PUBLISHED",
+    "PAUSED",
+]
+
+
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
@@ -37,6 +44,7 @@ class ProductResponse(ProductBase):
     id: UUID
     seller_id: UUID
     is_active: bool
+    publication_status: PublicationStatus
     created_at: datetime
 
     class Config:
@@ -88,4 +96,5 @@ class ProductUpdate(BaseModel):
     commercial_type: Optional[CommercialType] = None
     commercial_text: Optional[str] = Field(default=None, max_length=200)
     commercial_active: Optional[bool] = None
+    publication_status: Optional[PublicationStatus] = None
     is_active: Optional[bool] = None

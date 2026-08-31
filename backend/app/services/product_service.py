@@ -105,7 +105,8 @@ def create_products_bulk(db: Session, seller_id: UUID, products_data: list[Produ
                 brand=product_data.brand,
                 avanter_enabled=product_data.avanter_enabled,
                 image_url=product_data.image_url,
-                is_active=True,
+                publication_status="DRAFT",
+                is_active=False,
             )
             db.add(new_product)
             new_products.append(new_product)
@@ -125,6 +126,7 @@ def get_products(db: Session, skip: int = 0, limit: int = 100, filters: ProductF
         .join(Store, Store.owner_id == Product.seller_id)
         .filter(
             Product.is_active == True,
+            Product.publication_status == "PUBLISHED",
             Product.is_deleted == False,
             Store.is_active == True,
             Store.operational_status == "ACTIVE",
@@ -290,6 +292,17 @@ def update_product_by_seller(
         return None
 
     updates = product_data.model_dump(exclude_unset=True)
+
+    requested_publication_status = updates.get("publication_status")
+
+    if requested_publication_status is not None:
+        updates["is_active"] = requested_publication_status == "PUBLISHED"
+    elif "is_active" in updates and updates["is_active"] is not None:
+        updates["publication_status"] = (
+            "PUBLISHED"
+            if updates["is_active"]
+            else "PAUSED"
+        )
 
     resulting_price = updates.get("price", product.price)
     resulting_offer_price = updates.get("offer_price", product.offer_price)
