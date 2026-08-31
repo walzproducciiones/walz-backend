@@ -151,9 +151,11 @@ Rama de trabajo actual:
 
 `feature/portada-exploracion`
 
-HEAD confirmado al cierre de WalZ One 18:
+Último commit FUNCIONAL confirmado antes del Handoff:
 
 `7c055b2 - fix: habilitar busqueda en marketplace central y vendedores`
+
+El HEAD exacto de cierre no se hardcodea en este archivo porque este Handoff también está versionado. Debe obtenerse siempre con `git log -1 --oneline --decorate` y contrastarse con el último checkpoint.
 
 Git:
 
@@ -183,7 +185,7 @@ Economía WalZ One Central.
 `80b5036`
 Cuenta económica y liquidaciones por vendedor.
 
-Último commit general:
+Último commit funcional:
 `7c055b2`
 Buscador habilitado en WalZ One Central y marketplaces de vendedores.
 
@@ -768,9 +770,11 @@ El orden se decide entre Carlos y ChatGPT según prioridad real.
 
 BUSCADOR CENTRAL + VENDEDORES.
 
-Último commit:
+Último commit funcional:
 
 `7c055b2`
+
+El HEAD exacto final queda registrado por Git y por el checkpoint de cierre.
 
 Git:
 
@@ -799,7 +803,8 @@ Primer paso del nuevo chat:
 3. Ejecutar `git log -1 --oneline --decorate`.
 4. Confirmar:
    - rama `feature/portada-exploracion`;
-   - HEAD `7c055b2`;
+   - que `git log -1 --oneline --decorate` informe el HEAD real más reciente;
+   - que `7c055b2` permanezca en la historia como último commit funcional previo al Handoff;
    - Git limpio.
 5. Confirmar último checkpoint.
 6. Revisar junto con Carlos la Lista Maestra.
