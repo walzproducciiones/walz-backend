@@ -13,7 +13,7 @@
     <title>WalZ One</title>
 
     <!-- CSS PRINCIPAL -->
-    <link rel="stylesheet" href="./style.css?v=20260827-news-coral-1">
+    <link rel="stylesheet" href="./style.css?v=20260831-pharmacy-duty-4">
 
 </head>
 
@@ -310,6 +310,17 @@
     >
         <span aria-hidden="true">&#127978;</span>
         <span>Mi tienda</span>
+    </button>
+
+    <button
+        type="button"
+        id="pharmacy-duty-button"
+        class="orders-button pharmacy-duty-button"
+        onclick="showPharmacyDuties()"
+        style="display:none;"
+    >
+        <span aria-hidden="true">&#9764;</span>
+        <span>Farmacias de turno</span>
     </button>
 
     <button
@@ -1006,6 +1017,106 @@
 
     </div>
 
+</section>
+
+
+<!-- WALZ_PUBLIC_PHARMACY_DUTY_V1 -->
+<section
+    id="walz-public-pharmacy-duty"
+    class="walz-public-pharmacy-duty"
+    style="display:none;"
+    aria-labelledby="walz-public-pharmacy-duty-title"
+>
+    <div class="walz-public-pharmacy-duty-shell">
+
+        <div class="walz-public-pharmacy-duty-heading">
+            <div>
+                <span>Informaci&oacute;n de utilidad</span>
+                <h2 id="walz-public-pharmacy-duty-title">
+                    Farmacias de turno hoy
+                </h2>
+                <p>
+                    Consult&aacute; qu&eacute; farmacias est&aacute;n de turno
+                    en tu zona y busc&aacute; turnos de otras fechas.
+                </p>
+            </div>
+
+            <div class="walz-public-pharmacy-duty-symbol" aria-hidden="true">
+                &#9764;
+            </div>
+        </div>
+
+        <div class="walz-public-pharmacy-duty-filters">
+            <label>
+                <span>Zona</span>
+                <select id="walz-public-duty-area">
+                    <option value="">Seleccionar zona</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Fecha</span>
+                <input
+                    id="walz-public-duty-date"
+                    type="date"
+                >
+            </label>
+
+            <div class="walz-public-pharmacy-duty-filter-actions">
+                <button
+                    type="button"
+                    id="walz-public-duty-search-button"
+                    onclick="searchPublicPharmacyDuties()"
+                >
+                    Consultar fecha
+                </button>
+
+                <button
+                    type="button"
+                    class="walz-public-duty-secondary-button"
+                    onclick="loadPublicPharmacyDutiesToday()"
+                >
+                    Ver hoy
+                </button>
+            </div>
+        </div>
+
+        <p
+            id="walz-public-duty-status"
+            class="walz-public-duty-status"
+            aria-live="polite"
+        ></p>
+
+        <div
+            id="walz-public-duty-results"
+            class="walz-public-duty-results"
+        ></div>
+
+        <div class="walz-public-pharmacy-directory-panel">
+            <div>
+                <strong>Farmacias registradas</strong>
+                <small>
+                    Directorio independiente de las farmacias que
+                    est&aacute;n de turno.
+                </small>
+            </div>
+
+            <button
+                type="button"
+                class="walz-public-duty-secondary-button"
+                onclick="togglePublicPharmacyDirectory()"
+            >
+                Ver directorio
+            </button>
+        </div>
+
+        <div
+            id="walz-public-pharmacy-directory"
+            class="walz-public-pharmacy-directory"
+            style="display:none;"
+        ></div>
+
+    </div>
 </section>
 
         <!-- WALZ_BANNERS_AFTER_DISCOVERY_V6 -->
@@ -2151,6 +2262,125 @@
 </section>
 
 <!-- =====================================================
+     FARMACIAS DE TURNO
+====================================================== -->
+<section
+    id="pharmacy-duty-section"
+    class="pharmacy-duty-section"
+    style="display:none;"
+>
+    <button
+        type="button"
+        onclick="showMarketplaceContent()"
+    >
+        &larr; Volver al marketplace
+    </button>
+
+    <h2>&#9764; Farmacias de turno</h2>
+
+    <p class="pharmacy-duty-intro">
+        Public&aacute; y consult&aacute; los turnos de las farmacias de tu zona.
+        Pod&eacute;s informar el turno de tu farmacia o de otra farmacia registrada.
+    </p>
+
+    <div
+        id="pharmacy-duty-publisher-info"
+        class="pharmacy-duty-publisher-info"
+    ></div>
+
+    <div class="pharmacy-duty-layout">
+        <section class="pharmacy-duty-form-card">
+            <h3>Publicar un turno</h3>
+
+            <div class="pharmacy-duty-form-grid">
+                <label>
+                    <span>Zona</span>
+                    <select id="pharmacy-duty-area">
+                        <option value="">Seleccionar zona</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Farmacia de turno</span>
+                    <select id="pharmacy-duty-pharmacy">
+                        <option value="">Seleccionar farmacia</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Desde</span>
+                    <input
+                        id="pharmacy-duty-start"
+                        type="datetime-local"
+                    >
+                </label>
+
+                <label>
+                    <span>Hasta</span>
+                    <input
+                        id="pharmacy-duty-end"
+                        type="datetime-local"
+                    >
+                </label>
+            </div>
+
+            <label class="pharmacy-duty-note-field">
+                <span>Informaci&oacute;n p&uacute;blica opcional</span>
+                <textarea
+                    id="pharmacy-duty-note"
+                    maxlength="1000"
+                    rows="3"
+                    placeholder="Ejemplo: ingreso por guardia lateral."
+                ></textarea>
+            </label>
+
+            <button
+                type="button"
+                id="pharmacy-duty-save-button"
+                onclick="savePharmacyDutyAssignment()"
+            >
+                Publicar turno
+            </button>
+
+            <p
+                id="pharmacy-duty-message"
+                class="pharmacy-duty-message"
+                role="status"
+            ></p>
+        </section>
+
+        <section class="pharmacy-duty-list-card">
+            <div class="pharmacy-duty-list-heading">
+                <div>
+                    <h3>Turnos cargados</h3>
+                    <p>
+                        Los reemplazos conservan siempre la farmacia
+                        originalmente asignada.
+                    </p>
+                </div>
+
+                <label>
+                    <span>Filtrar por zona</span>
+                    <select
+                        id="pharmacy-duty-list-area"
+                        onchange="loadPharmacyDutyAssignments()"
+                    >
+                        <option value="">Todas las zonas</option>
+                    </select>
+                </label>
+            </div>
+
+            <div
+                id="pharmacy-duty-assignments"
+                class="pharmacy-duty-assignments"
+            >
+                Cargando turnos...
+            </div>
+        </section>
+    </div>
+</section>
+
+<!-- =====================================================
      PROPUESTAS DE PUBLICIDAD DEL VENDEDOR
 ====================================================== -->
 <section id="banner-proposal-section" class="banner-admin-section banner-proposal-section" style="display:none;">
@@ -2343,7 +2573,7 @@
         &uarr; Arriba
     </button>
 
-<script src="./app.js?v=20260830-seller-sponsored-1"></script>
+<script src="./app.js?v=20260831-pharmacy-duty-5"></script>
 
 <div id="terms-modal" class="terms-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="terms-title">
     <div class="terms-modal-card">

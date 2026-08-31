@@ -2432,6 +2432,23 @@ function renderSellerMarketplaceClassification(
         );
     }
 
+    const sellerDutyToday =
+        document.createElement("div");
+
+    sellerDutyToday.className =
+        "walz-seller-duty-today";
+
+    sellerDutyToday.style.display = "none";
+
+    sellerIdentity.appendChild(
+        sellerDutyToday
+    );
+
+    loadSellerMarketplaceDutyToday(
+        store,
+        sellerDutyToday
+    );
+
     const sellerScheduleHtml =
         renderPublicStoreScheduleStatus(
             window.walzSellerMarketplaceScheduleStatus,
@@ -8356,6 +8373,7 @@ function showMarketplace() {
     ).style.display = "block";
 
     updateAdminBannerVisibility();
+    loadPublicPharmacyDutyExperience();
 }
 
 
@@ -12042,6 +12060,8 @@ function updateAdminBannerVisibility() {
             sellerButton.style.display = canSell ? "inline-flex" : "none";
         }
     }
+
+    refreshPharmacyDutyVisibility();
 }
 function setSellerPendingOrderBadge(count) {
     const badge = document.getElementById("seller-pending-orders-badge");
@@ -12966,7 +12986,7 @@ function hideAllWalzWorkSections() {
     saveCurrentMyProductDraft();
     for (const id of [
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
-        "store-profile-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
+        "store-profile-section", "pharmacy-duty-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
         "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "admin-economy-section", "institutional-settings-section"
     ]) {
@@ -17156,6 +17176,1703 @@ async function syncVisibleWalzData(showConfirmation = false) {
         if (showConfirmation) showMessage("No se pudo actualizar. Verifica la conexion.", "error");
     }
 }
+
+
+// =====================================================
+// FARMACIAS DE TURNO
+// =====================================================
+
+window.walzPharmacyDutyPharmacies = [];
+window.walzPharmacyDutyAreas = [];
+
+
+window.walzPublicPharmacyDutyAreas = [];
+window.walzPublicPharmacies = [];
+
+
+function getPublicPharmacyDutySection() {
+    return document.getElementById(
+        "walz-public-pharmacy-duty"
+    );
+}
+
+
+function isCentralMarketplacePath() {
+    const path = window.location.pathname
+        .split("/")
+        .filter(Boolean)
+        .join("/")
+        .toLowerCase();
+
+    return !path;
+}
+
+
+function setPublicPharmacyDutyStatus(
+    message = "",
+    type = ""
+) {
+    const element = document.getElementById(
+        "walz-public-duty-status"
+    );
+
+    if (!element) return;
+
+    element.textContent = message;
+    element.className =
+        `walz-public-duty-status ${type}`.trim();
+}
+
+
+function getPublicPharmacyDutyAreaId() {
+    return document.getElementById(
+        "walz-public-duty-area"
+    )?.value || "";
+}
+
+
+function formatPublicPharmacyContact(pharmacy) {
+    const parts = [];
+
+    if (pharmacy?.address) {
+        parts.push(
+            `<span><strong>Direcci&oacute;n:</strong> ${escapeHtml(pharmacy.address)}</span>`
+        );
+    }
+
+    const location = [
+        pharmacy?.locality,
+        pharmacy?.region
+    ].filter(Boolean).join(", ");
+
+    if (location) {
+        parts.push(
+            `<span><strong>Ubicaci&oacute;n:</strong> ${escapeHtml(location)}</span>`
+        );
+    }
+
+    if (pharmacy?.phone) {
+        parts.push(
+            `<span><strong>Tel&eacute;fono:</strong> ${escapeHtml(pharmacy.phone)}</span>`
+        );
+    }
+
+    if (pharmacy?.whatsapp) {
+        const whatsappDigits =
+            String(pharmacy.whatsapp)
+                .replace(/\D/g, "");
+
+        parts.push(
+            whatsappDigits
+                ? `<span><strong>WhatsApp:</strong> <a href="https://wa.me/${escapeHtml(whatsappDigits)}" target="_blank" rel="noopener noreferrer">${escapeHtml(pharmacy.whatsapp)}</a></span>`
+                : `<span><strong>WhatsApp:</strong> ${escapeHtml(pharmacy.whatsapp)}</span>`
+        );
+    }
+
+    if (pharmacy?.email) {
+        parts.push(
+            `<span><strong>Email:</strong> <a href="mailto:${escapeHtml(pharmacy.email)}">${escapeHtml(pharmacy.email)}</a></span>`
+        );
+    }
+
+    return parts.join("");
+}
+
+
+function renderPublicPharmacyDuties(
+    rows,
+    emptyMessage = "No hay turnos informados para esta fecha."
+) {
+    const container = document.getElementById(
+        "walz-public-duty-results"
+    );
+
+    if (!container) return;
+
+    const duties =
+        Array.isArray(rows) ? rows : [];
+
+    if (!duties.length) {
+        container.innerHTML = `
+            <div class="walz-public-duty-empty">
+                ${escapeHtml(emptyMessage)}
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = duties.map(
+        duty => {
+            const pharmacy =
+                duty.effective_pharmacy || {};
+
+            const original =
+                duty.original_pharmacy || {};
+
+            const area =
+                duty.area || {};
+
+            return `
+                <article class="walz-public-duty-card">
+                    <div class="walz-public-duty-card-heading">
+                        <div>
+                            <span class="walz-public-duty-area-label">
+                                ${escapeHtml(area.name || "Zona")}
+                            </span>
+
+                            <h3>
+                                ${escapeHtml(
+                                    pharmacy.name ||
+                                    "Farmacia"
+                                )}
+                            </h3>
+                        </div>
+
+                        ${
+                            duty.is_replacement
+                                ? `
+                                    <span class="walz-public-duty-replacement-badge">
+                                        Reemplazo
+                                    </span>
+                                `
+                                : `
+                                    <span class="walz-public-duty-active-badge">
+                                        De turno
+                                    </span>
+                                `
+                        }
+                    </div>
+
+                    <div class="walz-public-duty-time">
+                        <span>
+                            <strong>Desde:</strong>
+                            ${escapeHtml(
+                                formatPharmacyDutyDateTime(
+                                    duty.starts_at
+                                )
+                            )}
+                        </span>
+
+                        <span>
+                            <strong>Hasta:</strong>
+                            ${escapeHtml(
+                                formatPharmacyDutyDateTime(
+                                    duty.ends_at
+                                )
+                            )}
+                        </span>
+                    </div>
+
+                    ${
+                        duty.is_replacement
+                            ? `
+                                <p class="walz-public-duty-original">
+                                    Turno originalmente asignado a
+                                    <strong>${escapeHtml(
+                                        original.name ||
+                                        "otra farmacia"
+                                    )}</strong>.
+                                </p>
+                            `
+                            : ""
+                    }
+
+                    ${
+                        duty.public_note
+                            ? `
+                                <p class="walz-public-duty-note">
+                                    ${escapeHtml(duty.public_note)}
+                                </p>
+                            `
+                            : ""
+                    }
+
+                    <div class="walz-public-duty-contact">
+                        ${formatPublicPharmacyContact(pharmacy)}
+                    </div>
+                </article>
+            `;
+        }
+    ).join("");
+}
+
+
+function renderPublicPharmacyDirectory() {
+    const container = document.getElementById(
+        "walz-public-pharmacy-directory"
+    );
+
+    if (!container) return;
+
+    const pharmacies =
+        Array.isArray(window.walzPublicPharmacies)
+            ? window.walzPublicPharmacies
+            : [];
+
+    if (!pharmacies.length) {
+        container.innerHTML = `
+            <div class="walz-public-duty-empty">
+                No hay farmacias registradas.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = pharmacies.map(
+        pharmacy => `
+            <article class="walz-public-pharmacy-directory-card">
+                <h3>
+                    ${escapeHtml(
+                        pharmacy.name ||
+                        "Farmacia"
+                    )}
+                </h3>
+
+                <div class="walz-public-duty-contact">
+                    ${formatPublicPharmacyContact(pharmacy)}
+                </div>
+            </article>
+        `
+    ).join("");
+}
+
+
+function togglePublicPharmacyDirectory() {
+    const container = document.getElementById(
+        "walz-public-pharmacy-directory"
+    );
+
+    if (!container) return;
+
+    const shouldOpen =
+        container.style.display === "none" ||
+        !container.style.display;
+
+    if (shouldOpen) {
+        renderPublicPharmacyDirectory();
+        container.style.display = "grid";
+    } else {
+        container.style.display = "none";
+    }
+}
+
+
+async function loadPublicPharmacyDutyCatalogs() {
+    const [
+        areasResponse,
+        pharmaciesResponse
+    ] = await Promise.all([
+        fetch(
+            `${API_URL}/pharmacy-duties/public/areas`
+        ),
+        fetch(
+            `${API_URL}/pharmacy-duties/public/pharmacies`
+        )
+    ]);
+
+    const areas = await areasResponse
+        .json()
+        .catch(() => []);
+
+    const pharmacies = await pharmaciesResponse
+        .json()
+        .catch(() => []);
+
+    if (!areasResponse.ok) {
+        throw new Error(
+            areas.detail ||
+            "No se pudieron cargar las zonas."
+        );
+    }
+
+    if (!pharmaciesResponse.ok) {
+        throw new Error(
+            pharmacies.detail ||
+            "No se pudo cargar el directorio de farmacias."
+        );
+    }
+
+    window.walzPublicPharmacyDutyAreas =
+        Array.isArray(areas) ? areas : [];
+
+    window.walzPublicPharmacies =
+        Array.isArray(pharmacies)
+            ? pharmacies
+            : [];
+
+    const areaSelect = document.getElementById(
+        "walz-public-duty-area"
+    );
+
+    if (areaSelect) {
+        areaSelect.innerHTML = `
+            <option value="">Todas las zonas</option>
+            ${window.walzPublicPharmacyDutyAreas
+                .map(
+                    area => `
+                        <option value="${escapeHtml(String(area.id))}">
+                            ${escapeHtml(area.name || "Zona")}
+                        </option>
+                    `
+                )
+                .join("")}
+        `;
+
+        if (
+            window.walzPublicPharmacyDutyAreas.length === 1
+        ) {
+            areaSelect.value = String(
+                window.walzPublicPharmacyDutyAreas[0].id
+            );
+        }
+    }
+}
+
+
+async function loadPublicPharmacyDutiesToday() {
+    const section =
+        getPublicPharmacyDutySection();
+
+    if (!section || !isCentralMarketplacePath()) {
+        if (section) section.style.display = "none";
+        return;
+    }
+
+    const areaId =
+        getPublicPharmacyDutyAreaId();
+
+    const query = areaId
+        ? `?area_id=${encodeURIComponent(areaId)}`
+        : "";
+
+    setPublicPharmacyDutyStatus(
+        "Consultando farmacias de turno..."
+    );
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/public/today${query}`
+        );
+
+        const data = await response
+            .json()
+            .catch(() => []);
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron consultar los turnos."
+            );
+        }
+
+        renderPublicPharmacyDuties(
+            data,
+            "No hay farmacias de turno informadas para hoy."
+        );
+
+        setPublicPharmacyDutyStatus("");
+    } catch (error) {
+        console.error(
+            "Error cargando turnos p?blicos de hoy:",
+            error
+        );
+
+        renderPublicPharmacyDuties(
+            [],
+            error.message ||
+            "No se pudieron consultar los turnos."
+        );
+
+        setPublicPharmacyDutyStatus(
+            "No pudimos actualizar los turnos.",
+            "error"
+        );
+    }
+}
+
+
+async function searchPublicPharmacyDuties() {
+    const dateInput = document.getElementById(
+        "walz-public-duty-date"
+    );
+
+    const targetDate =
+        dateInput?.value || "";
+
+    if (!targetDate) {
+        setPublicPharmacyDutyStatus(
+            "Seleccion? una fecha para consultar.",
+            "error"
+        );
+        return;
+    }
+
+    const areaId =
+        getPublicPharmacyDutyAreaId();
+
+    const query = areaId
+        ? `?area_id=${encodeURIComponent(areaId)}`
+        : "";
+
+    setPublicPharmacyDutyStatus(
+        "Consultando la fecha seleccionada..."
+    );
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/public/date/${encodeURIComponent(targetDate)}${query}`
+        );
+
+        const data = await response
+            .json()
+            .catch(() => []);
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron consultar los turnos."
+            );
+        }
+
+        renderPublicPharmacyDuties(
+            data,
+            "No hay farmacias de turno informadas para la fecha seleccionada."
+        );
+
+        setPublicPharmacyDutyStatus("");
+    } catch (error) {
+        console.error(
+            "Error buscando turnos p?blicos:",
+            error
+        );
+
+        renderPublicPharmacyDuties(
+            [],
+            error.message ||
+            "No se pudieron consultar los turnos."
+        );
+
+        setPublicPharmacyDutyStatus(
+            "No pudimos consultar esa fecha.",
+            "error"
+        );
+    }
+}
+
+
+async function loadPublicPharmacyDutyExperience() {
+    const section =
+        getPublicPharmacyDutySection();
+
+    if (!section) return;
+
+    if (!isCentralMarketplacePath()) {
+        section.style.display = "none";
+        return;
+    }
+
+    try {
+        await loadPublicPharmacyDutyCatalogs();
+
+        if (
+            !window.walzPublicPharmacyDutyAreas.length
+        ) {
+            section.style.display = "none";
+            return;
+        }
+
+        section.style.display = "block";
+
+        await loadPublicPharmacyDutiesToday();
+    } catch (error) {
+        console.error(
+            "Error inicializando Farmacias de turno:",
+            error
+        );
+
+        section.style.display = "none";
+    }
+}
+
+
+
+function formatSellerDutyTodayTime(
+    value,
+    timezone
+) {
+    if (!value) return "";
+
+    try {
+        return new Intl.DateTimeFormat(
+            "es-AR",
+            {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+                timeZone:
+                    timezone ||
+                    "America/Argentina/Buenos_Aires"
+            }
+        ).format(new Date(value));
+    } catch (error) {
+        return formatPharmacyDutyDateTime(value);
+    }
+}
+
+
+async function loadSellerMarketplaceDutyToday(
+    store,
+    container
+) {
+    if (!store?.id || !container) return;
+
+    const storeId = String(store.id);
+
+    container.dataset.walzDutyStoreId =
+        storeId;
+
+    container.style.display = "none";
+    container.innerHTML = "";
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/public/today`
+        );
+
+        const rows = await response
+            .json()
+            .catch(() => []);
+
+        if (!response.ok || !Array.isArray(rows)) {
+            return;
+        }
+
+        if (
+            !container.isConnected ||
+            container.dataset.walzDutyStoreId !== storeId
+        ) {
+            return;
+        }
+
+        const duties = rows
+            .filter(
+                duty =>
+                    String(
+                        duty?.effective_pharmacy?.store_id ||
+                        ""
+                    ) === storeId
+            )
+            .sort(
+                (a, b) =>
+                    new Date(a.starts_at) -
+                    new Date(b.starts_at)
+            );
+
+        if (!duties.length) {
+            return;
+        }
+
+        const firstDuty = duties[0];
+        const timezone =
+            firstDuty?.area?.timezone ||
+            store.timezone ||
+            "America/Argentina/Buenos_Aires";
+
+        const ranges = duties.map(
+            duty => {
+                const starts =
+                    formatSellerDutyTodayTime(
+                        duty.starts_at,
+                        duty?.area?.timezone || timezone
+                    );
+
+                const ends =
+                    formatSellerDutyTodayTime(
+                        duty.ends_at,
+                        duty?.area?.timezone || timezone
+                    );
+
+                return `${starts} a ${ends}`;
+            }
+        );
+
+        container.innerHTML = `
+            <span class="walz-seller-duty-today-kicker">
+                Farmacias de turno
+            </span>
+
+            <strong>
+                Hoy estamos de turno
+            </strong>
+
+            <small>
+                ${escapeHtml(
+                    ranges.length === 1
+                        ? `Horario: ${ranges[0]}`
+                        : `Horarios: ${ranges.join(" / ")}`
+                )}
+            </small>
+        `;
+
+        container.style.display = "flex";
+    } catch (error) {
+        console.error(
+            "Error consultando turno de la tienda:",
+            error
+        );
+
+        container.style.display = "none";
+        container.innerHTML = "";
+    }
+}
+
+
+async function refreshPharmacyDutyVisibility() {
+    const button = document.getElementById("pharmacy-duty-button");
+
+    if (!button) return;
+
+    button.style.display = "none";
+
+    const hasSession = Boolean(
+        localStorage.getItem("walz_token")
+    );
+
+    const canSell =
+        hasSession &&
+        ["VENDEDOR", "SELLER"].includes(currentUserRole);
+
+    if (!canSell) return;
+
+    const token = localStorage.getItem("walz_token");
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/pharmacies`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!response.ok) return;
+
+        button.style.display = "inline-flex";
+    } catch (error) {
+        console.error(
+            "No se pudo verificar Farmacias de turno:",
+            error
+        );
+    }
+}
+
+
+function setPharmacyDutyMessage(message, type = "") {
+    const element = document.getElementById(
+        "pharmacy-duty-message"
+    );
+
+    if (!element) return;
+
+    element.textContent = message || "";
+    element.className =
+        `pharmacy-duty-message ${type}`.trim();
+}
+
+
+function getPharmacyDutyAuthHeaders() {
+    const token = localStorage.getItem("walz_token");
+
+    return {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+}
+
+
+function formatPharmacyDutyDateTime(value) {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return new Intl.DateTimeFormat(
+        "es-AR",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    ).format(date);
+}
+
+
+function renderPharmacyDutySelects() {
+    const pharmacySelect =
+        document.getElementById(
+            "pharmacy-duty-pharmacy"
+        );
+
+    const areaSelect =
+        document.getElementById(
+            "pharmacy-duty-area"
+        );
+
+    const listAreaSelect =
+        document.getElementById(
+            "pharmacy-duty-list-area"
+        );
+
+    const pharmacyOptions = [
+        '<option value="">Seleccionar farmacia</option>',
+        ...window.walzPharmacyDutyPharmacies.map(
+            pharmacy => `
+                <option value="${escapeHtml(String(pharmacy.id))}">
+                    ${escapeHtml(pharmacy.name || "Farmacia")}
+                </option>
+            `
+        )
+    ].join("");
+
+    const areaOptions = [
+        '<option value="">Seleccionar zona</option>',
+        ...window.walzPharmacyDutyAreas.map(
+            area => `
+                <option value="${escapeHtml(String(area.id))}">
+                    ${escapeHtml(area.name || "Zona")}
+                </option>
+            `
+        )
+    ].join("");
+
+    if (pharmacySelect) {
+        pharmacySelect.innerHTML = pharmacyOptions;
+    }
+
+    if (areaSelect) {
+        areaSelect.innerHTML = areaOptions;
+    }
+
+    if (listAreaSelect) {
+        const previousValue = listAreaSelect.value;
+
+        listAreaSelect.innerHTML = [
+            '<option value="">Todas las zonas</option>',
+            ...window.walzPharmacyDutyAreas.map(
+                area => `
+                    <option value="${escapeHtml(String(area.id))}">
+                        ${escapeHtml(area.name || "Zona")}
+                    </option>
+                `
+            )
+        ].join("");
+
+        if (
+            Array.from(listAreaSelect.options)
+                .some(
+                    option =>
+                        option.value === previousValue
+                )
+        ) {
+            listAreaSelect.value = previousValue;
+        }
+    }
+}
+
+
+function renderPharmacyDutyAssignments(rows) {
+    const container = document.getElementById(
+        "pharmacy-duty-assignments"
+    );
+
+    if (!container) return;
+
+    const assignments =
+        Array.isArray(rows) ? rows : [];
+
+    if (!assignments.length) {
+        container.innerHTML = `
+            <div class="orders-state-card">
+                Todav&iacute;a no hay turnos cargados.
+            </div>
+        `;
+        return;
+    }
+
+    const pharmacyMap = new Map(
+        window.walzPharmacyDutyPharmacies.map(
+            pharmacy => [
+                String(pharmacy.id),
+                pharmacy
+            ]
+        )
+    );
+
+    const areaMap = new Map(
+        window.walzPharmacyDutyAreas.map(
+            area => [
+                String(area.id),
+                area
+            ]
+        )
+    );
+
+    container.innerHTML = assignments.map(
+        assignment => {
+            const pharmacy =
+                pharmacyMap.get(
+                    String(assignment.pharmacy_id)
+                );
+
+            const area =
+                areaMap.get(
+                    String(assignment.area_id)
+                );
+
+            const isCancelled =
+                String(
+                    assignment.status || ""
+                ).toUpperCase() === "CANCELLED";
+
+            const canManage =
+                !isCancelled &&
+                String(
+                    assignment.published_by_user_id || ""
+                ) === String(currentUserId || "");
+
+            const replacementOptions =
+                window.walzPharmacyDutyPharmacies
+                    .filter(
+                        item =>
+                            String(item.id) !==
+                            String(assignment.pharmacy_id)
+                    )
+                    .map(
+                        item => `
+                            <option value="${escapeHtml(String(item.id))}">
+                                ${escapeHtml(item.name || "Farmacia")}
+                            </option>
+                        `
+                    )
+                    .join("");
+
+            return `
+                <article
+                    class="pharmacy-duty-assignment-card"
+                    data-assignment-id="${escapeHtml(String(assignment.id))}"
+                >
+                    <div class="pharmacy-duty-assignment-heading">
+                        <div>
+                            <strong>
+                                ${escapeHtml(
+                                    pharmacy?.name ||
+                                    "Farmacia"
+                                )}
+                            </strong>
+                            <span>
+                                ${escapeHtml(
+                                    area?.name ||
+                                    "Zona"
+                                )}
+                            </span>
+                        </div>
+
+                        <span class="pharmacy-duty-status ${isCancelled ? "cancelled" : "scheduled"}">
+                            ${isCancelled ? "Cancelado" : "Programado"}
+                        </span>
+                    </div>
+
+                    <p>
+                        <strong>Desde:</strong>
+                        ${escapeHtml(
+                            formatPharmacyDutyDateTime(
+                                assignment.starts_at
+                            )
+                        )}
+                    </p>
+
+                    <p>
+                        <strong>Hasta:</strong>
+                        ${escapeHtml(
+                            formatPharmacyDutyDateTime(
+                                assignment.ends_at
+                            )
+                        )}
+                    </p>
+
+                    ${
+                        assignment.public_note
+                            ? `
+                                <p class="pharmacy-duty-public-note">
+                                    ${escapeHtml(
+                                        assignment.public_note
+                                    )}
+                                </p>
+                            `
+                            : ""
+                    }
+
+                    <div class="pharmacy-duty-replacements-summary">
+                        <button
+                            type="button"
+                            class="pharmacy-duty-secondary-button"
+                            onclick="loadPharmacyDutyReplacements('${escapeHtml(String(assignment.id))}')"
+                        >
+                            Ver reemplazos
+                        </button>
+
+                        <div
+                            id="pharmacy-duty-replacements-${escapeHtml(String(assignment.id))}"
+                            class="pharmacy-duty-replacements"
+                            style="display:none;"
+                        ></div>
+                    </div>
+
+                    ${
+                        canManage
+                            ? `
+                                <div class="pharmacy-duty-actions">
+                                    <button
+                                        type="button"
+                                        class="pharmacy-duty-secondary-button"
+                                        onclick="togglePharmacyDutyReplacementForm('${escapeHtml(String(assignment.id))}')"
+                                    >
+                                        Registrar reemplazo
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="pharmacy-duty-danger-button"
+                                        onclick="cancelPharmacyDutyAssignment('${escapeHtml(String(assignment.id))}')"
+                                    >
+                                        Cancelar turno
+                                    </button>
+                                </div>
+
+                                <div
+                                    id="pharmacy-duty-replacement-form-${escapeHtml(String(assignment.id))}"
+                                    class="pharmacy-duty-replacement-form"
+                                    style="display:none;"
+                                >
+                                    <h4>Reemplazo de farmacia</h4>
+
+                                    <label>
+                                        <span>Farmacia reemplazante</span>
+                                        <select
+                                            id="pharmacy-duty-replacement-pharmacy-${escapeHtml(String(assignment.id))}"
+                                        >
+                                            <option value="">Seleccionar farmacia</option>
+                                            ${replacementOptions}
+                                        </select>
+                                    </label>
+
+                                    <div class="pharmacy-duty-replacement-grid">
+                                        <label>
+                                            <span>Desde</span>
+                                            <input
+                                                id="pharmacy-duty-replacement-start-${escapeHtml(String(assignment.id))}"
+                                                type="datetime-local"
+                                            >
+                                        </label>
+
+                                        <label>
+                                            <span>Hasta</span>
+                                            <input
+                                                id="pharmacy-duty-replacement-end-${escapeHtml(String(assignment.id))}"
+                                                type="datetime-local"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <label>
+                                        <span>Motivo interno opcional</span>
+                                        <input
+                                            id="pharmacy-duty-replacement-reason-${escapeHtml(String(assignment.id))}"
+                                            type="text"
+                                            maxlength="250"
+                                            placeholder="Ejemplo: cambio acordado entre farmacias."
+                                        >
+                                    </label>
+
+                                    <label>
+                                        <span>Informaci&oacute;n p&uacute;blica opcional</span>
+                                        <textarea
+                                            id="pharmacy-duty-replacement-note-${escapeHtml(String(assignment.id))}"
+                                            rows="2"
+                                            maxlength="1000"
+                                            placeholder="Mensaje que puede ver el p&uacute;blico."
+                                        ></textarea>
+                                    </label>
+
+                                    <div class="pharmacy-duty-replacement-actions">
+                                        <button
+                                            type="button"
+                                            onclick="savePharmacyDutyReplacement('${escapeHtml(String(assignment.id))}')"
+                                        >
+                                            Guardar reemplazo
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="pharmacy-duty-secondary-button"
+                                            onclick="togglePharmacyDutyReplacementForm('${escapeHtml(String(assignment.id))}', false)"
+                                        >
+                                            Cerrar
+                                        </button>
+                                    </div>
+
+                                    <p
+                                        id="pharmacy-duty-replacement-message-${escapeHtml(String(assignment.id))}"
+                                        class="pharmacy-duty-message"
+                                    ></p>
+                                </div>
+                            `
+                            : ""
+                    }
+                </article>
+            `;
+        }
+    ).join("");
+}
+
+
+function togglePharmacyDutyReplacementForm(
+    assignmentId,
+    forceOpen = null
+) {
+    const form = document.getElementById(
+        `pharmacy-duty-replacement-form-${assignmentId}`
+    );
+
+    if (!form) return;
+
+    const shouldOpen =
+        forceOpen === null
+            ? form.style.display === "none"
+            : Boolean(forceOpen);
+
+    form.style.display =
+        shouldOpen ? "grid" : "none";
+}
+
+
+async function cancelPharmacyDutyAssignment(
+    assignmentId
+) {
+    const confirmed = window.confirm(
+        "?Cancelar este turno? La asignaci?n quedar? guardada en el historial."
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/assignments/${encodeURIComponent(assignmentId)}`,
+            {
+                method: "PATCH",
+                headers: getPharmacyDutyAuthHeaders(),
+                body: JSON.stringify({
+                    status: "CANCELLED"
+                })
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudo cancelar el turno."
+            );
+        }
+
+        setPharmacyDutyMessage(
+            "Turno cancelado. Se conserv? en el historial.",
+            "success"
+        );
+
+        await loadPharmacyDutyAssignments();
+    } catch (error) {
+        console.error(
+            "Error cancelando turno:",
+            error
+        );
+
+        setPharmacyDutyMessage(
+            error.message ||
+            "No se pudo cancelar el turno.",
+            "error"
+        );
+    }
+}
+
+
+async function loadPharmacyDutyReplacements(
+    assignmentId
+) {
+    const container = document.getElementById(
+        `pharmacy-duty-replacements-${assignmentId}`
+    );
+
+    if (!container) return;
+
+    container.style.display = "block";
+    container.innerHTML = "Cargando reemplazos...";
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/assignments/${encodeURIComponent(assignmentId)}/replacements`,
+            {
+                headers: getPharmacyDutyAuthHeaders()
+            }
+        );
+
+        const rows = await response
+            .json()
+            .catch(() => []);
+
+        if (!response.ok) {
+            throw new Error(
+                rows.detail ||
+                "No se pudieron cargar los reemplazos."
+            );
+        }
+
+        if (!Array.isArray(rows) || !rows.length) {
+            container.innerHTML =
+                "<small>No hay reemplazos registrados.</small>";
+            return;
+        }
+
+        const pharmacyMap = new Map(
+            window.walzPharmacyDutyPharmacies.map(
+                pharmacy => [
+                    String(pharmacy.id),
+                    pharmacy
+                ]
+            )
+        );
+
+        container.innerHTML = rows.map(
+            replacement => {
+                const pharmacy =
+                    pharmacyMap.get(
+                        String(
+                            replacement.replacement_pharmacy_id
+                        )
+                    );
+
+                const active =
+                    String(
+                        replacement.status || ""
+                    ).toUpperCase() === "ACTIVE";
+
+                return `
+                    <div class="pharmacy-duty-replacement-row">
+                        <strong>
+                            ${escapeHtml(
+                                pharmacy?.name ||
+                                "Farmacia reemplazante"
+                            )}
+                        </strong>
+
+                        <span>
+                            ${escapeHtml(
+                                formatPharmacyDutyDateTime(
+                                    replacement.starts_at
+                                )
+                            )}
+                            a
+                            ${escapeHtml(
+                                formatPharmacyDutyDateTime(
+                                    replacement.ends_at
+                                )
+                            )}
+                        </span>
+
+                        <small>
+                            ${active ? "Reemplazo activo" : "Reemplazo cancelado"}
+                        </small>
+
+                        ${
+                            replacement.public_note
+                                ? `
+                                    <p>
+                                        ${escapeHtml(
+                                            replacement.public_note
+                                        )}
+                                    </p>
+                                `
+                                : ""
+                        }
+                    </div>
+                `;
+            }
+        ).join("");
+    } catch (error) {
+        console.error(
+            "Error cargando reemplazos:",
+            error
+        );
+
+        container.innerHTML = `
+            <span class="delivery-error">
+                ${escapeHtml(
+                    error.message ||
+                    "No se pudieron cargar los reemplazos."
+                )}
+            </span>
+        `;
+    }
+}
+
+
+async function savePharmacyDutyReplacement(
+    assignmentId
+) {
+    const pharmacyId =
+        document.getElementById(
+            `pharmacy-duty-replacement-pharmacy-${assignmentId}`
+        )?.value || "";
+
+    const startValue =
+        document.getElementById(
+            `pharmacy-duty-replacement-start-${assignmentId}`
+        )?.value || "";
+
+    const endValue =
+        document.getElementById(
+            `pharmacy-duty-replacement-end-${assignmentId}`
+        )?.value || "";
+
+    const reason =
+        document.getElementById(
+            `pharmacy-duty-replacement-reason-${assignmentId}`
+        )?.value.trim() || "";
+
+    const publicNote =
+        document.getElementById(
+            `pharmacy-duty-replacement-note-${assignmentId}`
+        )?.value.trim() || "";
+
+    const message = document.getElementById(
+        `pharmacy-duty-replacement-message-${assignmentId}`
+    );
+
+    if (!pharmacyId || !startValue || !endValue) {
+        if (message) {
+            message.textContent =
+                "Seleccion? farmacia reemplazante y horario completo.";
+            message.className =
+                "pharmacy-duty-message error";
+        }
+        return;
+    }
+
+    const startsAt = new Date(startValue);
+    const endsAt = new Date(endValue);
+
+    if (
+        Number.isNaN(startsAt.getTime()) ||
+        Number.isNaN(endsAt.getTime()) ||
+        endsAt <= startsAt
+    ) {
+        if (message) {
+            message.textContent =
+                "Revis? las fechas y horarios del reemplazo.";
+            message.className =
+                "pharmacy-duty-message error";
+        }
+        return;
+    }
+
+    if (message) {
+        message.textContent =
+            "Guardando reemplazo...";
+        message.className =
+            "pharmacy-duty-message";
+    }
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/assignments/${encodeURIComponent(assignmentId)}/replacements`,
+            {
+                method: "POST",
+                headers: getPharmacyDutyAuthHeaders(),
+                body: JSON.stringify({
+                    replacement_pharmacy_id:
+                        pharmacyId,
+                    starts_at:
+                        startsAt.toISOString(),
+                    ends_at:
+                        endsAt.toISOString(),
+                    reason:
+                        reason || null,
+                    public_note:
+                        publicNote || null
+                })
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudo guardar el reemplazo."
+            );
+        }
+
+        if (message) {
+            message.textContent =
+                "Reemplazo guardado correctamente.";
+            message.className =
+                "pharmacy-duty-message success";
+        }
+
+        await loadPharmacyDutyReplacements(
+            assignmentId
+        );
+    } catch (error) {
+        console.error(
+            "Error guardando reemplazo:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "No se pudo guardar el reemplazo.";
+            message.className =
+                "pharmacy-duty-message error";
+        }
+    }
+}
+
+
+async function loadPharmacyDutyCatalogs() {
+    const headers = getPharmacyDutyAuthHeaders();
+
+    const [
+        pharmaciesResponse,
+        areasResponse
+    ] = await Promise.all([
+        fetch(
+            `${API_URL}/pharmacy-duties/manage/pharmacies`,
+            { headers }
+        ),
+        fetch(
+            `${API_URL}/pharmacy-duties/manage/areas`,
+            { headers }
+        )
+    ]);
+
+    const pharmacies = await pharmaciesResponse
+        .json()
+        .catch(() => []);
+
+    const areas = await areasResponse
+        .json()
+        .catch(() => []);
+
+    if (!pharmaciesResponse.ok) {
+        throw new Error(
+            pharmacies.detail ||
+            "No se pudieron cargar las farmacias."
+        );
+    }
+
+    if (!areasResponse.ok) {
+        throw new Error(
+            areas.detail ||
+            "No se pudieron cargar las zonas."
+        );
+    }
+
+    window.walzPharmacyDutyPharmacies =
+        Array.isArray(pharmacies)
+            ? pharmacies
+            : [];
+
+    window.walzPharmacyDutyAreas =
+        Array.isArray(areas)
+            ? areas
+            : [];
+
+    renderPharmacyDutySelects();
+}
+
+
+async function loadPharmacyDutyAssignments() {
+    const container = document.getElementById(
+        "pharmacy-duty-assignments"
+    );
+
+    if (container) {
+        container.innerHTML =
+            '<div class="orders-state-card">Cargando turnos...</div>';
+    }
+
+    const areaId =
+        document.getElementById(
+            "pharmacy-duty-list-area"
+        )?.value || "";
+
+    const query = areaId
+        ? `?area_id=${encodeURIComponent(areaId)}`
+        : "";
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/assignments${query}`,
+            {
+                headers: getPharmacyDutyAuthHeaders()
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => []);
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudieron cargar los turnos."
+            );
+        }
+
+        renderPharmacyDutyAssignments(data);
+    } catch (error) {
+        console.error(
+            "Error cargando Farmacias de turno:",
+            error
+        );
+
+        if (container) {
+            container.innerHTML = `
+                <div class="orders-state-card">
+                    ${escapeHtml(
+                        error.message ||
+                        "No se pudieron cargar los turnos."
+                    )}
+                </div>
+            `;
+        }
+    }
+}
+
+
+async function showPharmacyDuties() {
+    if (
+        !["VENDEDOR", "SELLER"].includes(
+            currentUserRole
+        )
+    ) {
+        showMessage(
+            "Se requiere una farmacia habilitada.",
+            "error"
+        );
+        return;
+    }
+
+    hideAllWalzWorkSections();
+
+    const section = document.getElementById(
+        "pharmacy-duty-section"
+    );
+
+    if (!section) return;
+
+    section.style.display = "block";
+    scrollPageToTop();
+
+    const publisherInfo =
+        document.getElementById(
+            "pharmacy-duty-publisher-info"
+        );
+
+    if (publisherInfo) {
+        publisherInfo.innerHTML =
+            "Cargando datos de Farmacias de turno...";
+    }
+
+    try {
+        await loadPharmacyDutyCatalogs();
+
+        if (publisherInfo) {
+            publisherInfo.innerHTML = `
+                <strong>Publicaci&oacute;n habilitada.</strong>
+                Pod&eacute;s informar turnos de cualquiera de las
+                farmacias registradas en las zonas disponibles.
+            `;
+        }
+
+        await loadPharmacyDutyAssignments();
+    } catch (error) {
+        console.error(
+            "No se pudo abrir Farmacias de turno:",
+            error
+        );
+
+        if (publisherInfo) {
+            publisherInfo.innerHTML = `
+                <span class="delivery-error">
+                    ${escapeHtml(
+                        error.message ||
+                        "No se pudo cargar la herramienta."
+                    )}
+                </span>
+            `;
+        }
+    }
+}
+
+
+async function savePharmacyDutyAssignment() {
+    const pharmacyId =
+        document.getElementById(
+            "pharmacy-duty-pharmacy"
+        )?.value || "";
+
+    const areaId =
+        document.getElementById(
+            "pharmacy-duty-area"
+        )?.value || "";
+
+    const startValue =
+        document.getElementById(
+            "pharmacy-duty-start"
+        )?.value || "";
+
+    const endValue =
+        document.getElementById(
+            "pharmacy-duty-end"
+        )?.value || "";
+
+    const publicNote =
+        document.getElementById(
+            "pharmacy-duty-note"
+        )?.value.trim() || "";
+
+    if (!areaId) {
+        setPharmacyDutyMessage(
+            "Seleccion&aacute; una zona.",
+            "error"
+        );
+        return;
+    }
+
+    if (!pharmacyId) {
+        setPharmacyDutyMessage(
+            "Seleccion&aacute; una farmacia.",
+            "error"
+        );
+        return;
+    }
+
+    if (!startValue || !endValue) {
+        setPharmacyDutyMessage(
+            "Indic&aacute; fecha y hora desde y hasta.",
+            "error"
+        );
+        return;
+    }
+
+    const startsAt = new Date(startValue);
+    const endsAt = new Date(endValue);
+
+    if (
+        Number.isNaN(startsAt.getTime()) ||
+        Number.isNaN(endsAt.getTime())
+    ) {
+        setPharmacyDutyMessage(
+            "Revis&aacute; las fechas y horarios.",
+            "error"
+        );
+        return;
+    }
+
+    if (endsAt <= startsAt) {
+        setPharmacyDutyMessage(
+            "La fecha final debe ser posterior a la inicial.",
+            "error"
+        );
+        return;
+    }
+
+    const button = document.getElementById(
+        "pharmacy-duty-save-button"
+    );
+
+    if (button) button.disabled = true;
+
+    setPharmacyDutyMessage(
+        "Publicando turno..."
+    );
+
+    try {
+        const response = await fetch(
+            `${API_URL}/pharmacy-duties/manage/assignments`,
+            {
+                method: "POST",
+                headers: getPharmacyDutyAuthHeaders(),
+                body: JSON.stringify({
+                    pharmacy_id: pharmacyId,
+                    area_id: areaId,
+                    starts_at: startsAt.toISOString(),
+                    ends_at: endsAt.toISOString(),
+                    public_note:
+                        publicNote || null
+                })
+            }
+        );
+
+        const data = await response
+            .json()
+            .catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "No se pudo publicar el turno."
+            );
+        }
+
+        setPharmacyDutyMessage(
+            "Turno publicado correctamente.",
+            "success"
+        );
+
+        const note = document.getElementById(
+            "pharmacy-duty-note"
+        );
+
+        if (note) note.value = "";
+
+        await loadPharmacyDutyAssignments();
+    } catch (error) {
+        console.error(
+            "Error publicando turno:",
+            error
+        );
+
+        setPharmacyDutyMessage(
+            error.message ||
+            "No se pudo publicar el turno.",
+            "error"
+        );
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
 
 function stopWalzDeviceSync() {
     if (window.walzDeviceSyncTimer) clearInterval(window.walzDeviceSyncTimer);

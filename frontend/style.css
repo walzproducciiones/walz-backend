@@ -9627,3 +9627,962 @@ button.admin-central-card:hover {
         width: 100%;
     }
 }
+
+
+/* =====================================================
+   FARMACIAS DE TURNO
+===================================================== */
+
+.pharmacy-duty-section {
+    max-width: 1180px;
+    margin: 28px auto 90px;
+    padding: 0 18px;
+}
+
+.pharmacy-duty-section > h2 {
+    margin-bottom: 8px;
+    color: var(--walz-petrol);
+}
+
+.pharmacy-duty-intro {
+    max-width: 820px;
+    margin: 0 0 18px;
+    color: #5b7074;
+    line-height: 1.55;
+}
+
+.pharmacy-duty-publisher-info {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid #cfe2dc;
+    border-radius: 12px;
+    background: #f5faf8;
+    color: #173f47;
+    line-height: 1.5;
+}
+
+.pharmacy-duty-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.pharmacy-duty-form-card,
+.pharmacy-duty-list-card {
+    padding: 20px;
+    border: 1px solid #cfe2dc;
+    border-radius: 14px;
+    background: #f5faf8;
+    color: #173f47;
+}
+
+.pharmacy-duty-form-card h3,
+.pharmacy-duty-list-card h3 {
+    margin: 0 0 14px;
+    color: #173f47;
+}
+
+.pharmacy-duty-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px;
+}
+
+.pharmacy-duty-form-card label,
+.pharmacy-duty-list-card label {
+    display: grid;
+    gap: 6px;
+    color: #173f47;
+    font-weight: 600;
+}
+
+.pharmacy-duty-form-card select,
+.pharmacy-duty-form-card input,
+.pharmacy-duty-form-card textarea,
+.pharmacy-duty-list-card select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid #c9d9d5;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #173f47;
+    font: inherit;
+}
+
+.pharmacy-duty-note-field {
+    margin-top: 14px;
+}
+
+#pharmacy-duty-save-button {
+    width: 100%;
+    margin-top: 15px;
+}
+
+.pharmacy-duty-message {
+    min-height: 20px;
+    margin: 11px 0 0;
+    font-size: 14px;
+}
+
+.pharmacy-duty-message.success {
+    color: #196b45;
+}
+
+.pharmacy-duty-message.error {
+    color: #a32929;
+}
+
+.pharmacy-duty-list-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.pharmacy-duty-list-heading h3 {
+    margin-bottom: 5px;
+}
+
+.pharmacy-duty-list-heading p {
+    margin: 0;
+    color: #68787b;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.pharmacy-duty-list-heading label {
+    min-width: 210px;
+}
+
+.pharmacy-duty-assignments {
+    display: grid;
+    gap: 12px;
+}
+
+.pharmacy-duty-assignments .orders-state-card {
+    margin-top: 0;
+}
+
+.pharmacy-duty-assignment-card {
+    padding: 16px;
+    border: 1px solid #cfe2dc;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #173f47;
+}
+
+.pharmacy-duty-assignment-card p {
+    margin: 8px 0 0;
+    color: #486267;
+    line-height: 1.45;
+}
+
+.pharmacy-duty-assignment-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+}
+
+.pharmacy-duty-assignment-heading > div {
+    display: grid;
+    gap: 4px;
+}
+
+.pharmacy-duty-assignment-heading strong {
+    color: #173f47;
+    font-size: 16px;
+}
+
+.pharmacy-duty-assignment-heading span {
+    color: #68787b;
+    font-size: 13px;
+}
+
+.pharmacy-duty-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px !important;
+    font-weight: 700;
+}
+
+.pharmacy-duty-status.scheduled {
+    background: #e4f4ed;
+    color: #196b45 !important;
+}
+
+.pharmacy-duty-status.cancelled {
+    background: #f8e5e5;
+    color: #9a3030 !important;
+}
+
+.pharmacy-duty-public-note {
+    padding-top: 9px;
+    border-top: 1px solid #e2ece9;
+}
+
+@media (max-width: 820px) {
+    .pharmacy-duty-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .pharmacy-duty-list-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pharmacy-duty-list-heading label {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 560px) {
+    .pharmacy-duty-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pharmacy-duty-form-card,
+    .pharmacy-duty-list-card {
+        padding: 15px;
+    }
+
+    .pharmacy-duty-assignment-heading {
+        flex-direction: column;
+    }
+}
+
+
+.pharmacy-duty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid #e2ece9;
+}
+
+.pharmacy-duty-secondary-button {
+    background: #ffffff;
+    color: #173f47;
+    border: 1px solid #b9d2cc;
+}
+
+.pharmacy-duty-danger-button {
+    background: #fff1f1;
+    color: #962f2f;
+    border: 1px solid #e3b9b9;
+}
+
+.pharmacy-duty-replacement-form {
+    gap: 12px;
+    margin-top: 14px;
+    padding: 15px;
+    border: 1px solid #cfe2dc;
+    border-radius: 10px;
+    background: #edf6f3;
+}
+
+.pharmacy-duty-replacement-form h4 {
+    margin: 0;
+    color: #173f47;
+}
+
+.pharmacy-duty-replacement-form label {
+    display: grid;
+    gap: 6px;
+}
+
+.pharmacy-duty-replacement-form input,
+.pharmacy-duty-replacement-form select,
+.pharmacy-duty-replacement-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #c9d9d5;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #173f47;
+    font: inherit;
+}
+
+.pharmacy-duty-replacement-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.pharmacy-duty-replacement-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.pharmacy-duty-replacements-summary {
+    margin-top: 13px;
+}
+
+.pharmacy-duty-replacements {
+    margin-top: 10px;
+}
+
+.pharmacy-duty-replacement-row {
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 11px 12px;
+    border-left: 3px solid #8cbab0;
+    background: #f2f7f5;
+    color: #173f47;
+}
+
+.pharmacy-duty-replacement-row span,
+.pharmacy-duty-replacement-row small {
+    color: #68787b;
+}
+
+.pharmacy-duty-replacement-row p {
+    margin: 4px 0 0;
+}
+
+@media (max-width: 560px) {
+    .pharmacy-duty-replacement-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pharmacy-duty-actions,
+    .pharmacy-duty-replacement-actions {
+        flex-direction: column;
+    }
+
+    .pharmacy-duty-actions button,
+    .pharmacy-duty-replacement-actions button {
+        width: 100%;
+    }
+}
+
+
+/* =====================================================
+   FARMACIAS DE TURNO - EXPERIENCIA PUBLICA
+   ===================================================== */
+
+.walz-public-pharmacy-duty {
+    max-width: 1180px;
+    margin: 34px auto;
+    padding: 0 18px;
+}
+
+.walz-public-pharmacy-duty-shell {
+    overflow: hidden;
+    border: 1px solid #d7e5e1;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 14px 36px rgba(24, 63, 71, 0.08);
+}
+
+.walz-public-pharmacy-duty-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 24px 26px;
+    background: linear-gradient(
+        135deg,
+        #173f47,
+        #245b61
+    );
+    color: #ffffff;
+}
+
+.walz-public-pharmacy-duty-heading span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.78;
+}
+
+.walz-public-pharmacy-duty-heading h2 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3vw, 2.15rem);
+    color: #ffffff;
+}
+
+.walz-public-pharmacy-duty-heading p {
+    max-width: 680px;
+    margin: 8px 0 0;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.84);
+}
+
+.walz-public-pharmacy-duty-symbol {
+    display: grid;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 2rem;
+}
+
+.walz-public-pharmacy-duty-filters {
+    display: grid;
+    grid-template-columns:
+        minmax(180px, 1fr)
+        minmax(170px, 0.75fr)
+        auto;
+    gap: 14px;
+    align-items: end;
+    padding: 22px 26px 12px;
+}
+
+.walz-public-pharmacy-duty-filters label {
+    display: grid;
+    gap: 7px;
+}
+
+.walz-public-pharmacy-duty-filters label > span {
+    color: #173f47;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.walz-public-pharmacy-duty-filters select,
+.walz-public-pharmacy-duty-filters input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #cbdad6;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #173f47;
+    font: inherit;
+}
+
+.walz-public-pharmacy-duty-filter-actions {
+    display: flex;
+    gap: 9px;
+}
+
+.walz-public-pharmacy-duty-filter-actions button,
+.walz-public-pharmacy-directory-panel button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid #173f47;
+    border-radius: 10px;
+    background: #173f47;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.walz-public-duty-secondary-button {
+    border-color: #b9d2cc !important;
+    background: #ffffff !important;
+    color: #173f47 !important;
+}
+
+.walz-public-duty-status {
+    min-height: 20px;
+    margin: 0;
+    padding: 0 26px 8px;
+    color: #66777a;
+    font-size: 0.9rem;
+}
+
+.walz-public-duty-status.error {
+    color: #a23e3e;
+}
+
+.walz-public-duty-results {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    padding: 10px 26px 22px;
+}
+
+.walz-public-duty-card {
+    padding: 18px;
+    border: 1px solid #d9e5e2;
+    border-radius: 14px;
+    background: #fbfdfc;
+}
+
+.walz-public-duty-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.walz-public-duty-card-heading h3 {
+    margin: 3px 0 0;
+    color: #173f47;
+    font-size: 1.15rem;
+}
+
+.walz-public-duty-area-label {
+    color: #718083;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.walz-public-duty-active-badge,
+.walz-public-duty-replacement-badge {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.walz-public-duty-active-badge {
+    background: #dff1ea;
+    color: #23634f;
+}
+
+.walz-public-duty-replacement-badge {
+    background: #fff0d9;
+    color: #85571b;
+}
+
+.walz-public-duty-time {
+    display: grid;
+    gap: 5px;
+    margin-top: 14px;
+    color: #475a5e;
+    font-size: 0.9rem;
+}
+
+.walz-public-duty-original {
+    margin: 13px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid #d7ad68;
+    background: #fff9ef;
+    color: #67543a;
+    font-size: 0.87rem;
+}
+
+.walz-public-duty-note {
+    margin: 12px 0 0;
+    color: #44575b;
+    line-height: 1.5;
+}
+
+.walz-public-duty-contact {
+    display: grid;
+    gap: 6px;
+    margin-top: 14px;
+    color: #5c6c70;
+    font-size: 0.86rem;
+}
+
+.walz-public-duty-contact a {
+    color: #176b72;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.walz-public-duty-empty {
+    padding: 18px;
+    border: 1px dashed #ccdcd8;
+    border-radius: 12px;
+    background: #f7faf9;
+    color: #697a7d;
+    text-align: center;
+}
+
+.walz-public-pharmacy-directory-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 0 26px 22px;
+    padding: 16px 18px;
+    border-top: 1px solid #dfe9e6;
+    border-bottom: 1px solid #dfe9e6;
+}
+
+.walz-public-pharmacy-directory-panel > div {
+    display: grid;
+    gap: 4px;
+}
+
+.walz-public-pharmacy-directory-panel strong {
+    color: #173f47;
+}
+
+.walz-public-pharmacy-directory-panel small {
+    color: #708083;
+}
+
+.walz-public-pharmacy-directory {
+    grid-template-columns:
+        repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    padding: 0 26px 24px;
+}
+
+.walz-public-pharmacy-directory-card {
+    padding: 16px;
+    border: 1px solid #dce7e4;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.walz-public-pharmacy-directory-card h3 {
+    margin: 0;
+    color: #173f47;
+    font-size: 1rem;
+}
+
+@media (max-width: 820px) {
+    .walz-public-pharmacy-duty-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .walz-public-pharmacy-duty-filter-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 560px) {
+    .walz-public-pharmacy-duty {
+        padding: 0 10px;
+        margin: 24px auto;
+    }
+
+    .walz-public-pharmacy-duty-heading {
+        padding: 20px;
+    }
+
+    .walz-public-pharmacy-duty-symbol {
+        display: none;
+    }
+
+    .walz-public-pharmacy-duty-filters {
+        grid-template-columns: 1fr;
+        padding: 18px 18px 10px;
+    }
+
+    .walz-public-pharmacy-duty-filter-actions {
+        grid-column: auto;
+        flex-direction: column;
+    }
+
+    .walz-public-pharmacy-duty-filter-actions button {
+        width: 100%;
+    }
+
+    .walz-public-duty-results {
+        grid-template-columns: 1fr;
+        padding: 10px 18px 18px;
+    }
+
+    .walz-public-duty-status {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .walz-public-pharmacy-directory-panel {
+        align-items: stretch;
+        flex-direction: column;
+        margin: 0 18px 18px;
+    }
+
+    .walz-public-pharmacy-directory-panel button {
+        width: 100%;
+    }
+
+    .walz-public-pharmacy-directory {
+        grid-template-columns: 1fr;
+        padding: 0 18px 20px;
+    }
+}
+
+
+/* =====================================================
+   WALZ_PHARMACY_DUTY_COMPACT_CORAL_V2
+   Farmacias de turno integradas a identidad WalZ One
+   ===================================================== */
+
+.walz-public-pharmacy-duty {
+    max-width: 1180px;
+    margin: 18px auto 22px;
+    padding: 0 18px;
+}
+
+.walz-public-pharmacy-duty-shell {
+    border: 1px solid #F1DDD7;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(120, 55, 38, .07);
+}
+
+.walz-public-pharmacy-duty-heading {
+    gap: 16px;
+    padding: 14px 18px;
+    background:
+        linear-gradient(
+            125deg,
+            var(--walz-coral-dark),
+            var(--walz-coral) 58%,
+            #FF7446
+        );
+}
+
+.walz-public-pharmacy-duty-heading span {
+    margin-bottom: 2px;
+    font-size: .68rem;
+}
+
+.walz-public-pharmacy-duty-heading h2 {
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+}
+
+.walz-public-pharmacy-duty-heading p {
+    margin-top: 3px;
+    font-size: .84rem;
+    line-height: 1.35;
+}
+
+.walz-public-pharmacy-duty-symbol {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    font-size: 1.35rem;
+}
+
+.walz-public-pharmacy-duty-filters {
+    grid-template-columns:
+        minmax(170px, 1fr)
+        minmax(155px, .7fr)
+        auto;
+    gap: 10px;
+    padding: 12px 18px 6px;
+}
+
+.walz-public-pharmacy-duty-filters label {
+    gap: 4px;
+}
+
+.walz-public-pharmacy-duty-filters label > span {
+    font-size: .76rem;
+}
+
+.walz-public-pharmacy-duty-filters select,
+.walz-public-pharmacy-duty-filters input {
+    min-height: 38px;
+    padding: 7px 10px;
+    border-color: #E8D8D3;
+    border-radius: 8px;
+}
+
+.walz-public-pharmacy-duty-filter-actions {
+    gap: 7px;
+}
+
+.walz-public-pharmacy-duty-filter-actions button,
+.walz-public-pharmacy-directory-panel button {
+    min-height: 38px;
+    padding: 7px 13px;
+    border-color: var(--walz-coral);
+    border-radius: 8px;
+    background: var(--walz-coral);
+    font-size: .82rem;
+}
+
+.walz-public-duty-secondary-button {
+    border-color: #F2BEB1 !important;
+    background: #FFFFFF !important;
+    color: var(--walz-coral-dark) !important;
+}
+
+.walz-public-duty-status {
+    min-height: 12px;
+    padding: 0 18px 4px;
+    font-size: .78rem;
+}
+
+.walz-public-duty-results {
+    gap: 9px;
+    padding: 4px 18px 11px;
+}
+
+.walz-public-duty-card {
+    padding: 12px 14px;
+    border-color: #F0DFDA;
+    border-radius: 11px;
+    background: #FFFCFB;
+}
+
+.walz-public-duty-card-heading h3 {
+    font-size: 1rem;
+}
+
+.walz-public-duty-area-label {
+    color: var(--walz-coral-dark);
+    font-size: .68rem;
+}
+
+.walz-public-duty-active-badge,
+.walz-public-duty-replacement-badge {
+    padding: 4px 8px;
+    font-size: .68rem;
+}
+
+.walz-public-duty-active-badge {
+    background: var(--walz-coral-soft);
+    color: var(--walz-coral-dark);
+}
+
+.walz-public-duty-replacement-badge {
+    background: #FFF3E7;
+    color: #8A5621;
+}
+
+.walz-public-duty-time {
+    gap: 3px;
+    margin-top: 8px;
+    font-size: .82rem;
+}
+
+.walz-public-duty-contact {
+    gap: 4px;
+    margin-top: 9px;
+    font-size: .79rem;
+}
+
+.walz-public-duty-contact a {
+    color: var(--walz-coral-dark);
+}
+
+.walz-public-duty-empty {
+    padding: 9px 12px;
+    border-color: #EEDCD6;
+    border-radius: 9px;
+    background: #FFF8F5;
+    color: #766A67;
+    font-size: .82rem;
+}
+
+.walz-public-pharmacy-directory-panel {
+    gap: 12px;
+    margin: 0 18px 11px;
+    padding: 9px 12px;
+    border-top-color: #F0E2DE;
+    border-bottom-color: #F0E2DE;
+}
+
+.walz-public-pharmacy-directory-panel small {
+    font-size: .76rem;
+}
+
+.walz-public-pharmacy-directory {
+    gap: 8px;
+    padding: 0 18px 12px;
+}
+
+.walz-public-pharmacy-directory-card {
+    padding: 11px 13px;
+    border-color: #F0E0DB;
+    border-radius: 9px;
+}
+
+.walz-public-pharmacy-directory-card h3 {
+    font-size: .92rem;
+}
+
+
+/* Aviso autom?tico dentro del marketplace de una farmacia */
+
+.walz-seller-duty-today {
+    width: fit-content;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin-top: 13px;
+    padding: 9px 13px;
+    border: 1px solid #FFD0C3;
+    border-radius: 11px;
+    background: var(--walz-coral-soft);
+    color: #20242F;
+}
+
+.walz-seller-duty-today-kicker {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--walz-coral);
+    color: #FFFFFF;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.walz-seller-duty-today strong {
+    color: var(--walz-coral-dark);
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.walz-seller-duty-today small {
+    color: #686970;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+
+/* Celular */
+
+@media (max-width: 560px) {
+    .walz-public-pharmacy-duty {
+        margin: 14px auto 18px;
+        padding: 0 10px;
+    }
+
+    .walz-public-pharmacy-duty-heading {
+        padding: 12px 14px;
+    }
+
+    .walz-public-pharmacy-duty-heading p {
+        display: none;
+    }
+
+    .walz-public-pharmacy-duty-filters {
+        padding: 11px 14px 6px;
+    }
+
+    .walz-public-duty-results {
+        padding: 4px 14px 10px;
+    }
+
+    .walz-public-pharmacy-directory-panel {
+        margin: 0 14px 10px;
+        padding: 8px 10px;
+    }
+
+    .walz-public-pharmacy-directory {
+        padding: 0 14px 11px;
+    }
+
+    .walz-seller-duty-today {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
