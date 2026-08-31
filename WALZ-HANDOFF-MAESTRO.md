@@ -925,3 +925,99 @@ Pr?ximo bloque separado:
 FARMACIAS DE TURNO / GUARDIAS.
 
 No mezclar guardias de farmacia con horarios comerciales normales.
+
+---
+
+# 30. ACTUALIZACIÓN WALZ ONE 19 — FARMACIAS DE TURNO
+
+**Fecha:** 31/08/2026
+
+Esta sección es POSTERIOR al cierre de WalZ One 18 y reemplaza como punto actual de continuidad a las referencias anteriores que todavía indican BUSCADOR CENTRAL + VENDEDORES como último bloque.
+
+No borrar las secciones anteriores: permanecen como historial.
+
+## Último bloque funcional cerrado
+
+FARMACIAS DE TURNO.
+
+Commit validado:
+
+`c48da13 - feat: agregar farmacias de turno`
+
+Rama:
+
+`feature/portada-exploracion`
+
+Git quedó LIMPIO después del commit.
+
+## Alcance cerrado
+
+Se incorporó un módulo escalable de Farmacias de turno.
+
+Backend:
+- `backend/app/api/pharmacy_duties.py`
+- `backend/app/models/pharmacy_duty.py`
+- `backend/app/schemas/pharmacy_duty.py`
+- `backend/app/services/pharmacy_duty_service.py`
+- integración en `backend/app/main.py`
+
+Frontend:
+- sección pública `Farmacias de turno hoy`;
+- selección de zona;
+- consulta por fecha;
+- acción `Ver hoy`;
+- resultados de farmacias de turno;
+- directorio de farmacias;
+- integración visual con WalZ One;
+- aviso contextual dentro del marketplace de una farmacia cuando corresponde;
+- diseño compacto integrado con identidad coral WalZ One;
+- adaptación móvil.
+
+## Validaciones del bloque
+
+- Backend compile: OK.
+- `git diff --check`: OK.
+- `git diff --cached --check`: OK.
+- Commit creado correctamente.
+- Git final: LIMPIO.
+- SQLite de backup: `PRAGMA integrity_check = ok`.
+- Git bundle: verificado, historia completa.
+- ZIP de código: verificado, 106 archivos.
+
+## Checkpoint actual
+
+Carpeta:
+
+`C:\Users\Usuario\Documents\WalZ-One-Backups\CIERRE-FARMACIAS-TURNO-2026-08-31`
+
+Archivos confirmados:
+- `CHECKPOINT-Y-HANDOFF.txt`
+- `GIT-LOG.txt`
+- `GIT-STATUS.txt`
+- `walz_local-CIERRE-FARMACIAS-TURNO.db`
+- `WALZ-ONE-CODIGO-CIERRE-FARMACIAS-TURNO-c48da13.zip`
+- `WALZ-ONE-GIT-HISTORY-CIERRE-FARMACIAS-TURNO.bundle`
+
+## Regla de continuidad desde este punto
+
+NO reconstruir Farmacias de turno desde chats anteriores.
+
+Fuente de verdad:
+1. código local actual;
+2. Git;
+3. base de datos actual;
+4. commit `c48da13`;
+5. checkpoint `CIERRE-FARMACIAS-TURNO-2026-08-31`;
+6. este Handoff Maestro.
+
+Las referencias anteriores a `7c055b2` y `CIERRE-BUSCADOR-2026-08-31-0400` siguen siendo históricamente válidas, pero YA NO son el último estado de WalZ One.
+
+## Próximo paso
+
+Antes de iniciar un nuevo bloque:
+1. confirmar Git;
+2. confirmar HEAD;
+3. confirmar rama;
+4. elegir conscientemente el siguiente bloque de la Lista Maestra.
+
+Farmacias de turno queda CERRADO, COMMITTEADO, VALIDADO Y RESPALDADO.
