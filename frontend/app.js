@@ -1628,6 +1628,67 @@ function renderSellerMarketplaceClassification(
             .querySelector(".walz-hero-city")
             ?.setAttribute("aria-hidden", "true");
 
+        const centralSearchInput =
+            document.getElementById("product-search");
+
+        const centralSearchIcon =
+            document.querySelector(
+                ".walz-main-search-icon"
+            );
+
+        if (
+            centralSearchInput &&
+            !centralSearchInput.dataset.walzSellerSearchBound
+        ) {
+            centralSearchInput.dataset.walzSellerSearchBound =
+                "true";
+
+            centralSearchInput.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key !== "Enter") return;
+
+                    event.preventDefault();
+                    executeSellerMarketplaceSearch();
+                }
+            );
+        }
+
+        if (
+            centralSearchIcon &&
+            !centralSearchIcon.dataset.walzSellerSearchBound
+        ) {
+            centralSearchIcon.dataset.walzSellerSearchBound =
+                "true";
+
+            centralSearchIcon.removeAttribute("aria-hidden");
+            centralSearchIcon.setAttribute("role", "button");
+            centralSearchIcon.setAttribute("tabindex", "0");
+            centralSearchIcon.title = "Buscar";
+
+            centralSearchIcon.addEventListener(
+                "click",
+                () => {
+                    executeSellerMarketplaceSearch();
+                }
+            );
+
+            centralSearchIcon.addEventListener(
+                "keydown",
+                event => {
+                    if (
+                        event.key !== "Enter" &&
+                        event.key !== " "
+                    ) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    executeSellerMarketplaceSearch();
+                }
+            );
+        }
+
         return;
     }
 
@@ -2061,14 +2122,6 @@ function renderSellerMarketplaceClassification(
             event => {
                 if (event.key !== "Enter") return;
 
-                if (
-                    !document.querySelector(
-                        ".walz-seller-marketplace-identity"
-                    )
-                ) {
-                    return;
-                }
-
                 event.preventDefault();
 
                 executeSellerMarketplaceSearch();
@@ -2102,13 +2155,7 @@ function renderSellerMarketplaceClassification(
         sellerSearchIcon.addEventListener(
             "click",
             () => {
-                if (
-                    document.querySelector(
-                        ".walz-seller-marketplace-identity"
-                    )
-                ) {
-                    executeSellerMarketplaceSearch();
-                }
+                executeSellerMarketplaceSearch();
             }
         );
 
