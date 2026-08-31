@@ -1263,6 +1263,37 @@ async function loadProducts() {
         const sellerMarketplace =
             Boolean(marketplaceSellerId);
 
+        window.walzSellerMarketplaceScheduleStatus = null;
+        window.walzSellerMarketplaceSchedule = null;
+
+        if (sellerMarketplace) {
+            const [
+                marketplaceScheduleStatusResponse,
+                marketplaceScheduleResponse
+            ] = await Promise.all([
+                fetch(
+                    `${API_URL}/store-schedules/seller/${marketplaceSellerId}/status`
+                ).catch(() => null),
+                fetch(
+                    `${API_URL}/store-schedules/seller/${marketplaceSellerId}`
+                ).catch(() => null)
+            ]);
+
+            window.walzSellerMarketplaceScheduleStatus =
+                marketplaceScheduleStatusResponse?.ok
+                    ? await marketplaceScheduleStatusResponse
+                        .json()
+                        .catch(() => null)
+                    : null;
+
+            window.walzSellerMarketplaceSchedule =
+                marketplaceScheduleResponse?.ok
+                    ? await marketplaceScheduleResponse
+                        .json()
+                        .catch(() => null)
+                    : null;
+        }
+
         const directStoreMarketplaceButton =
             document.getElementById("direct-store-marketplace-button");
 
@@ -2398,6 +2429,19 @@ function renderSellerMarketplaceClassification(
 
         sellerIdentity.appendChild(
             sellerCity
+        );
+    }
+
+    const sellerScheduleHtml =
+        renderPublicStoreScheduleStatus(
+            window.walzSellerMarketplaceScheduleStatus,
+            window.walzSellerMarketplaceSchedule
+        );
+
+    if (sellerScheduleHtml) {
+        sellerIdentity.insertAdjacentHTML(
+            "beforeend",
+            sellerScheduleHtml
         );
     }
 
