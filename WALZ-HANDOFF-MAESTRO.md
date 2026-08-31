@@ -852,3 +852,76 @@ Si existe contradicción entre un chat antiguo y este handoff:
 ESTE HANDOFF + GIT TIENEN PRIORIDAD.
 
 Nunca basar la continuidad únicamente en una conversación de ChatGPT.
+
+---
+
+# 30. WALZ ONE 19 ? HORARIOS DE TIENDA
+
+Punto 2 completado y validado visualmente el 31/08/2026.
+
+Commits:
+
+- `999a193` ? feat: agregar horarios configurables por tienda
+- `f15e441` ? fix: mostrar horarios en marketplace de vendedores
+
+Regla estructural:
+
+- horarios disponibles para TODAS las tiendas;
+- cada vendedor decide si los configura;
+- no hay vendedores, rubros ni ciudades hardcodeados;
+- una tienda sin horarios configurados conserva el comportamiento anterior y no muestra estado de horario;
+- apertura f?sica y recepci?n de pedidos online son conceptos separados.
+
+Funciones implementadas:
+
+- horario habitual semanal;
+- m?ltiples franjas por d?a;
+- d?a cerrado;
+- copiar lunes a martes-viernes;
+- copiar lunes a toda la semana;
+- horarios de temporada;
+- temporadas recurrentes;
+- fechas y excepciones especiales;
+- horarios especiales;
+- mensaje p?blico;
+- pedidos online ALWAYS / OPEN_ONLY;
+- excepci?n online ALWAYS / OPEN_ONLY / DISABLED;
+- franjas nocturnas;
+- c?lculo de pr?xima apertura;
+- prioridad excepci?n -> temporada -> habitual;
+- integraci?n con checkout;
+- estado p?blico Abierto ahora / Cerrado ahora;
+- pr?xima apertura;
+- Ver horario habitual;
+- fallas del servicio de horarios no deben impedir abrir una tienda.
+
+Validaci?n real:
+
+Farmacia Federico decidi? configurar sus horarios:
+
+- lunes a viernes: 09:00?13:00 y 16:00?20:00;
+- s?bado: 09:00?13:00;
+- domingo: cerrado.
+
+Validado visualmente en:
+
+`/farmacia-federico`
+
+La portada particular muestra correctamente el estado actual y el horario habitual.
+
+La misma l?gica queda disponible autom?ticamente para Maylud Store y cualquier vendedor futuro que configure horarios.
+
+Importante:
+
+`showPublicStore()` no es la portada principal de una tienda directa.
+Las rutas directas de vendedores usan:
+
+`loadProducts()` -> `renderSellerMarketplaceClassification()`
+
+Por eso el horario p?blico tambi?n qued? integrado all?.
+
+Pr?ximo bloque separado:
+
+FARMACIAS DE TURNO / GUARDIAS.
+
+No mezclar guardias de farmacia con horarios comerciales normales.
