@@ -114,6 +114,20 @@ class Product(Base):
         nullable=True
     )
 
+    image_layout = Column(
+        String(20),
+        nullable=False,
+        default="AUTO",
+        server_default="AUTO"
+    )
+
+    image_contrast = Column(
+        String(20),
+        nullable=False,
+        default="AUTO",
+        server_default="AUTO"
+    )
+
     is_active = Column(
         Boolean,
         default=True

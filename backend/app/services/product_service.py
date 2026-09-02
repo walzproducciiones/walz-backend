@@ -57,7 +57,9 @@ def create_product(db: Session, seller_id: UUID, product_data: ProductCreate):
         subcategory=product_data.subcategory,
         brand=product_data.brand,
         avanter_enabled=product_data.avanter_enabled,
-        image_url=product_data.image_url
+        image_url=product_data.image_url,
+        image_layout=product_data.image_layout,
+        image_contrast=product_data.image_contrast,
     )
     db.add(new_product)
     db.commit()
@@ -105,6 +107,8 @@ def create_products_bulk(db: Session, seller_id: UUID, products_data: list[Produ
                 brand=product_data.brand,
                 avanter_enabled=product_data.avanter_enabled,
                 image_url=product_data.image_url,
+                image_layout=product_data.image_layout,
+                image_contrast=product_data.image_contrast,
                 publication_status="DRAFT",
                 is_active=False,
             )

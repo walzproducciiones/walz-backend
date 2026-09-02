@@ -261,6 +261,18 @@
 
     <button
         type="button"
+        id="conversations-button"
+        class="orders-button conversations-button"
+        onclick="showConversations()"
+        style="display:none;"
+    >
+        <span aria-hidden="true">&#128172;</span>
+        <span>Conversaciones</span>
+        <span id="conversations-unread-badge" class="admin-pending-badge" style="display:none;">0</span>
+    </button>
+
+    <button
+        type="button"
         id="sales-orders-button"
         class="orders-button sales-orders-button"
         onclick="showReceivedOrders()"
@@ -1408,6 +1420,96 @@
             </div>
         </section>
         <!-- =================================================
+             CONVERSACIONES
+        ================================================== -->
+
+        <section
+            id="conversations-section"
+            class="conversations-section"
+            style="display:none;"
+        >
+            <div class="conversations-page-heading">
+                <div>
+                    <button type="button" onclick="showMarketplaceContent()">
+                        &larr; Volver al marketplace
+                    </button>
+                    <p class="conversations-kicker">Comunicacion interna</p>
+                    <h2>Conversaciones</h2>
+                    <p>Consultas, compras y soporte dentro de WalZ One.</p>
+                </div>
+                <button type="button" class="conversation-refresh-button" onclick="loadConversations()">
+                    Actualizar
+                </button>
+            </div>
+
+            <div class="conversations-shell">
+                <aside class="conversation-inbox" aria-label="Bandeja de conversaciones">
+                    <div class="conversation-inbox-heading">
+                        <strong>Tu bandeja</strong>
+                        <select id="conversation-status-filter" onchange="loadConversations()" aria-label="Filtrar conversaciones">
+                            <option value="OPEN" selected>Abiertas</option>
+                            <option value="">Todas</option>
+                            <option value="CLOSED">Cerradas</option>
+                            <option value="ARCHIVED">Archivadas</option>
+                        </select>
+                    </div>
+                    <div id="conversation-list" class="conversation-list" aria-live="polite">
+                        <div class="conversation-state">Cargando conversaciones...</div>
+                    </div>
+                </aside>
+
+                <div class="conversation-panel">
+                    <div id="conversation-empty" class="conversation-empty">
+                        <span aria-hidden="true">&#128172;</span>
+                        <h3>Eleg&iacute; una conversaci&oacute;n</h3>
+                        <p>Ac&aacute; vas a poder hablar con compradores, vendedores o el equipo de WalZ One.</p>
+                    </div>
+
+                    <div id="conversation-active" class="conversation-active" style="display:none;">
+                        <header class="conversation-active-heading">
+                            <button type="button" class="conversation-mobile-back" onclick="closeActiveConversation()">
+                                &larr; Bandeja
+                            </button>
+                            <div>
+                                <span id="conversation-active-context" class="conversation-context"></span>
+                                <h3 id="conversation-active-subject"></h3>
+                                <p id="conversation-active-status"></p>
+                            </div>
+                            <div class="conversation-heading-actions">
+                                <button
+                                    id="conversation-toggle-status-button"
+                                    type="button"
+                                    onclick="toggleActiveConversationStatus()"
+                                >
+                                    Cerrar conversaci&oacute;n
+                                </button>
+                                <button
+                                    id="conversation-archive-button"
+                                    type="button"
+                                    class="conversation-archive-button"
+                                    onclick="archiveActiveConversation()"
+                                    style="display:none;"
+                                >
+                                    Archivar
+                                </button>
+                            </div>
+                        </header>
+
+                        <div id="conversation-messages" class="conversation-messages" role="log" aria-live="polite"></div>
+
+                        <form id="conversation-message-form" class="conversation-composer" onsubmit="sendConversationMessage(event)">
+                            <label for="conversation-message-input">Escrib&iacute; tu mensaje</label>
+                            <div>
+                                <textarea id="conversation-message-input" maxlength="4000" rows="2" placeholder="Escrib&iacute; una consulta o respuesta..." required></textarea>
+                                <button id="conversation-send-button" type="submit">Enviar</button>
+                            </div>
+                            <p id="conversation-message-error" class="conversation-message-error" role="alert"></p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- =================================================
              PEDIDOS RECIBIDOS
         ================================================== -->
 
@@ -1680,6 +1782,26 @@
                 <label for="prod-image-file"><strong>O elegi una imagen</strong><span>WalZ la reducira y convertira automaticamente.</span></label>
                 <input type="file" id="prod-image-file" accept="image/jpeg,image/png,image/webp" onchange="previewNewProductImage()">
                 <div id="prod-image-preview" class="product-upload-preview">Sin imagen seleccionada</div>
+                <div class="product-image-presentation-options">
+                    <label>
+                        <span>Formato de presentacion</span>
+                        <select id="prod-image-layout" onchange="updateNewProductImagePreviewStyle()">
+                            <option value="AUTO">Automatico</option>
+                            <option value="LANDSCAPE">Horizontal</option>
+                            <option value="SQUARE">Cuadrado</option>
+                            <option value="PORTRAIT">Vertical</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Contraste del fondo</span>
+                        <select id="prod-image-contrast" onchange="updateNewProductImagePreviewStyle()">
+                            <option value="AUTO">Automatico</option>
+                            <option value="LIGHT">Claro</option>
+                            <option value="NEUTRAL">Neutro</option>
+                            <option value="DARK">Oscuro</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
             <button

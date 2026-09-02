@@ -20,6 +20,9 @@ PublicationStatus = Literal[
     "PAUSED",
 ]
 
+ImageLayout = Literal["AUTO", "LANDSCAPE", "SQUARE", "PORTRAIT"]
+ImageContrast = Literal["AUTO", "LIGHT", "NEUTRAL", "DARK"]
+
 
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -36,6 +39,8 @@ class ProductBase(BaseModel):
     brand: Optional[str] = None
     avanter_enabled: bool = False
     image_url: Optional[str] = None
+    image_layout: ImageLayout = "AUTO"
+    image_contrast: ImageContrast = "AUTO"
 
 class ProductCreate(ProductBase):
     pass
@@ -91,6 +96,8 @@ class ProductUpdate(BaseModel):
     brand: Optional[str] = None
     avanter_enabled: Optional[bool] = None
     image_url: Optional[str] = None
+    image_layout: Optional[ImageLayout] = None
+    image_contrast: Optional[ImageContrast] = None
     offer_price: Optional[float] = Field(default=None, gt=0)
     offer_active: Optional[bool] = None
     commercial_type: Optional[CommercialType] = None

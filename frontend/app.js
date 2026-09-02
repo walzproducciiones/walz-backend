@@ -686,7 +686,9 @@ async function handleEditProductImageSelection(productId, event) {
                 renderProductImage(
                     imageUrl,
                     "Vista previa",
-                    "product-card-image"
+                    "product-card-image",
+                    document.getElementById(`edit-product-image-layout-${productId}`)?.value || "AUTO",
+                    document.getElementById(`edit-product-image-contrast-${productId}`)?.value || "AUTO"
                 );
         }
 
@@ -727,10 +729,36 @@ async function handleEditProductImageSelection(productId, event) {
 }
 
 
+function updateNewProductImagePreviewStyle() {
+    const preview = document.getElementById("prod-image-preview");
+    if (!preview) return;
+
+    preview.dataset.imageLayout =
+        document.getElementById("prod-image-layout")?.value || "AUTO";
+
+    preview.dataset.imageContrast =
+        document.getElementById("prod-image-contrast")?.value || "AUTO";
+}
+
 function previewNewProductImage() {
-    const file = document.getElementById("prod-image-file")?.files?.[0]; const preview = document.getElementById("prod-image-preview");
-    if (!preview) return; if (!file) { preview.textContent = "Sin imagen seleccionada"; return; }
-    const url = URL.createObjectURL(file); preview.innerHTML = `<img src="${url}" alt="Vista previa">`;
+    const file =
+        document.getElementById("prod-image-file")?.files?.[0];
+
+    const preview =
+        document.getElementById("prod-image-preview");
+
+    if (!preview) return;
+
+    if (!file) {
+        preview.textContent = "Sin imagen seleccionada";
+        updateNewProductImagePreviewStyle();
+        return;
+    }
+
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${url}" alt="Vista previa">`;
+
+    updateNewProductImagePreviewStyle();
 }
 
 // =====================================================
@@ -1059,6 +1087,8 @@ async function handleCreateProduct() {
 
     let imageUrl = document.getElementById("prod-image-url").value.trim();
     const imageFile = document.getElementById("prod-image-file")?.files?.[0] || window.walzPreparedWhatsAppImage || null;
+    const imageLayout = document.getElementById("prod-image-layout")?.value || "AUTO";
+    const imageContrast = document.getElementById("prod-image-contrast")?.value || "AUTO";
 
     if (!name || isNaN(price) || isNaN(stock)) {
 
@@ -1124,7 +1154,9 @@ async function handleCreateProduct() {
                     brand: brand || null,
                     avanter_enabled: avanterEnabled,
                     description: description || null,
-                    image_url: imageUrl || null
+                    image_url: imageUrl || null,
+                    image_layout: imageLayout,
+                    image_contrast: imageContrast
                 })
             }
         );
@@ -1167,6 +1199,9 @@ async function handleCreateProduct() {
             document.getElementById("prod-image-url").value = "";
             document.getElementById("prod-image-file").value = "";
             document.getElementById("prod-image-preview").textContent = "Sin imagen seleccionada";
+            document.getElementById("prod-image-layout").value = "AUTO";
+            document.getElementById("prod-image-contrast").value = "AUTO";
+            updateNewProductImagePreviewStyle();
 
             if (window.walzPreparedFromWhatsApp) {
                 window.walzPreparedWhatsAppImage = null;
@@ -1433,10 +1468,39 @@ function getProductImageUrl(value) {
     return /^(https?:\/\/|blob:)/i.test(url) ? url : "";
 }
 
-function renderProductImage(value, altText, className) {
+function renderProductImage(
+    value,
+    altText,
+    className,
+    imageLayout = "AUTO",
+    imageContrast = "AUTO"
+) {
     const url = getProductImageUrl(value);
-    if (!url) return `<div class="${className} product-image-placeholder">Sin imagen</div>`;
-    return `<img class="${className}" src="${escapeHtml(url)}" alt="${escapeHtml(altText || "Producto")}" loading="lazy" onerror="this.outerHTML='<div class=&quot;${className} product-image-placeholder&quot;>Imagen no disponible</div>'">`;
+
+    const validLayouts = ["AUTO", "LANDSCAPE", "SQUARE", "PORTRAIT"];
+    const validContrasts = ["AUTO", "LIGHT", "NEUTRAL", "DARK"];
+
+    const layout =
+        validLayouts.includes(String(imageLayout || "").toUpperCase())
+            ? String(imageLayout || "").toUpperCase()
+            : "AUTO";
+
+    const contrast =
+        validContrasts.includes(String(imageContrast || "").toUpperCase())
+            ? String(imageContrast || "").toUpperCase()
+            : "AUTO";
+
+    const presentationClasses =
+        `walz-product-image-layout-${layout.toLowerCase()} walz-product-image-contrast-${contrast.toLowerCase()}`;
+
+    const fullClassName =
+        `${className} ${presentationClasses}`.trim();
+
+    if (!url) {
+        return `<div class="${fullClassName} product-image-placeholder">Sin imagen</div>`;
+    }
+
+    return `<img class="${fullClassName}" src="${escapeHtml(url)}" alt="${escapeHtml(altText || "Producto")}" loading="lazy" onerror="this.outerHTML='<div class=&quot;${fullClassName} product-image-placeholder&quot;>Imagen no disponible</div>'">`;
 }
 
 function hasActiveProductOffer(product) {
@@ -2539,7 +2603,9 @@ function renderSellerMarketplaceClassification(
                         ${renderProductImage(
                             product.image_url,
                             product.name,
-                            "walz-seller-avanter-product-image"
+                            "walz-seller-avanter-product-image",
+                            product.image_layout,
+                            product.image_contrast
                         )}
                     </div>
 
@@ -2993,7 +3059,7 @@ function renderProducts(products) {
                 onclick="openProductDetail('${product.id}')"
             >
 
-                ${renderProductImage(product.image_url, product.name, "product-card-image")}
+                ${renderProductImage(product.image_url, product.name, "product-card-image", product.image_layout, product.image_contrast)}
                 ${renderProductStoreIdentity(product)}
 
                 <div class="product-card-content">
@@ -3021,6 +3087,18 @@ function renderProducts(products) {
                         onclick="showPublicStore('${product.seller_id}')"
                     >
                         Ver tienda
+                    </button>
+
+                    <button
+                        type="button"
+                        class="product-conversation-link"
+                        onclick="startProductConversation(
+                            '${product.id}',
+                            '${product.seller_id}',
+                            '${escapeJs(product.name)}'
+                        )"
+                    >
+                        Consultar
                     </button>
 
                     ${
@@ -3275,7 +3353,13 @@ function openProductDetail(productId) {
 
     const imageContainer = document.getElementById("detail-product-image-container");
     if (imageContainer) {
-        imageContainer.innerHTML = renderProductImage(product.image_url, product.name, "detail-product-image");
+        imageContainer.innerHTML = renderProductImage(
+            product.image_url,
+            product.name,
+            "detail-product-image",
+            product.image_layout,
+            product.image_contrast
+        );
     }
 
     const nameElement =
@@ -5485,6 +5569,7 @@ async function loadPublicInstitutionalContact() {
 
 function showMarketplaceContent(loadCentralAdvertising = true) {
     window.walzOrderSuccessOpen = false;
+    stopConversationPolling();
 
     hideSellerApplicationSections();
     hidePublicStoreSection();
@@ -5496,12 +5581,19 @@ function showMarketplaceContent(loadCentralAdvertising = true) {
     const ordersSection =
         document.getElementById("orders-section");
 
+    const conversationsSection =
+        document.getElementById("conversations-section");
+
     if (marketplaceContent) {
         marketplaceContent.style.display = "block";
     }
 
     if (ordersSection) {
         ordersSection.style.display = "none";
+    }
+
+    if (conversationsSection) {
+        conversationsSection.style.display = "none";
     }
 
     const salesOrdersSection =
@@ -5875,12 +5967,25 @@ function renderMyOrders(orders) {
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onclick="openOrderDetail('${escapeJs(String(order.id))}')"
-                        >
-                            Ver pedido
-                        </button>
+                        <div class="order-conversation-actions">
+                            <button
+                                type="button"
+                                onclick="openOrderDetail('${escapeJs(String(order.id))}')"
+                            >
+                                Ver pedido
+                            </button>
+                            <button
+                                type="button"
+                                class="order-conversation-button"
+                                onclick="startOrderConversation(
+                                    '${escapeJs(String(order.id))}',
+                                    '${escapeJs(String(order.store_id || ""))}',
+                                    '${escapeJs(String(order.seller_id || ""))}'
+                                )"
+                            >
+                                Conversar sobre la compra
+                            </button>
+                        </div>
                     </article>
                 `;
             }).join("")}
@@ -6457,6 +6562,19 @@ function renderOrderDetail(order, items) {
                 <div><dt>Cuenta vendedora</dt><dd>${escapeHtml(order.seller_account_email || "No disponible")}</dd></div>
                 <div><dt>Dirección de envío</dt><dd>${escapeHtml(address)}</dd></div>
             </dl>
+            <div class="order-conversation-actions">
+                <button
+                    type="button"
+                    class="order-conversation-button"
+                    onclick="startOrderConversation(
+                        '${escapeJs(String(order.id))}',
+                        '${escapeJs(String(order.store_id || ""))}',
+                        '${escapeJs(String(order.seller_id || ""))}'
+                    )"
+                >
+                    Conversar con el vendedor
+                </button>
+            </div>
             <h4>Productos</h4>
             <div class="order-detail-items">
                 ${items.map(item => {
@@ -8980,6 +9098,20 @@ function renderReceivedOrders(orders) {
 
                         ${renderSellerPaymentBlock(order)}
 
+                        <div class="order-conversation-actions">
+                            <button
+                                type="button"
+                                class="order-conversation-button"
+                                onclick="startOrderConversation(
+                                    '${escapeJs(String(order.id))}',
+                                    '${escapeJs(String(order.store_id || ""))}',
+                                    '${escapeJs(String(order.seller_id || currentUserId || ""))}'
+                                )"
+                            >
+                                Conversar con el comprador
+                            </button>
+                        </div>
+
                         ${renderSellerOrderActions(order)}
                     </article>
                 `;
@@ -9844,7 +9976,9 @@ function renderAdminProducts(entries) {
                             ${renderProductImage(
                                 product.image_url,
                                 product.name || "Producto",
-                                "admin-product-image"
+                                "admin-product-image",
+                                product.image_layout,
+                                product.image_contrast
                             )}
                         </div>
 
@@ -11201,7 +11335,7 @@ function renderMyProducts(products) {
         <div class="my-products-list">
             ${products.map(product => `
                 <article class="my-product-card">
-                    ${renderProductImage(product.image_url, product.name, "my-product-image")}
+                    ${renderProductImage(product.image_url, product.name, "my-product-image", product.image_layout, product.image_contrast)}
                     <div class="my-product-card-header">
                         <div>
                             <span>Producto</span>
@@ -11358,7 +11492,9 @@ function saveCurrentMyProductDraft() {
             document.getElementById(`edit-product-avanter-enabled-${productId}`)?.checked
         ),
         description: document.getElementById(`edit-product-description-${productId}`)?.value || "",
-        image_url: document.getElementById(`edit-product-image-${productId}`)?.value || ""
+        image_url: document.getElementById(`edit-product-image-${productId}`)?.value || "",
+        image_layout: document.getElementById(`edit-product-image-layout-${productId}`)?.value || "AUTO",
+        image_contrast: document.getElementById(`edit-product-image-contrast-${productId}`)?.value || "AUTO"
     };
 
     localStorage.setItem(
@@ -11410,6 +11546,8 @@ function restoreMyProductDraft(productId) {
 
     setValue("edit-product-description", draft.description);
     setValue("edit-product-image", draft.image_url);
+    setValue("edit-product-image-layout", draft.image_layout || "AUTO");
+    setValue("edit-product-image-contrast", draft.image_contrast || "AUTO");
 
     const draftPreview =
         document.getElementById(
@@ -11422,7 +11560,9 @@ function restoreMyProductDraft(productId) {
                 renderProductImage(
                     draft.image_url,
                     draft.name || "Producto",
-                    "product-card-image"
+                    "product-card-image",
+                    draft.image_layout || "AUTO",
+                    draft.image_contrast || "AUTO"
                 );
         } else {
             draftPreview.innerHTML =
@@ -11462,6 +11602,21 @@ function cancelEditingMyProduct() {
     applyMyProductsFilters();
 }
 
+
+function updateEditProductImagePreviewStyle(productId) {
+    const preview = document.getElementById(`edit-product-image-preview-${productId}`);
+    if (!preview) return;
+
+    const imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
+    const imageLayout = document.getElementById(`edit-product-image-layout-${productId}`)?.value || "AUTO";
+    const imageContrast = document.getElementById(`edit-product-image-contrast-${productId}`)?.value || "AUTO";
+
+    preview.innerHTML = imageUrl
+        ? renderProductImage(imageUrl, "Vista previa", "product-card-image", imageLayout, imageContrast)
+        : "<small>Sin imagen actual.</small>";
+
+    saveCurrentMyProductDraft();
+}
 
 function renderMyProductEditor(product) {
     return `
@@ -11603,13 +11758,35 @@ function renderMyProductEditor(product) {
                 >
                     ${
                         product.image_url
-                            ? renderProductImage(
-                                product.image_url,
-                                product.name,
-                                "product-card-image"
-                            )
+                            ? renderProductImage(product.image_url, product.name, "product-card-image", product.image_layout, product.image_contrast)
                             : "<small>Sin imagen actual.</small>"
                     }
+                </div>
+                <div class="product-image-presentation-options">
+                    <label>
+                        <span>Formato de presentacion</span>
+                        <select
+                            id="edit-product-image-layout-${escapeHtml(String(product.id))}"
+                            onchange="updateEditProductImagePreviewStyle('${escapeJs(String(product.id))}')"
+                        >
+                            <option value="AUTO" ${String(product.image_layout || "AUTO").toUpperCase() === "AUTO" ? "selected" : ""}>Automatico</option>
+                            <option value="LANDSCAPE" ${String(product.image_layout || "").toUpperCase() === "LANDSCAPE" ? "selected" : ""}>Horizontal</option>
+                            <option value="SQUARE" ${String(product.image_layout || "").toUpperCase() === "SQUARE" ? "selected" : ""}>Cuadrado</option>
+                            <option value="PORTRAIT" ${String(product.image_layout || "").toUpperCase() === "PORTRAIT" ? "selected" : ""}>Vertical</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Contraste del fondo</span>
+                        <select
+                            id="edit-product-image-contrast-${escapeHtml(String(product.id))}"
+                            onchange="updateEditProductImagePreviewStyle('${escapeJs(String(product.id))}')"
+                        >
+                            <option value="AUTO" ${String(product.image_contrast || "AUTO").toUpperCase() === "AUTO" ? "selected" : ""}>Automatico</option>
+                            <option value="LIGHT" ${String(product.image_contrast || "").toUpperCase() === "LIGHT" ? "selected" : ""}>Claro</option>
+                            <option value="NEUTRAL" ${String(product.image_contrast || "").toUpperCase() === "NEUTRAL" ? "selected" : ""}>Neutro</option>
+                            <option value="DARK" ${String(product.image_contrast || "").toUpperCase() === "DARK" ? "selected" : ""}>Oscuro</option>
+                        </select>
+                    </label>
                 </div>
 
                 <small
@@ -11659,6 +11836,8 @@ async function saveMyProductChanges(productId) {
     const description = document.getElementById(`edit-product-description-${productId}`)?.value.trim() || "";
     let imageUrl = document.getElementById(`edit-product-image-${productId}`)?.value.trim() || "";
     const replacementImage = document.getElementById(`edit-product-image-file-${productId}`)?.files?.[0] || null;
+    const imageLayout = document.getElementById(`edit-product-image-layout-${productId}`)?.value || "AUTO";
+    const imageContrast = document.getElementById(`edit-product-image-contrast-${productId}`)?.value || "AUTO";
 
     if (!name) {
         showMessage("El nombre del producto es obligatorio.", "error");
@@ -11726,7 +11905,9 @@ async function saveMyProductChanges(productId) {
                 brand: brand || null,
                 avanter_enabled: avanterEnabled,
                 description: description || null,
-                image_url: imageUrl
+                image_url: imageUrl,
+                image_layout: imageLayout,
+                image_contrast: imageContrast
             })
         });
         const data = await res.json().catch(() => ({}));
@@ -12022,6 +12203,16 @@ function updateAdminBannerVisibility() {
     const myOrdersButton = document.getElementById("my-orders-button");
     if (myOrdersButton) {
         myOrdersButton.style.display = hasSession && !isAdmin ? "inline-flex" : "none";
+    }
+
+    const conversationsButton = document.getElementById("conversations-button");
+    if (conversationsButton) {
+        conversationsButton.style.display = hasSession ? "inline-flex" : "none";
+    }
+    if (hasSession) {
+        refreshConversationUnreadCount();
+    } else {
+        setConversationUnreadBadge(0);
     }
 
     const accountButton = document.getElementById("account-settings-button");
@@ -12982,13 +13173,653 @@ async function submitSellerApplication(event) {
 }
 
 
+// =====================================================
+// CONVERSACIONES COMERCIALES
+// =====================================================
+
+window.walzConversations = [];
+window.walzActiveConversationId = null;
+window.walzConversationParticipants = [];
+window.walzConversationLastMessageId = null;
+
+
+async function conversationRequest(path, options = {}) {
+    const currentToken = localStorage.getItem("walz_token");
+
+    if (!currentToken) {
+        throw new Error("Inicia sesion para usar tus conversaciones.");
+    }
+
+    const headers = {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.headers || {}),
+        Authorization: `Bearer ${currentToken}`,
+    };
+    const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers,
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+        handleExpiredSession();
+        throw new Error("Tu sesion vencio. Inicia sesion nuevamente.");
+    }
+
+    if (!response.ok) {
+        throw new Error(data.detail || "No se pudo completar la operacion.");
+    }
+
+    return data;
+}
+
+
+async function loadConversationStores() {
+    if (window.walzConversationStoresById) {
+        return window.walzConversationStoresById;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/stores/public`);
+        const stores = await response.json().catch(() => ([]));
+
+        window.walzConversationStoresById = Object.fromEntries(
+            (Array.isArray(stores) ? stores : []).map(store => [
+                String(store.id),
+                store,
+            ])
+        );
+    } catch (error) {
+        console.error("No se pudieron cargar los nombres de tiendas:", error);
+        window.walzConversationStoresById = {};
+    }
+
+    return window.walzConversationStoresById;
+}
+
+
+function getConversationStoreName(conversation) {
+    return window.walzConversationStoresById?.[String(conversation?.store_id)]?.name
+        || "Tienda WalZ One";
+}
+
+
+function getConversationStatusLabel(status) {
+    return {
+        OPEN: "Abierta",
+        CLOSED: "Cerrada",
+        ARCHIVED: "Archivada",
+    }[String(status || "").toUpperCase()] || "Conversacion";
+}
+
+
+function setConversationUnreadBadge(count) {
+    const badge = document.getElementById("conversations-unread-badge");
+    if (!badge) return;
+
+    const value = Math.max(0, Number(count || 0));
+    badge.textContent = value > 99 ? "99+" : String(value);
+    badge.style.display = value > 0 ? "inline-flex" : "none";
+}
+
+
+async function refreshConversationUnreadCount() {
+    if (!localStorage.getItem("walz_token")) {
+        setConversationUnreadBadge(0);
+        return;
+    }
+
+    try {
+        const result = await conversationRequest("/conversations/unread/count");
+        setConversationUnreadBadge(result.count);
+    } catch (error) {
+        console.error("No se pudo actualizar el contador de conversaciones:", error);
+    }
+}
+
+
+function renderConversationList() {
+    const container = document.getElementById("conversation-list");
+
+    if (!container) return;
+
+    const conversations = Array.isArray(window.walzConversations)
+        ? window.walzConversations
+        : [];
+
+    if (!conversations.length) {
+        container.innerHTML = `
+            <div class="conversation-state">
+                <strong>No hay conversaciones en esta vista.</strong>
+                <span>Podes iniciar una desde el boton Consultar de un producto.</span>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = conversations.map(conversation => {
+        const isActive = String(conversation.id) === String(window.walzActiveConversationId);
+        const activityDate = conversation.updated_at || conversation.created_at;
+
+        return `
+            <button
+                type="button"
+                class="conversation-list-item${isActive ? " is-active" : ""}"
+                onclick="openConversation('${escapeJs(String(conversation.id))}')"
+            >
+                <span class="conversation-list-store">${escapeHtml(getConversationStoreName(conversation))}</span>
+                <strong>${escapeHtml(conversation.subject || "Conversacion")}</strong>
+                <span class="conversation-list-meta">
+                    <span class="conversation-status conversation-status-${escapeHtml(String(conversation.status || "").toLowerCase())}">
+                        ${escapeHtml(getConversationStatusLabel(conversation.status))}
+                    </span>
+                    <time>${escapeHtml(formatWalzDate(activityDate))}</time>
+                </span>
+            </button>
+        `;
+    }).join("");
+}
+
+
+async function showConversations(targetConversationId = null) {
+    if (!localStorage.getItem("walz_token")) {
+        showAuth();
+        showLogin();
+        showMessage("Inicia sesion para conversar dentro de WalZ One.", "error");
+        return;
+    }
+
+    hideAllWalzWorkSections();
+    const section = document.getElementById("conversations-section");
+    if (section) section.style.display = "block";
+    scrollPageToTop();
+    await loadConversations(false, targetConversationId);
+}
+
+
+async function loadConversations(silent = false, targetConversationId = null) {
+    const container = document.getElementById("conversation-list");
+    const filter = document.getElementById("conversation-status-filter")?.value || "";
+
+    if (!silent && container) {
+        container.innerHTML = '<div class="conversation-state">Cargando conversaciones...</div>';
+    }
+
+    try {
+        const query = new URLSearchParams({ limit: "100", offset: "0" });
+        if (filter) query.set("status", filter);
+
+        const [conversations] = await Promise.all([
+            conversationRequest(`/conversations?${query.toString()}`),
+            loadConversationStores(),
+        ]);
+        window.walzConversations = Array.isArray(conversations) ? conversations : [];
+        renderConversationList();
+        refreshConversationUnreadCount();
+
+        const conversationToOpen = targetConversationId || window.walzActiveConversationId;
+        const isVisible = window.walzConversations.some(
+            item => String(item.id) === String(conversationToOpen)
+        );
+
+        if (conversationToOpen && isVisible) {
+            await openConversation(conversationToOpen);
+        } else if (window.walzActiveConversationId && !isVisible) {
+            closeActiveConversation();
+        }
+    } catch (error) {
+        if (container) {
+            container.innerHTML = `
+                <div class="conversation-state conversation-state-error">
+                    ${escapeHtml(error.message || "No se pudo cargar la bandeja.")}
+                </div>
+            `;
+        }
+    }
+}
+
+
+function getConversationParticipant(userId) {
+    return (window.walzConversationParticipants || []).find(
+        item => String(item.user_id) === String(userId)
+    );
+}
+
+
+function getConversationParticipantLabel(userId) {
+    const participant = getConversationParticipant(userId);
+    if (String(userId) === String(currentUserId)) return "Vos";
+    if (participant?.display_name) return participant.display_name;
+
+    return {
+        ADMIN: "WalZ One Central",
+        SELLER: "Vendedor",
+        BUYER: "Comprador",
+        MEMBER: "Participante",
+    }[String(participant?.role || "").toUpperCase()] || "Participante";
+}
+
+
+function renderConversationParticipantAvatar(userId) {
+    const participant = getConversationParticipant(userId);
+    const displayName = participant?.display_name || getConversationParticipantLabel(userId);
+    const initials = String(displayName || "P")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join("") || "P";
+    const avatarUrl = String(participant?.avatar_url || "").trim();
+    const safeAvatarUrl = /^(https?:\/\/|\/)/i.test(avatarUrl)
+        ? avatarUrl
+        : "";
+
+    return safeAvatarUrl
+        ? `<span class="conversation-message-avatar"><img src="${escapeHtml(safeAvatarUrl)}" alt=""></span>`
+        : `<span class="conversation-message-avatar" aria-hidden="true">${escapeHtml(initials)}</span>`;
+}
+
+
+function renderConversationMessages(messages) {
+    const container = document.getElementById("conversation-messages");
+
+    if (!container) return;
+
+    if (!Array.isArray(messages) || !messages.length) {
+        container.innerHTML = `
+            <div class="conversation-state conversation-messages-empty">
+                Todavia no hay mensajes. Inicia la conversacion cuando quieras.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = messages.map(message => {
+        const isMine = String(message.sender_id) === String(currentUserId);
+
+        return `
+            <article class="conversation-message${isMine ? " is-mine" : ""}">
+                <div>
+                    <span class="conversation-message-author">
+                        ${renderConversationParticipantAvatar(message.sender_id)}
+                        <strong>${escapeHtml(getConversationParticipantLabel(message.sender_id))}</strong>
+                    </span>
+                    <time>${escapeHtml(formatWalzDate(message.created_at))}</time>
+                </div>
+                <p>${escapeHtml(message.body || "")}</p>
+            </article>
+        `;
+    }).join("");
+    container.scrollTop = container.scrollHeight;
+}
+
+
+function setConversationComposerState(conversation) {
+    const isOpen = String(conversation?.status || "").toUpperCase() === "OPEN";
+    const input = document.getElementById("conversation-message-input");
+    const button = document.getElementById("conversation-send-button");
+
+    if (input) {
+        input.disabled = !isOpen;
+        input.placeholder = isOpen
+            ? "Escribi una consulta o respuesta..."
+            : "Esta conversacion ya no admite mensajes.";
+    }
+
+    if (button) button.disabled = !isOpen;
+    updateConversationStatusControls(conversation);
+}
+
+
+function updateConversationStatusControls(conversation) {
+    const status = String(conversation?.status || "").toUpperCase();
+    const toggleButton = document.getElementById("conversation-toggle-status-button");
+    const archiveButton = document.getElementById("conversation-archive-button");
+    const currentParticipant = (window.walzConversationParticipants || []).find(
+        item => String(item.user_id) === String(currentUserId)
+    );
+    const canManageArchive = ["SELLER", "ADMIN"].includes(
+        String(currentParticipant?.role || "").toUpperCase()
+    );
+
+    if (toggleButton) {
+        toggleButton.textContent = status === "OPEN"
+            ? "Cerrar conversacion"
+            : status === "CLOSED"
+            ? "Reabrir conversacion"
+            : "Recuperar conversacion";
+        toggleButton.style.display = status === "ARCHIVED" && !canManageArchive
+            ? "none"
+            : "inline-flex";
+    }
+
+    if (archiveButton) {
+        archiveButton.style.display = canManageArchive && status !== "ARCHIVED"
+            ? "inline-flex"
+            : "none";
+    }
+}
+
+
+async function openConversation(conversationId) {
+    const conversation = (window.walzConversations || []).find(
+        item => String(item.id) === String(conversationId)
+    );
+
+    if (!conversation) return;
+
+    window.walzActiveConversationId = String(conversation.id);
+    window.walzConversationParticipants = [];
+    window.walzConversationLastMessageId = null;
+    renderConversationList();
+
+    document.getElementById("conversations-section")?.classList.add("has-active-conversation");
+    const empty = document.getElementById("conversation-empty");
+    const active = document.getElementById("conversation-active");
+    const messages = document.getElementById("conversation-messages");
+    if (empty) empty.style.display = "none";
+    if (active) active.style.display = "flex";
+    if (messages) messages.innerHTML = '<div class="conversation-state">Cargando mensajes...</div>';
+
+    const subject = document.getElementById("conversation-active-subject");
+    const context = document.getElementById("conversation-active-context");
+    const status = document.getElementById("conversation-active-status");
+    const error = document.getElementById("conversation-message-error");
+    if (subject) subject.textContent = conversation.subject || "Conversacion";
+    if (context) context.textContent = getConversationStoreName(conversation);
+    if (status) status.textContent = getConversationStatusLabel(conversation.status);
+    if (error) error.textContent = "";
+    setConversationComposerState(conversation);
+
+    try {
+        const [participants] = await Promise.all([
+            conversationRequest(`/conversations/${conversation.id}/participants`),
+            loadActiveConversationMessages(true),
+        ]);
+        window.walzConversationParticipants = Array.isArray(participants) ? participants : [];
+        updateConversationStatusControls(conversation);
+        await loadActiveConversationMessages(false);
+        startConversationPolling();
+    } catch (loadError) {
+        if (messages) {
+            messages.innerHTML = `
+                <div class="conversation-state conversation-state-error">
+                    ${escapeHtml(loadError.message || "No se pudieron cargar los mensajes.")}
+                </div>
+            `;
+        }
+    }
+}
+
+
+async function changeActiveConversationStatus(nextStatus, confirmationMessage) {
+    const conversationId = window.walzActiveConversationId;
+    if (!conversationId) return;
+    if (confirmationMessage && !window.confirm(confirmationMessage)) return;
+
+    try {
+        const updated = await conversationRequest(
+            `/conversations/${conversationId}/status`,
+            {
+                method: "PATCH",
+                body: JSON.stringify({ status: nextStatus }),
+            }
+        );
+        const index = (window.walzConversations || []).findIndex(
+            item => String(item.id) === String(conversationId)
+        );
+        if (index >= 0) window.walzConversations[index] = updated;
+        setConversationComposerState(updated);
+        const status = document.getElementById("conversation-active-status");
+        if (status) status.textContent = getConversationStatusLabel(updated.status);
+        showMessage(
+            nextStatus === "OPEN"
+                ? "Conversacion reabierta."
+                : nextStatus === "CLOSED"
+                ? "Conversacion cerrada."
+                : "Conversacion archivada.",
+            "success"
+        );
+        await loadConversations(true);
+    } catch (error) {
+        const message = document.getElementById("conversation-message-error");
+        if (message) message.textContent = error.message || "No se pudo cambiar el estado.";
+    }
+}
+
+
+function toggleActiveConversationStatus() {
+    const conversation = (window.walzConversations || []).find(
+        item => String(item.id) === String(window.walzActiveConversationId)
+    );
+    const status = String(conversation?.status || "").toUpperCase();
+    const nextStatus = status === "OPEN" ? "CLOSED" : "OPEN";
+    const confirmation = nextStatus === "CLOSED"
+        ? "Queres cerrar esta conversacion? Podra reabrirse mas adelante."
+        : "Queres reabrir esta conversacion?";
+    changeActiveConversationStatus(nextStatus, confirmation);
+}
+
+
+function archiveActiveConversation() {
+    changeActiveConversationStatus(
+        "ARCHIVED",
+        "Queres archivar esta conversacion? Dejaremos de mostrarla entre las conversaciones activas."
+    );
+}
+
+
+async function loadActiveConversationMessages(silent = false) {
+    const conversationId = window.walzActiveConversationId;
+    if (!conversationId) return;
+
+    const messages = await conversationRequest(
+        `/conversations/${conversationId}/messages?limit=200&offset=0`
+    );
+    renderConversationMessages(messages);
+
+    const lastMessageId = Array.isArray(messages) && messages.length
+        ? String(messages[messages.length - 1].id)
+        : "empty";
+
+    if (lastMessageId !== window.walzConversationLastMessageId) {
+        window.walzConversationLastMessageId = lastMessageId;
+        await conversationRequest(
+            `/conversations/${conversationId}/read`,
+            { method: "PATCH" }
+        );
+        refreshConversationUnreadCount();
+    }
+
+    if (!silent) {
+        const input = document.getElementById("conversation-message-input");
+        if (input && !input.disabled) input.focus();
+    }
+}
+
+
+async function sendConversationMessage(event) {
+    event.preventDefault();
+    const conversationId = window.walzActiveConversationId;
+    const input = document.getElementById("conversation-message-input");
+    const button = document.getElementById("conversation-send-button");
+    const error = document.getElementById("conversation-message-error");
+    const body = input?.value.trim() || "";
+
+    if (!conversationId || !body) return;
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Enviando...";
+    }
+    if (error) error.textContent = "";
+
+    try {
+        await conversationRequest(
+            `/conversations/${conversationId}/messages`,
+            {
+                method: "POST",
+                body: JSON.stringify({ body }),
+            }
+        );
+        if (input) input.value = "";
+        await loadActiveConversationMessages(false);
+        await loadConversations(true);
+    } catch (sendError) {
+        if (error) error.textContent = sendError.message || "No se pudo enviar el mensaje.";
+    } finally {
+        const conversation = (window.walzConversations || []).find(
+            item => String(item.id) === String(conversationId)
+        );
+        const canSend = String(conversation?.status || "").toUpperCase() === "OPEN";
+        if (button) {
+            button.disabled = !canSend;
+            button.textContent = "Enviar";
+        }
+    }
+}
+
+
+function closeActiveConversation() {
+    stopConversationPolling();
+    window.walzActiveConversationId = null;
+    window.walzConversationParticipants = [];
+    document.getElementById("conversations-section")?.classList.remove("has-active-conversation");
+    const empty = document.getElementById("conversation-empty");
+    const active = document.getElementById("conversation-active");
+    if (empty) empty.style.display = "grid";
+    if (active) active.style.display = "none";
+    renderConversationList();
+}
+
+
+function stopConversationPolling() {
+    if (window.walzConversationPollingTimer) {
+        clearInterval(window.walzConversationPollingTimer);
+        window.walzConversationPollingTimer = null;
+    }
+}
+
+
+function startConversationPolling() {
+    stopConversationPolling();
+    window.walzConversationPollingTimer = setInterval(() => {
+        if (window.walzActiveConversationId) {
+            loadActiveConversationMessages(true).catch(error => {
+                console.error("No se pudo actualizar la conversacion:", error);
+            });
+        }
+    }, 8000);
+}
+
+
+async function startProductConversation(productId, sellerId, productName) {
+    if (!localStorage.getItem("walz_token")) {
+        showAuth();
+        showLogin();
+        showMessage("Inicia sesion para consultar al vendedor.", "error");
+        return;
+    }
+
+    if (String(sellerId) === String(currentUserId)) {
+        showMessage("Este producto pertenece a tu propia tienda.", "error");
+        return;
+    }
+
+    try {
+        const existing = await conversationRequest("/conversations?limit=200&offset=0");
+        const matchingConversation = (Array.isArray(existing) ? existing : []).find(
+            item => String(item.product_id) === String(productId) && item.status === "OPEN"
+        );
+
+        if (matchingConversation) {
+            await showConversations(matchingConversation.id);
+            return;
+        }
+
+        const storeResponse = await fetch(`${API_URL}/stores/seller/${encodeURIComponent(sellerId)}`);
+        const store = await storeResponse.json().catch(() => ({}));
+        if (!storeResponse.ok) {
+            throw new Error(store.detail || "No se encontro la tienda del producto.");
+        }
+
+        const subject = `Consulta por ${String(productName || "producto")}`.slice(0, 200);
+        const conversation = await conversationRequest(
+            "/conversations",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    store_id: store.id,
+                    product_id: productId,
+                    subject,
+                }),
+            }
+        );
+        window.walzConversationStoresById = {
+            ...(window.walzConversationStoresById || {}),
+            [String(store.id)]: store,
+        };
+        await showConversations(conversation.id);
+    } catch (error) {
+        showMessage(error.message || "No se pudo iniciar la conversacion.", "error");
+    }
+}
+
+
+async function startOrderConversation(orderId, storeId) {
+    if (!localStorage.getItem("walz_token")) {
+        showAuth();
+        showLogin();
+        showMessage("Inicia sesion para conversar sobre el pedido.", "error");
+        return;
+    }
+
+    if (!String(storeId || "").trim()) {
+        showMessage(
+            "Este pedido historico no tiene una tienda asociada para iniciar la conversacion.",
+            "error"
+        );
+        return;
+    }
+
+    try {
+        const existing = await conversationRequest("/conversations?limit=200&offset=0");
+        const matchingConversation = (Array.isArray(existing) ? existing : []).find(
+            item => String(item.order_id) === String(orderId) && item.status === "OPEN"
+        );
+
+        if (matchingConversation) {
+            await showConversations(matchingConversation.id);
+            return;
+        }
+
+        const shortOrderId = String(orderId || "").split("-")[0] || "pedido";
+        const conversation = await conversationRequest(
+            "/conversations",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    store_id: storeId,
+                    order_id: orderId,
+                    subject: `Pedido #${shortOrderId}`,
+                }),
+            }
+        );
+        await showConversations(conversation.id);
+    } catch (error) {
+        showMessage(error.message || "No se pudo iniciar la conversacion del pedido.", "error");
+    }
+}
+
+
 function hideAllWalzWorkSections() {
+    stopConversationPolling();
     saveCurrentMyProductDraft();
     for (const id of [
         "marketplace-content", "orders-section", "sales-orders-section", "my-products-section",
         "store-profile-section", "pharmacy-duty-section", "public-store-section", "banner-admin-section", "banner-proposal-section",
         "seller-application-section", "seller-applications-admin-section", "account-settings-section",
-        "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "admin-economy-section", "institutional-settings-section"
+        "admin-central-section", "admin-stores-section", "admin-orders-section", "admin-products-section", "admin-economy-section", "institutional-settings-section",
+        "conversations-section"
     ]) {
         document.getElementById(id)?.style.setProperty("display", "none");
     }
@@ -13368,7 +14199,9 @@ async function showPublicStore(sellerId) {
                                         ${renderProductImage(
                                             product.image_url,
                                             product.name,
-                                            "public-store-product-image"
+                                            "public-store-product-image",
+                                            product.image_layout,
+                                            product.image_contrast
                                         )}
 
                                         <div>
@@ -13408,7 +14241,7 @@ async function showPublicStore(sellerId) {
             <h2>Productos de ${escapeHtml(store.name || "la tienda")}</h2>
             ${storeProducts.length ? `<div class="public-store-products">${storeProducts.map(product => `
                 <article class="public-store-product" onclick="openProductDetail('${escapeJs(String(product.id))}')">
-                    ${renderProductImage(product.image_url, product.name, "public-store-product-image")}
+                    ${renderProductImage(product.image_url, product.name, "public-store-product-image", product.image_layout, product.image_contrast)}
                     <div>
                         <h3>${escapeHtml(product.name || "Producto")}</h3>
                         <p class="product-price">${renderProductPrice(product)}</p>
@@ -17170,6 +18003,7 @@ async function syncVisibleWalzData(showConfirmation = false) {
         } else if (walzSectionIsVisible("marketplace-content")) {
             await loadProducts();
         }
+        await refreshConversationUnreadCount();
         if (showConfirmation) showMessage("Informacion actualizada.", "success");
     } catch (error) {
         console.error("No se pudo sincronizar WalZ:", error);

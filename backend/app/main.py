@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=ENV_FILE, override=False)
 
-from backend.app.api import auth, banners, institutional_settings, pharmacy_duties, platform_economy, products, orders, payments, seller_applications, stores, store_schedules
+from backend.app.api import auth, banners, conversations, institutional_settings, pharmacy_duties, platform_economy, products, orders, payments, seller_applications, stores, store_schedules
 from backend.app.database.session import engine
 from backend.app.database.schema_updates import (
     ensure_admin_user,
@@ -25,6 +25,7 @@ from backend.app.database.schema_updates import (
     ensure_product_subcategory_column,
     ensure_product_brand_column,
     ensure_product_avanter_column,
+    ensure_product_image_presentation_columns,
     ensure_seller_application_business_categories_column,
     ensure_store_delivery_columns,
     ensure_store_avanter_columns,
@@ -35,7 +36,7 @@ from backend.app.database.schema_updates import (
     ensure_user_terms_columns,
 )
 
-from backend.app.models import banner, economic_ledger_entry, email_change_token, institutional_setting, user, product, order, payment, password_reset_token, pharmacy_duty, platform_economy_setting, seller_application, seller_fee_settlement, store, store_payment_method, store_schedule
+from backend.app.models import banner, conversation, economic_ledger_entry, email_change_token, institutional_setting, user, product, order, payment, password_reset_token, pharmacy_duty, platform_economy_setting, seller_application, seller_fee_settlement, store, store_payment_method, store_schedule
 
 
 # ============================================================
@@ -50,6 +51,7 @@ platform_economy_setting.Base.metadata.create_all(bind=engine)
 economic_ledger_entry.Base.metadata.create_all(bind=engine)
 seller_fee_settlement.Base.metadata.create_all(bind=engine)
 banner.Base.metadata.create_all(bind=engine)
+conversation.Base.metadata.create_all(bind=engine)
 institutional_setting.Base.metadata.create_all(bind=engine)
 store.Base.metadata.create_all(bind=engine)
 store_payment_method.Base.metadata.create_all(bind=engine)
@@ -64,6 +66,7 @@ ensure_product_deletion_column(engine)
 ensure_product_subcategory_column(engine)
 ensure_product_brand_column(engine)
 ensure_product_avanter_column(engine)
+ensure_product_image_presentation_columns(engine)
 ensure_admin_user(engine, os.getenv("WALZ_ADMIN_EMAIL"))
 ensure_banner_proposal_columns(engine)
 ensure_banner_targeting_columns(engine)
@@ -126,6 +129,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(banners.router)
+app.include_router(conversations.router)
 app.include_router(institutional_settings.router)
 app.include_router(pharmacy_duties.router)
 app.include_router(platform_economy.router)

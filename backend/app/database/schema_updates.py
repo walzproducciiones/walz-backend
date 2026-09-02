@@ -150,6 +150,30 @@ def ensure_product_publication_status_column(engine):
             ))
 
 
+
+def ensure_product_image_presentation_columns(engine):
+    """Add product image layout and contrast preferences without deleting data."""
+    inspector = inspect(engine)
+
+    if "products" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("products")
+    }
+
+    with engine.begin() as connection:
+        if "image_layout" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN image_layout VARCHAR(20) NOT NULL DEFAULT 'AUTO'"
+            ))
+
+        if "image_contrast" not in existing_columns:
+            connection.execute(text(
+                "ALTER TABLE products ADD COLUMN image_contrast VARCHAR(20) NOT NULL DEFAULT 'AUTO'"
+            ))
+
 def ensure_admin_user(engine, admin_email):
     """Promote only the configured owner account to administrator."""
     normalized_email = str(admin_email or "").strip().lower()
